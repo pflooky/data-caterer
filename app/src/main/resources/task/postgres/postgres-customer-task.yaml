@@ -1,0 +1,37 @@
+name: "jdbc_customer_accounts_table_create"
+steps:
+  - name: "accounts"
+    type: "postgres"
+    count:
+      total: 10
+    options:
+      dbtable: "account.accounts"
+    schema:
+      type: "manual"
+      fields:
+        - name: "account_number"
+          type: "string"
+          generator:
+            type: "regex"
+            options:
+              regex: "ACC1[0-9]{5,10}"
+        - name: "account_status"
+          type: "string"
+          generator:
+            type: "oneOf"
+            options:
+              oneOf:
+                - "open"
+                - "closed"
+        - name: "open_date"
+          type: "date"
+          generator:
+            type: "random"
+        - name: "created_by"
+          type: "string"
+          generator:
+            type: "random"
+        - name: "customer_id"
+          type: "int"
+          generator:
+            type: "random"

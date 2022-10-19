@@ -1,0 +1,40 @@
+name: "parquet_transaction_file"
+steps:
+  - name: "transactions"
+    type: "parquet"
+    options:
+      path: "/Users/peter/code/spark-datagen/app/src/test/resources/sample/parquet/transactions"
+    count:
+      perColumn:
+        columnNames:
+          - "account_id"
+        generator:
+          type: "random"
+          options:
+            maxValue: 10
+            minValue: 1
+    schema:
+      type: "manual"
+      fields:
+        - name: "account_id"
+          type: "string"
+          generator:
+            type: "random"
+        - name: "year"
+          type: "int"
+          generator:
+            type: "random"
+            options:
+              minValue: 2021
+              maxValue: 2022
+        - name: "amount"
+          type: "double"
+          generator:
+            type: "random"
+        - name: "txn_date"
+          type: "date"
+          generator:
+            type: "random"
+            options:
+              minValue: "2021-01-01"
+              maxValue: "2021-12-31"
