@@ -51,6 +51,7 @@ sinkOptions:
 
 <details><summary>Detailed summary</summary><br>
 
+Simple sample
 ```yaml
 name: "jdbc_customer_accounts_table_create"
 steps:
@@ -58,6 +59,7 @@ steps:
   - name: "accounts"
     type: "postgres"
     count:
+      #Number of records to generate
       total: 10
     #Define any Spark options to pass when pushing data
     options:
@@ -108,6 +110,30 @@ steps:
                maxValue: 100  #Default: 1
 ```
 
+With multiple records per foreign key
+```yaml
+name: "parquet_transaction_file"
+steps:
+   - name: "transactions"
+     type: "parquet"
+     options:
+        path: "/tmp/sample/parquet/transactions"
+     count:
+        #Number of records per column to generate
+        perColumn:
+           #Can be based on multiple columns
+           columnNames:
+              - "account_id"
+           #Can define simple count of records
+           count: 10
+           #Or define generator for number of records (has to be int generator)
+           generator:
+              type: "random"
+              options:
+                 minValue: 1
+                 maxValue: 10
+...
+```
 </details>
 
 ### Datagen Input
