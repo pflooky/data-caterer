@@ -6,8 +6,109 @@ Generator data for databases, files or HTTP request through a YAML based input a
 ![draven high level design](design/draven-design.png "High level design")
 
 ## How to use
-1. Input data into YAML
-2. Run job
+1. Create plan like [here](app/src/main/resources/plan/customer-create-plan.yaml)
+2. Create tasks like [here](app/src/main/resources/task/postgres/postgres-customer-task.yaml)
+3. Run job from [here](app/src/main/scala/com/github/pflooky/datagen/App.scala)
+   1. Set plan file path to run via environment variable [PLAN_FILE_PATH](app/src/main/resources/application.conf)
+   2. Set task folder path via environment variable [TASK_FOLDER_PATH](app/src/main/resources/application.conf)
+
+### Datagen Plan
+[Sample plan](app/src/main/resources/plan/customer-create-plan.yaml)
+
+<details><summary>Detailed summary</summary><br>
+
+```yaml
+name: "customer_create_plan"
+description: "Create customers in JDBC and Cassandra"
+tasks:
+  #list of tasks to execute
+  - name: "jdbc_customer_accounts_table_create"
+    #Name of the data source with configuration as defined in application.conf
+    sinkName: "postgres"
+  - name: "parquet_transaction_file"
+    sinkName: "parquet"
+  - name: "cassandra_customer_status_table_create"
+    sinkName: "cassandra"
+    #Can disable tasks
+    enabled: false
+  - name: "cassandra_customer_transactions_table_create"
+    sinkName: "cassandra"
+    enabled: false
+    
+sinkOptions:
+  #Define any foreign keys that should match across data tasks
+  foreignKeys:
+    #The foreign key name with naming convention [sinkName].[schema].[column name]
+    "postgres.accounts.account_number":
+      #List of columns to match with same naming convention
+      - "parquet.transactions.account_id"
+```
+
+</details>
+
+### Datagen Task
+[Sample task](app/src/main/resources/task/postgres/postgres-transaction-task.yaml)
+
+<details><summary>Detailed summary</summary><br>
+
+```yaml
+name: "jdbc_customer_accounts_table_create"
+steps:
+  #Define one or more steps within a task
+  - name: "accounts"
+    type: "postgres"
+    count:
+      total: 10
+    #Define any Spark options to pass when pushing data
+    options:
+      dbtable: "account.accounts"
+    schema:
+      #How to discover the schema: only supports manual for now
+      type: "manual"
+      fields:
+        - name: "account_number"
+          #Data type of column: string, int, double, date
+          type: "string"
+          generator:
+            #Type of data generator: regex, random, oneOf
+            type: "regex"
+            #Options to set per type of generator
+            options:
+              regex: "ACC1[0-9]{5,10}"
+        - name: "account_status"
+          type: "string"
+          generator:
+            type: "oneOf"
+            options:
+              #List of potential values
+              oneOf:
+                - "open"
+                - "closed"
+        - name: "open_date"
+          type: "date"
+          generator:
+            type: "random"
+            #`options` is optional, will revert to defaults if not defined
+            options:
+               minValue: "2020-01-01" #Default: now() - 5 days
+               maxValue: "2022-12-31" #Default: now()
+        - name: "created_by"
+          type: "string"
+          generator:
+            type: "random"
+            options:
+               minLength: 10  #Default: 0
+               maxLength: 100 #Default: 20
+        - name: "customer_id"
+          type: "int"
+          generator:
+            type: "random"
+            options:
+               minValue: 0    #Default: 0
+               maxValue: 100  #Default: 1
+```
+
+</details>
 
 ### Datagen Input
 #### Supported Data Sinks
@@ -34,6 +135,7 @@ Draven is able to support the following data sinks:
    2. Number of records per column value
 3. Send events progressively
 4. Automatically insert data into database
+   1. Read metadata from database and insert for all tables defined
 
 
 ## Challenges
