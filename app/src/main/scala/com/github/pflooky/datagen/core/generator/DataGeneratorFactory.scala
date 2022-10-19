@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator
 
 import com.github.pflooky.datagen.core.generator.provider.{DataGenerator, OneOfDataGenerator, RandomDataGenerator, RegexDataGenerator}
-import com.github.pflooky.datagen.core.model.{Count, Field, Generator, PerColumnCount, Step}
+import com.github.pflooky.datagen.core.model._
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{ArrayType, DataType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
@@ -52,10 +52,9 @@ class DataGeneratorFactory(implicit val sparkSession: SparkSession) {
     val perColumnRange = if (perColumnCount.generator.isDefined) {
       val generatedCount = getDataGenerator(perColumnCount.generator.get, "int", false)
       val numList = udf(() => {
-        val y = (1 to generatedCount.generate.asInstanceOf[Int])
+        (1 to generatedCount.generate.asInstanceOf[Int])
           .toList
           .map(_ => Row.fromSeq(fieldsToBeGenDataGenerators.map(_.generate)))
-        y
       }, ArrayType(StructType(structForNewFields)))
       df.withColumn("_per_col_count", numList())
     } else {

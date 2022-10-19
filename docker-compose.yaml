@@ -8,6 +8,7 @@ services:
       PGDATA: "/data/postgres"
     volumes:
       - "/data/docker/postgres:/data/postgres"
+      - "./app/src/test/resources/sample/sql/customer.sql:/docker-entrypoint-initdb.d/customer.sql"
     ports:
       - "5432:5432"
 

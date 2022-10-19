@@ -6,5 +6,6 @@ build
 .idea
 
 app/src/test/resources/sample/parquet
+
 *.class
 *.log

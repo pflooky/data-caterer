@@ -36,9 +36,9 @@ object ForeignKeyUtil {
 
   protected def applyForeignKeysToTargetDf(sourceDf: DataFrame, targetDf: DataFrame, sourceColumn: String, targetColumn: String): DataFrame = {
     val distinctSourceKeys = sourceDf.select(sourceColumn).distinct()
-      .withColumn("_join_foreign_key", monotonically_increasing_id)
+      .withColumn("_join_foreign_key", monotonically_increasing_id())
     val distinctTargetKeys = targetDf.select(targetColumn).distinct()
-      .withColumn("_join_foreign_key", monotonically_increasing_id)
+      .withColumn("_join_foreign_key", monotonically_increasing_id())
     LOGGER.info(s"Attempting to join source DF keys with target DF, source=$sourceColumn, target=$targetColumn")
     val joinDf = distinctSourceKeys.join(distinctTargetKeys, Seq("_join_foreign_key"))
       .drop("_join_foreign_key")
