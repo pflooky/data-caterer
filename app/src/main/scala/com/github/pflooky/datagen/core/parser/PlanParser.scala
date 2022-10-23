@@ -49,7 +49,7 @@ object PlanParser {
     val tryParseTask = Try(objectMapper.readValue(taskFile, classOf[Task]))
     tryParseTask match {
       case Success(x) => x
-      case Failure(exception) => throw TaskParseException(taskFile.getName, exception)
+      case Failure(exception) => throw new TaskParseException(taskFile.getName, exception)
     }
   }
 

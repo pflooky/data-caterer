@@ -20,12 +20,12 @@ object ForeignKeyUtil {
     val foreignKeyAppliedDfs = sinkOptions.foreignKeys
       .flatMap(fk => {
         val foreignKeyDetails = sinkOptions.getForeignKeyRelations(fk._1)
-        val sourceDfName = s"${foreignKeyDetails._1.sink}.${foreignKeyDetails._1.step}"
+        val sourceDfName = foreignKeyDetails._1.getDataFrameName
         LOGGER.info(s"Getting source dataframe, source=$sourceDfName")
         val sourceDf = generatedDataForeachTask(sourceDfName)
 
         foreignKeyDetails._2.map(target => {
-          val targetDfName = s"${target.sink}.${target.step}"
+          val targetDfName = target.getDataFrameName
           LOGGER.info(s"Getting target dataframe, source=$targetDfName")
           val targetDf = generatedDataForeachTask(targetDfName)
           (targetDfName, applyForeignKeysToTargetDf(sourceDf, targetDf, foreignKeyDetails._1.column, target.column))
@@ -34,8 +34,9 @@ object ForeignKeyUtil {
     generatedDataForeachTask ++ foreignKeyAppliedDfs
   }
 
-  protected def applyForeignKeysToTargetDf(sourceDf: DataFrame, targetDf: DataFrame, sourceColumn: String, targetColumn: String): DataFrame = {
+  private def applyForeignKeysToTargetDf(sourceDf: DataFrame, targetDf: DataFrame, sourceColumn: String, targetColumn: String): DataFrame = {
     val distinctSourceKeys = sourceDf.select(sourceColumn).distinct()
+      .withColumnRenamed(sourceColumn, s"_src_$sourceColumn")
       .withColumn("_join_foreign_key", monotonically_increasing_id())
     val distinctTargetKeys = targetDf.select(targetColumn).distinct()
       .withColumn("_join_foreign_key", monotonically_increasing_id())
@@ -44,8 +45,8 @@ object ForeignKeyUtil {
       .drop("_join_foreign_key")
     joinDf.show(false)
     val res = targetDf.join(joinDf, targetColumn)
-      .withColumn(targetColumn, col(sourceColumn))
-      .drop(sourceColumn)
+      .withColumn(targetColumn, col(s"_src_$sourceColumn"))
+      .drop(s"_src_$sourceColumn")
     LOGGER.info(s"Applied source DF keys with target DF, source=$sourceColumn, target=$targetColumn")
     res.show(2, false)
     res

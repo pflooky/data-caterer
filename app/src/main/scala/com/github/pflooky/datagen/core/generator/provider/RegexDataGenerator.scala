@@ -11,6 +11,8 @@ object RegexDataGenerator {
   class RandomRegexDataGenerator(val options: Map[String, Any], val isNullable: Boolean) extends NullableDataGenerator[String] {
     private val regex = new RgxGen(options("regex").toString)
 
+    override val edgeCases: List[String] = List()
+
     override def generate: String = {
       regex.generate(random.self)
     }

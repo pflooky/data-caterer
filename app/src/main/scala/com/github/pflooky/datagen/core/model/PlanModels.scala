@@ -7,19 +7,21 @@ case class Plan(name: String, description: String, tasks: List[TaskSummary], sin
 case class SinkOptions(foreignKeys: Map[String, List[String]] = Map()) {
   def getForeignKeyRelations(key: String): (ForeignKeyRelation, List[ForeignKeyRelation]) = {
     val sourceSpt = key.split("\\.")
-    if (sourceSpt.length != 3) throw ForeignKeyFormatException(key)
+    if (sourceSpt.length != 3) throw new ForeignKeyFormatException(key)
     val source = ForeignKeyRelation(sourceSpt.head, sourceSpt(1), sourceSpt.last)
 
     val targets = foreignKeys(key)
     val targetForeignKeys = targets.map(t => {
       val targetSpt = t.split("\\.")
-      if (targetSpt.length != 3) throw ForeignKeyFormatException(t)
+      if (targetSpt.length != 3) throw new ForeignKeyFormatException(t)
       ForeignKeyRelation(targetSpt.head, targetSpt(1), targetSpt.last)
     })
     (source, targetForeignKeys)
   }
 }
-case class ForeignKeyRelation(sink: String, step: String, column: String)
+case class ForeignKeyRelation(sink: String, step: String, column: String) {
+  def getDataFrameName = s"${sink}.$step"
+}
 
 case class TaskSummary(name: String, sinkName: String, enabled: Boolean = true)
 

@@ -77,6 +77,7 @@ steps:
             #Options to set per type of generator
             options:
               regex: "ACC1[0-9]{5,10}"
+              seed: 1 #Can set the random seed at column level
         - name: "account_status"
           type: "string"
           generator:
@@ -99,7 +100,7 @@ steps:
           generator:
             type: "random"
             options:
-               minLength: 10  #Default: 0
+               minLength: 10  #Default: 1
                maxLength: 100 #Default: 20
         - name: "customer_id"
           type: "int"
@@ -159,8 +160,9 @@ Draven is able to support the following data sinks:
 2. Insert into multiple data sinks
    1. Foreign keys associated with data sinks
    2. Number of records per column value
-3. Send events progressively
-4. Automatically insert data into database
+3. Set random seed at column level
+4. Send events progressively
+5. Automatically insert data into database
    1. Read metadata from database and insert for all tables defined
 
 

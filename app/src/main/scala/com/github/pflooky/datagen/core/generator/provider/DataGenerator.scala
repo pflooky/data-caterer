@@ -13,9 +13,12 @@ trait DataGenerator[T] extends Serializable {
   def generate: T
 
   lazy val random: Random = options.get("seed").map(x => new Random(x.asInstanceOf[Int])).getOrElse(new Random())
+  lazy val enabledNull: Boolean = options.getOrElse("enableNull", "false").toString.toBoolean
+  lazy val enabledEdgeCases: Boolean = options.getOrElse("enableEdgeCases", "false").toString.toBoolean
 
-  def generateWrapper(randDouble: Double): T = {
-    if (randDouble <= PROBABILITY_OF_EDGE_CASES) {
+  def generateWrapper: T = {
+    val randDouble = random.nextDouble()
+    if (enabledEdgeCases && randDouble <= PROBABILITY_OF_EDGE_CASES) {
       edgeCases(random.nextInt(edgeCases.size))
     } else {
       generate
@@ -27,11 +30,13 @@ trait NullableDataGenerator[T >: Null] extends DataGenerator[T] {
 
   val isNullable: Boolean
 
-  override def generateWrapper(randDouble: Double): T = {
-    if (randDouble <= PROBABILITY_OF_NULL && isNullable) {
+  override def generateWrapper: T = {
+    val randDouble = random.nextDouble()
+    if (enabledNull && isNullable && randDouble <= PROBABILITY_OF_NULL) {
       null
-    } else if (edgeCases.nonEmpty && (randDouble <= PROBABILITY_OF_EDGE_CASES + PROBABILITY_OF_NULL && isNullable) ||
-      (randDouble <= PROBABILITY_OF_EDGE_CASES && !isNullable)) {
+    } else if (enabledEdgeCases && edgeCases.nonEmpty &&
+      ((isNullable && randDouble <= PROBABILITY_OF_EDGE_CASES + PROBABILITY_OF_NULL) ||
+      (!isNullable && randDouble <= PROBABILITY_OF_EDGE_CASES))) {
       edgeCases(random.nextInt(edgeCases.size))
     } else {
       generate

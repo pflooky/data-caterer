@@ -5,6 +5,7 @@
 build
 .idea
 
+app/out
 app/src/test/resources/sample/parquet
 
 *.class

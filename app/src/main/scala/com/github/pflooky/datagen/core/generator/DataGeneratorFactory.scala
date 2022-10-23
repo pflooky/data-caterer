@@ -27,9 +27,9 @@ class DataGeneratorFactory(implicit val sparkSession: SparkSession) {
 
     val generatedData = if (count.generator.isDefined) {
       val generatedCount = getDataGenerator(count.generator.get, "int", false).asInstanceOf[Int]
-      (1 to generatedCount).map(_ => Row.fromSeq(dataGenerators.map(_.generate)))
+      (1 to generatedCount).map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper)))
     } else {
-      (1 to count.total.toInt).map(_ => Row.fromSeq(dataGenerators.map(_.generate)))
+      (1 to count.total.toInt).map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper)))
     }
 
     val rddGeneratedData = sparkSession.sparkContext.parallelize(generatedData)
@@ -54,12 +54,12 @@ class DataGeneratorFactory(implicit val sparkSession: SparkSession) {
       val numList = udf(() => {
         (1 to generatedCount.generate.asInstanceOf[Int])
           .toList
-          .map(_ => Row.fromSeq(fieldsToBeGenDataGenerators.map(_.generate)))
+          .map(_ => Row.fromSeq(fieldsToBeGenDataGenerators.map(_.generateWrapper)))
       }, ArrayType(StructType(structForNewFields)))
       df.withColumn("_per_col_count", numList())
     } else {
       df.withColumn("_per_col_count", lit((1 to perColumnCount.count.toInt)
-        .map(_ => Row(fieldsToBeGenDataGenerators.map(_.generate)))))
+        .map(_ => Row(fieldsToBeGenDataGenerators.map(_.generateWrapper)))))
     }
 
     val explodeCount = perColumnRange.withColumn("_per_col_index", explode(col("_per_col_count")))
