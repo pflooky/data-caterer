@@ -22,6 +22,9 @@ object ForeignKeyUtil {
         val foreignKeyDetails = sinkOptions.getForeignKeyRelations(fk._1)
         val sourceDfName = foreignKeyDetails._1.getDataFrameName
         LOGGER.info(s"Getting source dataframe, source=$sourceDfName")
+        if (!generatedDataForeachTask.contains(sourceDfName)) {
+          throw new RuntimeException(s"Cannot create target foreign key as one of the data sources not created. Please ensure there exists a data source with name (<task step type>.<task step name>): $sourceDfName")
+        }
         val sourceDf = generatedDataForeachTask(sourceDfName)
 
         foreignKeyDetails._2.map(target => {
@@ -51,5 +54,4 @@ object ForeignKeyUtil {
     res.show(2, false)
     res
   }
-
 }

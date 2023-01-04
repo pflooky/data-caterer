@@ -10,6 +10,9 @@ trait SparkSuite extends AnyFunSuite with BeforeAndAfterAll with BeforeAndAfterE
     SparkSession.builder()
       .master("local[*]")
       .appName("spark tests")
+      .config("spark.sql.legacy.allowUntypedScalaUDF", "true")
+      .config("spark.sql.shuffle.partitions", "2")
+      .config("spark.ui.enabled", "false")
       .getOrCreate()
   }
 

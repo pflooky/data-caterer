@@ -1,0 +1,7 @@
+name: "transaction_create_plan"
+description: "Create JSON transaction files"
+tasks:
+  - name: "json_transaction_file"
+    sinkName: "json"
+    enabled: true
+

@@ -1,6 +1,8 @@
 package com.github.pflooky.datagen.core.model
 
 import com.github.pflooky.datagen.core.exception.ForeignKeyFormatException
+import com.github.pflooky.datagen.core.generator.provider.DataGenerator
+import org.apache.spark.sql.types.{StructField, StructType}
 
 case class Plan(name: String, description: String, tasks: List[TaskSummary], sinkOptions: Option[SinkOptions] = None)
 
@@ -29,8 +31,8 @@ case class Task(name: String, steps: List[Step])
 
 case class Step(name: String, `type`: String, count: Count, options: Map[String, String] = Map(), schema: Schema, enabled: Boolean = true)
 
-case class Count(total: Long = 1000, perColumn: Option[PerColumnCount] = None, generator: Option[Generator] = None)
-case class PerColumnCount(columnNames: List[String], count: Long = 10, generator: Option[Generator] = None)
+case class Count(total: Option[Long] = Some(1000), perColumn: Option[PerColumnCount] = None, generator: Option[Generator] = None)
+case class PerColumnCount(columnNames: List[String], count: Option[Long] = Some(10), generator: Option[Generator] = None)
 
 case class Schema(`type`: String, fields: Option[List[Field]])
 case class Field(name: String, `type`: String, generator: Generator, nullable: Boolean = false, defaultValue: Option[Any] = None)

@@ -1,17 +1,34 @@
 package com.github.pflooky.datagen.core.generator.provider
 
+import com.github.pflooky.datagen.core.model.Constants._
+import org.apache.spark.sql.types.StructField
+
+import scala.util.Try
+
 object OneOfDataGenerator {
 
-  def getGenerator(options: Map[String, Any]): DataGenerator[_] = {
-    new RandomOneOfDataGenerator(options)
+  def getGenerator(structField: StructField): DataGenerator[Any] = {
+    new RandomOneOfDataGenerator(structField)
   }
 
-  class RandomOneOfDataGenerator(val options: Map[String, Any]) extends DataGenerator[Any] {
-    private val oneOfList = options("oneOf").asInstanceOf[List[Any]]
-    private val oneOfListSize = oneOfList.size
+  class RandomOneOfDataGenerator(val structField: StructField) extends DataGenerator[Any] {
+    private lazy val oneOfValues = getOneOfList
+    private lazy val oneOfArrayLength = oneOfValues.length
 
     override def generate: Any = {
-      oneOfList(random.nextInt(oneOfListSize))
+      oneOfValues(random.nextInt(oneOfArrayLength))
+    }
+
+    private def getOneOfList: Array[Any] = {
+      lazy val arrayType = Try(structField.metadata.getString(ARRAY_TYPE)).getOrElse(ONE_OF_STRING)
+      val x = arrayType.toLowerCase match {
+        case ONE_OF_STRING => structField.metadata.getStringArray(ONE_OF)
+        case ONE_OF_LONG => structField.metadata.getLongArray(ONE_OF)
+        case ONE_OF_DOUBLE => structField.metadata.getDoubleArray(ONE_OF)
+        case ONE_OF_BOOLEAN => structField.metadata.getBooleanArray(ONE_OF)
+        case _ => Array()
+      }
+      x.asInstanceOf[Array[Any]]
     }
   }
 

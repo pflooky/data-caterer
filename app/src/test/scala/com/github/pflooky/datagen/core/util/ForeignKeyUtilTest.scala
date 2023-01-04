@@ -1,9 +1,11 @@
 package com.github.pflooky.datagen.core.util
 
 import com.github.pflooky.datagen.core.model.SinkOptions
+import org.apache.spark.sql.types.{DataType, StructType}
 
 import java.sql.Date
 import java.time.LocalDate
+import scala.io.Source
 
 class ForeignKeyUtilTest extends SparkSuite {
 
@@ -32,6 +34,16 @@ class ForeignKeyUtilTest extends SparkSuite {
 
     val resTxnRows = result("postgres.transaction").collect()
     resTxnRows.foreach(r => r.getString(0) == "acc1")
+  }
+
+
+  ignore("Can create random json generator") {
+    val sampleJsonFile = Source.fromURL(getClass.getResource("/sample/json/sample.json"))
+    val sampleJson = sampleJsonFile.getLines().mkString
+    import sparkSession.implicits._
+    val json = sparkSession.createDataset(Seq(sampleJson))
+    val dataType = sparkSession.read.option("inferTimestamp", "true").json(json)
+    sampleJsonFile.close()
   }
 
   case class Account(account_id: String, name: String, open_date: Date, age: Int)

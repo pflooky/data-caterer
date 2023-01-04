@@ -1,20 +1,24 @@
 package com.github.pflooky.datagen.core.generator.provider
 
+import com.github.pflooky.datagen.core.model.Constants.{ENABLED_EDGE_CASES, ENABLED_NULL, RANDOM_SEED}
+import org.apache.spark.sql.types.StructField
+
 import scala.util.Random
 
 trait DataGenerator[T] extends Serializable {
 
+  val structField: StructField
+
   val PROBABILITY_OF_NULL = 0.1
   val PROBABILITY_OF_EDGE_CASES = 0.5
 
-  val options: Map[String, Any]
   val edgeCases: List[T] = List()
 
   def generate: T
 
-  lazy val random: Random = options.get("seed").map(x => new Random(x.asInstanceOf[Int])).getOrElse(new Random())
-  lazy val enabledNull: Boolean = options.getOrElse("enableNull", "false").toString.toBoolean
-  lazy val enabledEdgeCases: Boolean = options.getOrElse("enableEdgeCases", "false").toString.toBoolean
+  lazy val random: Random = if (structField.metadata.contains(RANDOM_SEED)) new Random(structField.metadata.getLong(RANDOM_SEED)) else new Random()
+  lazy val enabledNull: Boolean = if (structField.metadata.contains(ENABLED_NULL)) structField.metadata.getBoolean(ENABLED_NULL) else false
+  lazy val enabledEdgeCases: Boolean = if (structField.metadata.contains(ENABLED_EDGE_CASES)) structField.metadata.getBoolean(ENABLED_EDGE_CASES) else false
 
   def generateWrapper: T = {
     val randDouble = random.nextDouble()
@@ -28,15 +32,13 @@ trait DataGenerator[T] extends Serializable {
 
 trait NullableDataGenerator[T >: Null] extends DataGenerator[T] {
 
-  val isNullable: Boolean
-
   override def generateWrapper: T = {
     val randDouble = random.nextDouble()
-    if (enabledNull && isNullable && randDouble <= PROBABILITY_OF_NULL) {
+    if (enabledNull && structField.nullable && randDouble <= PROBABILITY_OF_NULL) {
       null
     } else if (enabledEdgeCases && edgeCases.nonEmpty &&
-      ((isNullable && randDouble <= PROBABILITY_OF_EDGE_CASES + PROBABILITY_OF_NULL) ||
-      (!isNullable && randDouble <= PROBABILITY_OF_EDGE_CASES))) {
+      ((structField.nullable && randDouble <= PROBABILITY_OF_EDGE_CASES + PROBABILITY_OF_NULL) ||
+      (!structField.nullable && randDouble <= PROBABILITY_OF_EDGE_CASES))) {
       edgeCases(random.nextInt(edgeCases.size))
     } else {
       generate

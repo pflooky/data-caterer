@@ -1,38 +1,46 @@
 package com.github.pflooky.datagen.core.generator.provider
 
 import com.github.pflooky.datagen.core.exception.UnsupportedDataGeneratorType
+import com.github.pflooky.datagen.core.model.Constants.{MAXIMUM_LENGTH, MAXIMUM_VALUE, MINIMUM_LENGTH, MINIMUM_VALUE}
+import org.apache.spark.sql.types._
 
 import java.sql.{Date, Timestamp}
 import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDate}
+import scala.util.Try
 
 object RandomDataGenerator {
 
-  def getGenerator(returnType: String, options: Map[String, Any], isNullable: Boolean): DataGenerator[_] = {
-    returnType.trim.toLowerCase match {
-      case "string" => new RandomStringDataGenerator(options, isNullable)
-      case "int" => new RandomIntDataGenerator(options)
-      case "double" => new RandomDoubleDataGenerator(options)
-      case "date" => new RandomDateDataGenerator(options, isNullable)
-      case "timestamp" => new RandomTimestampDataGenerator(options, isNullable)
-      case x => throw new UnsupportedDataGeneratorType(s"Unsupported type for random data generating: type=$x")
+  def getGeneratorForStructType(structType: StructType): Array[DataGenerator[_]] = {
+    structType.fields.map(getGeneratorForStructField)
+  }
+
+  def getGeneratorForStructField(structField: StructField): DataGenerator[_] = {
+    structField.dataType match {
+      case StringType => new RandomStringDataGenerator(structField)
+      case IntegerType => new RandomIntDataGenerator(structField)
+      case DoubleType => new RandomDoubleDataGenerator(structField)
+      case DateType => new RandomDateDataGenerator(structField)
+      case TimestampType => new RandomTimestampDataGenerator(structField)
+      case BooleanType => new RandomBooleanDataGenerator(structField)
+      case x => throw new UnsupportedDataGeneratorType(s"Unsupported type for random data generating: type=${x.typeName}")
     }
   }
 
-  class RandomStringDataGenerator(val options: Map[String, Any], val isNullable: Boolean) extends NullableDataGenerator[String] {
-    private lazy val minLength = options.getOrElse("minLength", 1).asInstanceOf[Int]
-    private lazy val maxLength = options.getOrElse("maxLength", 20).asInstanceOf[Int]
+  class RandomStringDataGenerator(val structField: StructField) extends NullableDataGenerator[String] {
+    private lazy val minLength = Try(structField.metadata.getLong(MINIMUM_LENGTH)).getOrElse(1L)
+    private lazy val maxLength = Try(structField.metadata.getLong(MAXIMUM_LENGTH)).getOrElse(20L)
 
     override val edgeCases: List[String] = List("", "\n", "\r", "\t", " ")
 
     override def generate: String = {
-      random.alphanumeric.take(random.between(minLength, maxLength)).mkString
+      random.alphanumeric.take(random.between(minLength, maxLength).toInt).mkString
     }
   }
 
-  class RandomIntDataGenerator(val options: Map[String, Any]) extends DataGenerator[Int] {
-    private lazy val minValue = options.getOrElse("minValue", 0).asInstanceOf[Int]
-    private lazy val maxValue = options.getOrElse("maxValue", 1).asInstanceOf[Int] + 1
+  class RandomIntDataGenerator(val structField: StructField) extends DataGenerator[Int] {
+    private lazy val minValue = Try(structField.metadata.getLong(MINIMUM_VALUE).toInt).getOrElse(0)
+    private lazy val maxValue = Try(structField.metadata.getLong(MAXIMUM_VALUE).toInt).getOrElse(1) + 1
 
     override val edgeCases: List[Int] = List(Int.MaxValue, Int.MinValue, 0)
 
@@ -41,9 +49,9 @@ object RandomDataGenerator {
     }
   }
 
-  class RandomDoubleDataGenerator(val options: Map[String, Any]) extends DataGenerator[Double] {
-    private lazy val minValue = options.getOrElse("minValue", 0.0).asInstanceOf[Double]
-    private lazy val maxValue = options.getOrElse("maxValue", 1.0).asInstanceOf[Double]
+  class RandomDoubleDataGenerator(val structField: StructField) extends DataGenerator[Double] {
+    private lazy val minValue = Try(structField.metadata.getDouble(MINIMUM_VALUE)).getOrElse(0.0)
+    private lazy val maxValue = Try(structField.metadata.getDouble(MAXIMUM_VALUE)).getOrElse(1.0)
 
     override val edgeCases: List[Double] = List(Double.PositiveInfinity, Double.MaxValue, Double.MinPositiveValue,
       0.0, -0.0, Double.MinValue, Double.NegativeInfinity)
@@ -53,7 +61,7 @@ object RandomDataGenerator {
     }
   }
 
-  class RandomDateDataGenerator(val options: Map[String, Any], val isNullable: Boolean) extends NullableDataGenerator[Date] {
+  class RandomDateDataGenerator(val structField: StructField) extends NullableDataGenerator[Date] {
     private lazy val minValue = getMinValue
     private lazy val maxValue = getMaxValue
     private lazy val maxDays = java.time.temporal.ChronoUnit.DAYS.between(minValue, maxValue).toInt
@@ -71,19 +79,17 @@ object RandomDataGenerator {
     }
 
     private def getMinValue: LocalDate = {
-      options.get("minValue")
-        .map(x => LocalDate.parse(x.asInstanceOf[String]))
+      Try(structField.metadata.getString(MINIMUM_VALUE)).map(LocalDate.parse)
         .getOrElse(LocalDate.now().minusDays(5))
     }
 
     private def getMaxValue: LocalDate = {
-      options.get("maxValue")
-        .map(x => LocalDate.parse(x.asInstanceOf[String]))
+      Try(structField.metadata.getString(MAXIMUM_VALUE)).map(LocalDate.parse)
         .getOrElse(LocalDate.now())
     }
   }
 
-  class RandomTimestampDataGenerator(val options: Map[String, Any], val isNullable: Boolean) extends NullableDataGenerator[Timestamp] {
+  class RandomTimestampDataGenerator(val structField: StructField) extends NullableDataGenerator[Timestamp] {
     private lazy val minValue = getMinValue
     private lazy val maxValue = getMaxValue
 
@@ -101,17 +107,21 @@ object RandomDataGenerator {
     }
 
     private def getMinValue: Long = {
-      val ts = options.get("minValue")
-        .map(x => Timestamp.valueOf(x.asInstanceOf[String]))
+      Try(structField.metadata.getString(MINIMUM_VALUE)).map(Timestamp.valueOf)
         .getOrElse(Timestamp.from(Instant.now().minus(5, ChronoUnit.DAYS)))
-      ts.toInstant.toEpochMilli
+        .toInstant.toEpochMilli
     }
 
     private def getMaxValue: Long = {
-      val ts = options.get("maxValue")
-        .map(x => Timestamp.valueOf(x.asInstanceOf[String]))
+      Try(structField.metadata.getString(MAXIMUM_VALUE)).map(Timestamp.valueOf)
         .getOrElse(Timestamp.from(Instant.now()))
-      ts.toInstant.toEpochMilli + 1L
+        .toInstant.toEpochMilli + 1L
+    }
+  }
+
+  class RandomBooleanDataGenerator(val structField: StructField) extends DataGenerator[Boolean] {
+    override def generate: Boolean = {
+      random.nextBoolean()
     }
   }
 }

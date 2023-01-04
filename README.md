@@ -172,6 +172,8 @@ Draven is able to support the following data sinks:
 - Setting out the Plan -> Task -> Step model
 - How to process the data in batches
 - Data cleanup after run
+  - Save data into parquet files. Can read and delete when needed
+  - Have option to truncate/delete directly
 
 
 ## Resources

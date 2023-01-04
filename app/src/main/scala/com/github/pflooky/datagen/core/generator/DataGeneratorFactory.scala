@@ -1,12 +1,20 @@
 package com.github.pflooky.datagen.core.generator
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.github.pflooky.datagen.core.exception.UnsupportedDataGeneratorType
 import com.github.pflooky.datagen.core.generator.provider.{DataGenerator, OneOfDataGenerator, RandomDataGenerator, RegexDataGenerator}
+import com.github.pflooky.datagen.core.model.Constants._
 import com.github.pflooky.datagen.core.model._
+import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{ArrayType, DataType, StructField, StructType}
+import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
 class DataGeneratorFactory(implicit val sparkSession: SparkSession) {
+
+  private val objectMapper = new ObjectMapper()
+  objectMapper.registerModule(DefaultScalaModule)
 
   def generateDataForStep(step: Step, sinkName: String): DataFrame = {
     val structFieldsWithDataGenerators = if (step.schema.fields.isDefined) {
@@ -21,15 +29,18 @@ class DataGeneratorFactory(implicit val sparkSession: SparkSession) {
       .alias(s"${sinkName}.${step.name}")
   }
 
-  def generateData(structFieldsWithDataGenerators: List[(StructField, DataGenerator[_])], count: Count): DataFrame = {
-    val structType = StructType(structFieldsWithDataGenerators.map(_._1))
-    val dataGenerators = structFieldsWithDataGenerators.map(_._2)
+  def generateData(dataGenerators: List[DataGenerator[_]], count: Count): DataFrame = {
+    val structType = StructType(dataGenerators.map(_.structField))
 
     val generatedData = if (count.generator.isDefined) {
-      val generatedCount = getDataGenerator(count.generator.get, "int", false).asInstanceOf[Int]
-      (1 to generatedCount).map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper)))
+      val metadata = Metadata.fromJson(objectMapper.writeValueAsString(count.generator.get.options))
+      val countStructField = StructField(RECORD_COUNT_GENERATOR_COL, IntegerType, false, metadata)
+      val generatedCount = getDataGenerator(count.generator.get, countStructField).generate.asInstanceOf[Int].toLong
+      (1L to generatedCount).map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper)))
+    } else if (count.total.isDefined) {
+      (1L to count.total.get.asInstanceOf[Number].longValue()).map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper)))
     } else {
-      (1 to count.total.toInt).map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper)))
+      throw new RuntimeException("Need to defined 'total' or 'generator' for generating rows")
     }
 
     val rddGeneratedData = sparkSession.sparkContext.parallelize(generatedData)
@@ -37,51 +48,61 @@ class DataGeneratorFactory(implicit val sparkSession: SparkSession) {
     df.cache()
 
     if (count.perColumn.isDefined) {
-      generateRecordsPerColumn(structFieldsWithDataGenerators, count.perColumn.get, df)
+      generateRecordsPerColumn(dataGenerators, count.perColumn.get, df)
     } else {
       df
     }
   }
 
-  private def generateRecordsPerColumn(structFieldsWithDataGenerators: List[(StructField, DataGenerator[_])],
-                                       perColumnCount: PerColumnCount, df: DataFrame) = {
-    val fieldsToBeGenerated = structFieldsWithDataGenerators.filter(x => !perColumnCount.columnNames.contains(x._1.name))
-    val structForNewFields = fieldsToBeGenerated.map(_._1)
-    val fieldsToBeGenDataGenerators = fieldsToBeGenerated.map(_._2)
+  private def generateRecordsPerColumn(dataGenerators: List[DataGenerator[_]],
+                                       perColumnCount: PerColumnCount, df: DataFrame): DataFrame = {
+    val fieldsToBeGenerated = dataGenerators.filter(x => !perColumnCount.columnNames.contains(x.structField.name))
 
     val perColumnRange = if (perColumnCount.generator.isDefined) {
-      val generatedCount = getDataGenerator(perColumnCount.generator.get, "int", false)
-      val numList = udf(() => {
-        (1 to generatedCount.generate.asInstanceOf[Int])
-          .toList
-          .map(_ => Row.fromSeq(fieldsToBeGenDataGenerators.map(_.generateWrapper)))
-      }, ArrayType(StructType(structForNewFields)))
-      df.withColumn("_per_col_count", numList())
+      val metadata = Metadata.fromJson(objectMapper.writeValueAsString(perColumnCount.generator.get.options))
+      val countStructField = StructField(RECORD_COUNT_GENERATOR_COL, IntegerType, false, metadata)
+      val generatedCount = getDataGenerator(perColumnCount.generator.get, countStructField)
+      val numList = generateDataWithSchema(generatedCount.generate.asInstanceOf[Int], fieldsToBeGenerated)
+      df.withColumn(PER_COLUMN_COUNT, numList())
+    } else if (perColumnCount.count.isDefined) {
+      val numList = generateDataWithSchema(perColumnCount.count.get, fieldsToBeGenerated)
+      df.withColumn(PER_COLUMN_COUNT, numList())
     } else {
-      df.withColumn("_per_col_count", lit((1 to perColumnCount.count.toInt)
-        .map(_ => Row(fieldsToBeGenDataGenerators.map(_.generateWrapper)))))
+      throw new RuntimeException("Need to defined 'total' or 'generator' for generating number of rows per column")
     }
 
-    val explodeCount = perColumnRange.withColumn("_per_col_index", explode(col("_per_col_count")))
-      .drop(col("_per_col_count"))
-    explodeCount.select("_per_col_index.*", perColumnCount.columnNames: _*)
+    val explodeCount = perColumnRange.withColumn(PER_COLUMN_INDEX_COL, explode(col(PER_COLUMN_COUNT)))
+      .drop(col(PER_COLUMN_COUNT))
+    explodeCount.select(PER_COLUMN_INDEX_COL + ".*", perColumnCount.columnNames: _*)
   }
 
-  private def getStructWithGenerators(fields: List[Field]): List[(StructField, DataGenerator[_])] = {
+  private def generateDataWithSchema(count: Long, dataGenerators: List[DataGenerator[_]]): UserDefinedFunction = {
+    udf(() => {
+      (1L to count)
+        .toList
+        .map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper)))
+    }, ArrayType(StructType(dataGenerators.map(_.structField))))
+  }
+
+  private def getStructWithGenerators(fields: List[Field]): List[DataGenerator[_]] = {
     val structFieldsWithDataGenerators = fields.map(field => {
-      val generator = getDataGenerator(field.generator, field.`type`, field.nullable)
-      val structField = StructField(field.name, DataType.fromDDL(field.`type`), field.nullable)
-      (structField, generator)
+      val structField: StructField = createStructFieldFromField(field)
+      getDataGenerator(field.generator, structField)
     })
     structFieldsWithDataGenerators
   }
 
-  private def getDataGenerator(generator: Generator, returnType: String, isNullable: Boolean): DataGenerator[_] = {
+  private def createStructFieldFromField(field: Field) = {
+    val metadata = Metadata.fromJson(objectMapper.writeValueAsString(field.generator.options))
+    StructField(field.name, DataType.fromDDL(field.`type`), field.nullable, metadata)
+  }
+
+  private def getDataGenerator(generator: Generator, structField: StructField): DataGenerator[_] = {
     generator.`type` match {
-      case "random" => RandomDataGenerator.getGenerator(returnType, generator.options, isNullable)
-      case "oneOf" => OneOfDataGenerator.getGenerator(generator.options)
-      case "regex" => RegexDataGenerator.getGenerator(generator.options, isNullable)
-      case x => throw new RuntimeException(s"Unsupported generator type, type=$x")
+      case RANDOM => RandomDataGenerator.getGeneratorForStructField(structField)
+      case ONE_OF => OneOfDataGenerator.getGenerator(structField)
+      case REGEX => RegexDataGenerator.getGenerator(structField)
+      case x => throw new UnsupportedDataGeneratorType(x)
     }
   }
 }

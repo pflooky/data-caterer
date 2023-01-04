@@ -1,7 +1,8 @@
 package com.github.pflooky.datagen.core.generator.provider
 
 import com.github.pflooky.datagen.core.exception.UnsupportedDataGeneratorType
-import com.github.pflooky.datagen.core.generator.provider.RandomDataGenerator.{RandomDateDataGenerator, RandomDoubleDataGenerator, RandomIntDataGenerator, RandomStringDataGenerator, RandomTimestampDataGenerator}
+import com.github.pflooky.datagen.core.generator.provider.RandomDataGenerator._
+import org.apache.spark.sql.types._
 import org.scalatest.funsuite.AnyFunSuite
 
 import java.sql.{Date, Timestamp}
@@ -10,25 +11,40 @@ import java.time.{Instant, LocalDate}
 
 class RandomDataGeneratorTest extends AnyFunSuite {
 
+  test("Can get correct data generator based on StructType") {
+    val structType = StructType(Seq(
+      StructField("name", StringType),
+      StructField("age", IntegerType),
+      StructField("amount", DoubleType),
+      StructField("date_of_birth", DateType),
+      StructField("last_login_time", TimestampType)
+    ))
+    val generators = RandomDataGenerator.getGeneratorForStructType(structType)
+    assert(generators.length == 5)
+  }
+
   test("Can get the correct data generator based on return type") {
-    val stringGenerator = RandomDataGenerator.getGenerator("string", Map(), true)
-    val stringCapitalWithSpaceGenerator = RandomDataGenerator.getGenerator(" STRING ", Map(), true)
-    val intGenerator = RandomDataGenerator.getGenerator("int", Map(), true)
-    val doubleGenerator = RandomDataGenerator.getGenerator("double", Map(), true)
-    val dateGenerator = RandomDataGenerator.getGenerator("date", Map(), true)
-    val timestampGenerator = RandomDataGenerator.getGenerator("timestamp", Map(), true)
+    val stringGenerator = RandomDataGenerator.getGeneratorForStructField(StructField("field", StringType))
+    val intGenerator = RandomDataGenerator.getGeneratorForStructField(StructField("field", IntegerType))
+    val doubleGenerator = RandomDataGenerator.getGeneratorForStructField(StructField("field", DoubleType))
+    val dateGenerator = RandomDataGenerator.getGeneratorForStructField(StructField("field", DateType))
+    val timestampGenerator = RandomDataGenerator.getGeneratorForStructField(StructField("field", TimestampType))
+    val booleanGenerator = RandomDataGenerator.getGeneratorForStructField(StructField("field", BooleanType))
 
     assert(stringGenerator.isInstanceOf[RandomStringDataGenerator])
-    assert(stringCapitalWithSpaceGenerator.isInstanceOf[RandomStringDataGenerator])
     assert(intGenerator.isInstanceOf[RandomIntDataGenerator])
     assert(doubleGenerator.isInstanceOf[RandomDoubleDataGenerator])
     assert(dateGenerator.isInstanceOf[RandomDateDataGenerator])
     assert(timestampGenerator.isInstanceOf[RandomTimestampDataGenerator])
-    assertThrows[UnsupportedDataGeneratorType](RandomDataGenerator.getGenerator("null", Map(), true))
+    assert(booleanGenerator.isInstanceOf[RandomBooleanDataGenerator])
+    assertThrows[UnsupportedDataGeneratorType](RandomDataGenerator.getGeneratorForStructField(StructField("field", ByteType)))
+    assertThrows[UnsupportedDataGeneratorType](RandomDataGenerator.getGeneratorForStructField(StructField("field", FloatType)))
+    assertThrows[UnsupportedDataGeneratorType](RandomDataGenerator.getGeneratorForStructField(StructField("field", LongType)))
+    assertThrows[UnsupportedDataGeneratorType](RandomDataGenerator.getGeneratorForStructField(StructField("field", ShortType)))
   }
 
   test("Can create random string generator") {
-    val stringGenerator = new RandomStringDataGenerator(Map(), false)
+    val stringGenerator = new RandomStringDataGenerator(StructField("random_string", StringType, false))
     val sampleData = stringGenerator.generate
 
     assert(stringGenerator.edgeCases.nonEmpty)
@@ -37,7 +53,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
   }
 
   test("Can create random int generator") {
-    val intGenerator = new RandomIntDataGenerator(Map())
+    val intGenerator = new RandomIntDataGenerator(StructField("random_int", IntegerType, false))
     val sampleData = intGenerator.generate
 
     assert(intGenerator.edgeCases.nonEmpty)
@@ -46,7 +62,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
   }
 
   test("Can create random double generator") {
-    val doubleGenerator = new RandomDoubleDataGenerator(Map())
+    val doubleGenerator = new RandomDoubleDataGenerator(StructField("random_double", DoubleType, false))
     val sampleData = doubleGenerator.generate
 
     assert(doubleGenerator.edgeCases.nonEmpty)
@@ -55,7 +71,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
   }
 
   test("Can create random date generator") {
-    val dateGenerator = new RandomDateDataGenerator(Map(), false)
+    val dateGenerator = new RandomDateDataGenerator(StructField("random_date", DateType, false))
     val sampleData = dateGenerator.generate
 
     assert(dateGenerator.edgeCases.nonEmpty)
@@ -64,7 +80,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
   }
 
   test("Can create random timestamp generator") {
-    val dateGenerator = new RandomTimestampDataGenerator(Map(), false)
+    val dateGenerator = new RandomTimestampDataGenerator(StructField("random_ts", TimestampType, false))
     val sampleData = dateGenerator.generate
 
     assert(dateGenerator.edgeCases.nonEmpty)

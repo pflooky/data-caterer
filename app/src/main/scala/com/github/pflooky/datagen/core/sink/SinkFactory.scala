@@ -12,6 +12,9 @@ class SinkFactory(
   private val LOGGER = Logger.getLogger(getClass.getName)
 
   def pushToSink(df: DataFrame, sinkName: String, stepOptions: Map[String, String]): Unit = {
+    if (!connectionConfigs.contains(sinkName)) {
+      throw new RuntimeException(s"Cannot find sink connection details in application.conf for sink: $sinkName")
+    }
     val connectionConfig = connectionConfigs(sinkName)
     val saveMode = connectionConfig.get("saveMode").map(SaveMode.valueOf).getOrElse(SaveMode.Append)
     LOGGER.info(s"Pushing data to sink=$sinkName, saveMode=${saveMode.name()}")

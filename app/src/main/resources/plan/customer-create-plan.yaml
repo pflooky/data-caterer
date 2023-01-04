@@ -3,8 +3,10 @@ description: "Create customers in JDBC and Cassandra"
 tasks:
   - name: "jdbc_customer_accounts_table_create"
     sinkName: "postgres"
+    enabled: false
   - name: "parquet_transaction_file"
     sinkName: "parquet"
+    enabled: true
   - name: "cassandra_customer_status_table_create"
     sinkName: "cassandra"
     enabled: false
@@ -12,7 +14,7 @@ tasks:
     sinkName: "cassandra"
     enabled: false
     
-sinkOptions:
-  foreignKeys:
-    "postgres.accounts.account_number":
-      - "parquet.transactions.account_id"
+#sinkOptions:
+#  foreignKeys:
+#    "postgres.accounts.account_number":
+#      - "parquet.transactions.account_id"
