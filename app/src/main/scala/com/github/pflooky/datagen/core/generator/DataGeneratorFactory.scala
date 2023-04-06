@@ -6,15 +6,37 @@ import com.github.pflooky.datagen.core.exception.UnsupportedDataGeneratorType
 import com.github.pflooky.datagen.core.generator.provider.{DataGenerator, OneOfDataGenerator, RandomDataGenerator, RegexDataGenerator}
 import com.github.pflooky.datagen.core.model.Constants._
 import com.github.pflooky.datagen.core.model._
+import net.datafaker.Faker
+import org.apache.log4j.Logger
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
-class DataGeneratorFactory(implicit val sparkSession: SparkSession) {
+import java.util.Random
+import scala.util.{Failure, Success, Try}
 
-  private val objectMapper = new ObjectMapper()
-  objectMapper.registerModule(DefaultScalaModule)
+class DataGeneratorFactory(optSeed: Option[String])(implicit val sparkSession: SparkSession) {
+
+  private val LOGGER = Logger.getLogger(getClass.getName)
+  private val FAKER = getDataFaker
+  private val OBJECT_MAPPER = new ObjectMapper()
+  OBJECT_MAPPER.registerModule(DefaultScalaModule)
+
+  private def getDataFaker = {
+    if (optSeed.isDefined) {
+      val trySeed = Try(optSeed.get.toInt)
+      val seedValue = trySeed match {
+        case Failure(exception) =>
+          throw new RuntimeException(s"Failed to get seed value from plan sink options. seed-value=${optSeed.get}", exception)
+        case Success(value) => value
+      }
+      LOGGER.info(s"Seed is defined at Plan level. All data will be generated with the set seed. seed-value=$seedValue")
+      new Faker(new Random(seedValue))
+    } else {
+      new Faker()
+    }
+  }
 
   def generateDataForStep(step: Step, sinkName: String): DataFrame = {
     val structFieldsWithDataGenerators = if (step.schema.fields.isDefined) {
@@ -26,14 +48,14 @@ class DataGeneratorFactory(implicit val sparkSession: SparkSession) {
     //TODO: separate batch service to determine how to batch generate the data base on Count details
     //TODO: batch service should go through all the tasks per batch run
     generateData(structFieldsWithDataGenerators, step.count)
-      .alias(s"${sinkName}.${step.name}")
+      .alias(s"$sinkName.${step.name}")
   }
 
   def generateData(dataGenerators: List[DataGenerator[_]], count: Count): DataFrame = {
     val structType = StructType(dataGenerators.map(_.structField))
 
     val generatedData = if (count.generator.isDefined) {
-      val metadata = Metadata.fromJson(objectMapper.writeValueAsString(count.generator.get.options))
+      val metadata = Metadata.fromJson(OBJECT_MAPPER.writeValueAsString(count.generator.get.options))
       val countStructField = StructField(RECORD_COUNT_GENERATOR_COL, IntegerType, false, metadata)
       val generatedCount = getDataGenerator(count.generator.get, countStructField).generate.asInstanceOf[Int].toLong
       (1L to generatedCount).map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper)))
@@ -59,7 +81,7 @@ class DataGeneratorFactory(implicit val sparkSession: SparkSession) {
     val fieldsToBeGenerated = dataGenerators.filter(x => !perColumnCount.columnNames.contains(x.structField.name))
 
     val perColumnRange = if (perColumnCount.generator.isDefined) {
-      val metadata = Metadata.fromJson(objectMapper.writeValueAsString(perColumnCount.generator.get.options))
+      val metadata = Metadata.fromJson(OBJECT_MAPPER.writeValueAsString(perColumnCount.generator.get.options))
       val countStructField = StructField(RECORD_COUNT_GENERATOR_COL, IntegerType, false, metadata)
       val generatedCount = getDataGenerator(perColumnCount.generator.get, countStructField)
       val numList = generateDataWithSchema(generatedCount.generate.asInstanceOf[Int], fieldsToBeGenerated)
@@ -93,15 +115,15 @@ class DataGeneratorFactory(implicit val sparkSession: SparkSession) {
   }
 
   private def createStructFieldFromField(field: Field) = {
-    val metadata = Metadata.fromJson(objectMapper.writeValueAsString(field.generator.options))
+    val metadata = Metadata.fromJson(OBJECT_MAPPER.writeValueAsString(field.generator.options))
     StructField(field.name, DataType.fromDDL(field.`type`), field.nullable, metadata)
   }
 
   private def getDataGenerator(generator: Generator, structField: StructField): DataGenerator[_] = {
     generator.`type` match {
-      case RANDOM => RandomDataGenerator.getGeneratorForStructField(structField)
-      case ONE_OF => OneOfDataGenerator.getGenerator(structField)
-      case REGEX => RegexDataGenerator.getGenerator(structField)
+      case RANDOM => RandomDataGenerator.getGeneratorForStructField(structField, FAKER)
+      case ONE_OF => OneOfDataGenerator.getGenerator(structField, FAKER)
+      case REGEX => RegexDataGenerator.getGenerator(structField, FAKER)
       case x => throw new UnsupportedDataGeneratorType(x)
     }
   }

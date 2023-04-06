@@ -1,6 +1,7 @@
 package com.github.pflooky.datagen.core.generator.provider
 
 import com.github.pflooky.datagen.core.model.Constants.{ENABLED_EDGE_CASES, ENABLED_NULL, RANDOM_SEED}
+import net.datafaker.Faker
 import org.apache.spark.sql.types.StructField
 
 import scala.util.Random
@@ -8,6 +9,7 @@ import scala.util.Random
 trait DataGenerator[T] extends Serializable {
 
   val structField: StructField
+  val faker: Faker
 
   val PROBABILITY_OF_NULL = 0.1
   val PROBABILITY_OF_EDGE_CASES = 0.5

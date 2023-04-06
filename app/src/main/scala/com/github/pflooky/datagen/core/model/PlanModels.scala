@@ -1,12 +1,10 @@
 package com.github.pflooky.datagen.core.model
 
 import com.github.pflooky.datagen.core.exception.ForeignKeyFormatException
-import com.github.pflooky.datagen.core.generator.provider.DataGenerator
-import org.apache.spark.sql.types.{StructField, StructType}
 
 case class Plan(name: String, description: String, tasks: List[TaskSummary], sinkOptions: Option[SinkOptions] = None)
 
-case class SinkOptions(foreignKeys: Map[String, List[String]] = Map()) {
+case class SinkOptions(seed: Option[String], foreignKeys: Map[String, List[String]] = Map()) {
   def getForeignKeyRelations(key: String): (ForeignKeyRelation, List[ForeignKeyRelation]) = {
     val sourceSpt = key.split("\\.")
     if (sourceSpt.length != 3) throw new ForeignKeyFormatException(key)

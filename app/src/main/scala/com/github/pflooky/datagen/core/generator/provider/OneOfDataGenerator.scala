@@ -1,17 +1,18 @@
 package com.github.pflooky.datagen.core.generator.provider
 
 import com.github.pflooky.datagen.core.model.Constants._
+import net.datafaker.Faker
 import org.apache.spark.sql.types.StructField
 
 import scala.util.Try
 
 object OneOfDataGenerator {
 
-  def getGenerator(structField: StructField): DataGenerator[Any] = {
-    new RandomOneOfDataGenerator(structField)
+  def getGenerator(structField: StructField, faker: Faker): DataGenerator[Any] = {
+    new RandomOneOfDataGenerator(structField, faker)
   }
 
-  class RandomOneOfDataGenerator(val structField: StructField) extends DataGenerator[Any] {
+  class RandomOneOfDataGenerator(val structField: StructField, val faker: Faker) extends DataGenerator[Any] {
     private lazy val oneOfValues = getOneOfList
     private lazy val oneOfArrayLength = oneOfValues.length
 

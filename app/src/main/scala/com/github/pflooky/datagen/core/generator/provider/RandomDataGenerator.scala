@@ -1,7 +1,8 @@
 package com.github.pflooky.datagen.core.generator.provider
 
 import com.github.pflooky.datagen.core.exception.UnsupportedDataGeneratorType
-import com.github.pflooky.datagen.core.model.Constants.{MAXIMUM_LENGTH, MAXIMUM_VALUE, MINIMUM_LENGTH, MINIMUM_VALUE}
+import com.github.pflooky.datagen.core.model.Constants.{EXPRESSION, MAXIMUM_LENGTH, MAXIMUM_VALUE, MINIMUM_LENGTH, MINIMUM_VALUE}
+import net.datafaker.Faker
 import org.apache.spark.sql.types._
 
 import java.sql.{Date, Timestamp}
@@ -11,34 +12,38 @@ import scala.util.Try
 
 object RandomDataGenerator {
 
-  def getGeneratorForStructType(structType: StructType): Array[DataGenerator[_]] = {
-    structType.fields.map(getGeneratorForStructField)
+  def getGeneratorForStructType(structType: StructType, faker: Faker): Array[DataGenerator[_]] = {
+    structType.fields.map(getGeneratorForStructField(_, faker))
   }
 
-  def getGeneratorForStructField(structField: StructField): DataGenerator[_] = {
+  def getGeneratorForStructField(structField: StructField, faker: Faker): DataGenerator[_] = {
     structField.dataType match {
-      case StringType => new RandomStringDataGenerator(structField)
-      case IntegerType => new RandomIntDataGenerator(structField)
-      case DoubleType => new RandomDoubleDataGenerator(structField)
-      case DateType => new RandomDateDataGenerator(structField)
-      case TimestampType => new RandomTimestampDataGenerator(structField)
-      case BooleanType => new RandomBooleanDataGenerator(structField)
+      case StringType => new RandomStringDataGenerator(structField, faker)
+      case IntegerType => new RandomIntDataGenerator(structField, faker)
+      case DoubleType => new RandomDoubleDataGenerator(structField, faker)
+      case DateType => new RandomDateDataGenerator(structField, faker)
+      case TimestampType => new RandomTimestampDataGenerator(structField, faker)
+      case BooleanType => new RandomBooleanDataGenerator(structField, faker)
       case x => throw new UnsupportedDataGeneratorType(s"Unsupported type for random data generating: type=${x.typeName}")
     }
   }
 
-  class RandomStringDataGenerator(val structField: StructField) extends NullableDataGenerator[String] {
+  class RandomStringDataGenerator(val structField: StructField, val faker: Faker) extends NullableDataGenerator[String] {
     private lazy val minLength = Try(structField.metadata.getLong(MINIMUM_LENGTH)).getOrElse(1L)
     private lazy val maxLength = Try(structField.metadata.getLong(MAXIMUM_LENGTH)).getOrElse(20L)
+    private lazy val tryExpression = Try(structField.metadata.getString(EXPRESSION))
 
     override val edgeCases: List[String] = List("", "\n", "\r", "\t", " ")
 
     override def generate: String = {
+      if (tryExpression.isSuccess) {
+        faker.expression(tryExpression.get)
+      }
       random.alphanumeric.take(random.between(minLength, maxLength).toInt).mkString
     }
   }
 
-  class RandomIntDataGenerator(val structField: StructField) extends DataGenerator[Int] {
+  class RandomIntDataGenerator(val structField: StructField, val faker: Faker) extends DataGenerator[Int] {
     private lazy val minValue = Try(structField.metadata.getLong(MINIMUM_VALUE).toInt).getOrElse(0)
     private lazy val maxValue = Try(structField.metadata.getLong(MAXIMUM_VALUE).toInt).getOrElse(1) + 1
 
@@ -49,7 +54,7 @@ object RandomDataGenerator {
     }
   }
 
-  class RandomDoubleDataGenerator(val structField: StructField) extends DataGenerator[Double] {
+  class RandomDoubleDataGenerator(val structField: StructField, val faker: Faker) extends DataGenerator[Double] {
     private lazy val minValue = Try(structField.metadata.getDouble(MINIMUM_VALUE)).getOrElse(0.0)
     private lazy val maxValue = Try(structField.metadata.getDouble(MAXIMUM_VALUE)).getOrElse(1.0)
 
@@ -61,7 +66,7 @@ object RandomDataGenerator {
     }
   }
 
-  class RandomDateDataGenerator(val structField: StructField) extends NullableDataGenerator[Date] {
+  class RandomDateDataGenerator(val structField: StructField, val faker: Faker) extends NullableDataGenerator[Date] {
     private lazy val minValue = getMinValue
     private lazy val maxValue = getMaxValue
     private lazy val maxDays = java.time.temporal.ChronoUnit.DAYS.between(minValue, maxValue).toInt
@@ -89,7 +94,7 @@ object RandomDataGenerator {
     }
   }
 
-  class RandomTimestampDataGenerator(val structField: StructField) extends NullableDataGenerator[Timestamp] {
+  class RandomTimestampDataGenerator(val structField: StructField, val faker: Faker) extends NullableDataGenerator[Timestamp] {
     private lazy val minValue = getMinValue
     private lazy val maxValue = getMaxValue
 
@@ -119,7 +124,7 @@ object RandomDataGenerator {
     }
   }
 
-  class RandomBooleanDataGenerator(val structField: StructField) extends DataGenerator[Boolean] {
+  class RandomBooleanDataGenerator(val structField: StructField, val faker: Faker) extends DataGenerator[Boolean] {
     override def generate: Boolean = {
       random.nextBoolean()
     }

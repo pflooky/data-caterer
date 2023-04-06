@@ -1,0 +1,7 @@
+site_name: Draven Documentation
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.top

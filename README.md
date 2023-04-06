@@ -1,11 +1,15 @@
 # Draven - spark-datagen
+
 ## Overview
+
 Generator data for databases, files or HTTP request through a YAML based input and executed via Spark.
 
 ## Flow
+
 ![draven high level design](design/draven-design.png "High level design")
 
 ## How to use
+
 1. Create plan like [here](app/src/main/resources/plan/customer-create-plan.yaml)
 2. Create tasks like [here](app/src/main/resources/task/postgres/postgres-customer-task.yaml)
 3. Run job from [here](app/src/main/scala/com/github/pflooky/datagen/App.scala)
@@ -13,6 +17,7 @@ Generator data for databases, files or HTTP request through a YAML based input a
    2. Set task folder path via environment variable [TASK_FOLDER_PATH](app/src/main/resources/application.conf)
 
 ### Datagen Plan
+
 [Sample plan](app/src/main/resources/plan/customer-create-plan.yaml)
 
 <details><summary>Detailed summary</summary><br>
@@ -34,8 +39,10 @@ tasks:
   - name: "cassandra_customer_transactions_table_create"
     sinkName: "cassandra"
     enabled: false
-    
+
 sinkOptions:
+  #Define a static seed if you want consistent data produced
+  seed: "1"
   #Define any foreign keys that should match across data tasks
   foreignKeys:
     #The foreign key name with naming convention [sinkName].[schema].[column name]
@@ -47,11 +54,13 @@ sinkOptions:
 </details>
 
 ### Datagen Task
+
 [Sample task](app/src/main/resources/task/postgres/postgres-transaction-task.yaml)
 
 <details><summary>Detailed summary</summary><br>
 
 Simple sample
+
 ```yaml
 name: "jdbc_customer_accounts_table_create"
 steps:
@@ -93,53 +102,58 @@ steps:
             type: "random"
             #`options` is optional, will revert to defaults if not defined
             options:
-               minValue: "2020-01-01" #Default: now() - 5 days
-               maxValue: "2022-12-31" #Default: now()
+              minValue: "2020-01-01" #Default: now() - 5 days
+              maxValue: "2022-12-31" #Default: now()
         - name: "created_by"
           type: "string"
           generator:
             type: "random"
             options:
-               minLength: 10  #Default: 1
-               maxLength: 100 #Default: 20
+              minLength: 10  #Default: 1
+              maxLength: 100 #Default: 20
         - name: "customer_id"
           type: "int"
           generator:
             type: "random"
             options:
-               minValue: 0    #Default: 0
-               maxValue: 100  #Default: 1
+              minValue: 0    #Default: 0
+              maxValue: 100  #Default: 1
 ```
 
 With multiple records per foreign key
+
 ```yaml
 name: "parquet_transaction_file"
 steps:
-   - name: "transactions"
-     type: "parquet"
-     options:
-        path: "/tmp/sample/parquet/transactions"
-     count:
-        #Number of records per column to generate
-        perColumn:
-           #Can be based on multiple columns
-           columnNames:
-              - "account_id"
-           #Can define simple count of records
-           count: 10
-           #Or define generator for number of records (has to be int generator)
-           generator:
-              type: "random"
-              options:
-                 minValue: 1
-                 maxValue: 10
+  - name: "transactions"
+    type: "parquet"
+    options:
+      path: "/tmp/sample/parquet/transactions"
+    count:
+      #Number of records per column to generate
+      perColumn:
+        #Can be based on multiple columns
+        columnNames:
+          - "account_id"
+        #Can define simple count of records
+        count: 10
+        #Or define generator for number of records (has to be int generator)
+        generator:
+          type: "random"
+          options:
+            minValue: 1
+            maxValue: 10
 ...
 ```
+
 </details>
 
 ### Datagen Input
+
 #### Supported Data Sinks
+
 Draven is able to support the following data sinks:
+
 1. Database
    1. JDBC
    2. Cassandra
@@ -156,6 +170,7 @@ Draven is able to support the following data sinks:
    2. ActiveMq
 
 #### Supported Use Cases
+
 1. Insert into single data sink
 2. Insert into multiple data sinks
    1. Foreign keys associated with data sinks
@@ -165,8 +180,8 @@ Draven is able to support the following data sinks:
 5. Automatically insert data into database
    1. Read metadata from database and insert for all tables defined
 
-
 ## Challenges
+
 - How to apply foreign keys across datasets
 - Providing functions for data generators
 - Setting out the Plan -> Task -> Step model
@@ -175,6 +190,6 @@ Draven is able to support the following data sinks:
   - Save data into parquet files. Can read and delete when needed
   - Have option to truncate/delete directly
 
-
 ## Resources
+
 https://github.com/apache/spark/blob/master/sql/catalyst/src/test/scala/org/apache/spark/sql/RandomDataGenerator.scala

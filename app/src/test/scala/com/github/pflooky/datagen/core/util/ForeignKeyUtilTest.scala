@@ -5,6 +5,8 @@ import org.apache.spark.sql.types.{DataType, StructType}
 
 import java.sql.Date
 import java.time.LocalDate
+import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.io.Source
 
 class ForeignKeyUtilTest extends SparkSuite {

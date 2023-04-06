@@ -28,13 +28,17 @@ dependencies {
     implementation("org.scala-lang:scala-library:$scalaSpecificVersion")
 
     implementation("org.apache.spark:spark-sql_$scalaVersion:$sparkVersion")
-    implementation("org.postgresql:postgresql:42.5.0")
+
+    // connections
+    implementation("org.postgresql:postgresql:42.5.1")
 
     implementation("com.google.guava:guava:31.0.1-jre")
     implementation("com.github.pureconfig:pureconfig_$scalaVersion:0.17.1")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.0")
     implementation("com.fasterxml.jackson.module:jackson-module-scala_$scalaVersion:2.13.4")
-    implementation("com.github.curious-odd-man:rgxgen:1.4")
+
+    // data generation helpers
+    implementation("net.datafaker:datafaker:1.8.1")
 }
 
 testing {

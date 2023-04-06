@@ -29,6 +29,7 @@ object Constants {
   val MINIMUM_VALUE = "minValue"
   val MAXIMUM_VALUE = "maxValue"
   val ARRAY_TYPE = "arrayType"
+  val EXPRESSION = "expression"
 
   //one of generator types
   val ONE_OF_STRING = "string"
