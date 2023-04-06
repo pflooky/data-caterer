@@ -6,7 +6,7 @@ import org.apache.spark.sql.types.{DoubleType, StringType}
 
 class DataGeneratorFactoryTest extends SparkSuite {
 
-  private val dataGeneratorFactory = new DataGeneratorFactory()
+  private val dataGeneratorFactory = new DataGeneratorFactory(None)
   private val schema = Schema("manual", Some(
     List(
       Field("id", "string", Generator("random", Map())),

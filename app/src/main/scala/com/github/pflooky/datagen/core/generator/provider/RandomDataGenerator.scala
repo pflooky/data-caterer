@@ -12,11 +12,11 @@ import scala.util.Try
 
 object RandomDataGenerator {
 
-  def getGeneratorForStructType(structType: StructType, faker: Faker): Array[DataGenerator[_]] = {
+  def getGeneratorForStructType(structType: StructType, faker: Faker = new Faker()): Array[DataGenerator[_]] = {
     structType.fields.map(getGeneratorForStructField(_, faker))
   }
 
-  def getGeneratorForStructField(structField: StructField, faker: Faker): DataGenerator[_] = {
+  def getGeneratorForStructField(structField: StructField, faker: Faker = new Faker()): DataGenerator[_] = {
     structField.dataType match {
       case StringType => new RandomStringDataGenerator(structField, faker)
       case IntegerType => new RandomIntDataGenerator(structField, faker)
@@ -28,7 +28,7 @@ object RandomDataGenerator {
     }
   }
 
-  class RandomStringDataGenerator(val structField: StructField, val faker: Faker) extends NullableDataGenerator[String] {
+  class RandomStringDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends NullableDataGenerator[String] {
     private lazy val minLength = Try(structField.metadata.getLong(MINIMUM_LENGTH)).getOrElse(1L)
     private lazy val maxLength = Try(structField.metadata.getLong(MAXIMUM_LENGTH)).getOrElse(20L)
     private lazy val tryExpression = Try(structField.metadata.getString(EXPRESSION))
@@ -43,7 +43,7 @@ object RandomDataGenerator {
     }
   }
 
-  class RandomIntDataGenerator(val structField: StructField, val faker: Faker) extends DataGenerator[Int] {
+  class RandomIntDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Int] {
     private lazy val minValue = Try(structField.metadata.getLong(MINIMUM_VALUE).toInt).getOrElse(0)
     private lazy val maxValue = Try(structField.metadata.getLong(MAXIMUM_VALUE).toInt).getOrElse(1) + 1
 
@@ -54,7 +54,7 @@ object RandomDataGenerator {
     }
   }
 
-  class RandomDoubleDataGenerator(val structField: StructField, val faker: Faker) extends DataGenerator[Double] {
+  class RandomDoubleDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Double] {
     private lazy val minValue = Try(structField.metadata.getDouble(MINIMUM_VALUE)).getOrElse(0.0)
     private lazy val maxValue = Try(structField.metadata.getDouble(MAXIMUM_VALUE)).getOrElse(1.0)
 
@@ -66,7 +66,7 @@ object RandomDataGenerator {
     }
   }
 
-  class RandomDateDataGenerator(val structField: StructField, val faker: Faker) extends NullableDataGenerator[Date] {
+  class RandomDateDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends NullableDataGenerator[Date] {
     private lazy val minValue = getMinValue
     private lazy val maxValue = getMaxValue
     private lazy val maxDays = java.time.temporal.ChronoUnit.DAYS.between(minValue, maxValue).toInt
@@ -94,7 +94,7 @@ object RandomDataGenerator {
     }
   }
 
-  class RandomTimestampDataGenerator(val structField: StructField, val faker: Faker) extends NullableDataGenerator[Timestamp] {
+  class RandomTimestampDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends NullableDataGenerator[Timestamp] {
     private lazy val minValue = getMinValue
     private lazy val maxValue = getMaxValue
 
@@ -124,7 +124,7 @@ object RandomDataGenerator {
     }
   }
 
-  class RandomBooleanDataGenerator(val structField: StructField, val faker: Faker) extends DataGenerator[Boolean] {
+  class RandomBooleanDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Boolean] {
     override def generate: Boolean = {
       random.nextBoolean()
     }

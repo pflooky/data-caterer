@@ -2,6 +2,7 @@ package com.github.pflooky.datagen.core.generator.provider
 
 import com.github.pflooky.datagen.core.exception.UnsupportedDataGeneratorType
 import com.github.pflooky.datagen.core.generator.provider.RandomDataGenerator._
+import net.datafaker.Faker
 import org.apache.spark.sql.types._
 import org.scalatest.funsuite.AnyFunSuite
 
@@ -10,6 +11,8 @@ import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDate}
 
 class RandomDataGeneratorTest extends AnyFunSuite {
+
+  private val faker = new Faker()
 
   test("Can get correct data generator based on StructType") {
     val structType = StructType(Seq(

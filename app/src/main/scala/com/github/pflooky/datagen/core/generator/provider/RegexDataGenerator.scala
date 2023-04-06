@@ -6,7 +6,7 @@ import org.apache.spark.sql.types.StructField
 
 object RegexDataGenerator {
 
-  def getGenerator(structField: StructField, faker: Faker): DataGenerator[_] = {
+  def getGenerator(structField: StructField, faker: Faker = new Faker()): DataGenerator[_] = {
     new RandomRegexDataGenerator(structField, faker)
   }
 

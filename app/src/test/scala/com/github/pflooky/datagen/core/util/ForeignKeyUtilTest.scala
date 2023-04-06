@@ -1,18 +1,15 @@
 package com.github.pflooky.datagen.core.util
 
 import com.github.pflooky.datagen.core.model.SinkOptions
-import org.apache.spark.sql.types.{DataType, StructType}
 
 import java.sql.Date
 import java.time.LocalDate
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 import scala.io.Source
 
 class ForeignKeyUtilTest extends SparkSuite {
 
   test("When no foreign keys defined, return back same dataframes") {
-    val sinkOptions = SinkOptions(Map())
+    val sinkOptions = SinkOptions(None, Map())
     val dfMap = Map("name" -> sparkSession.emptyDataFrame)
 
     val result = ForeignKeyUtil.getDataFramesWithForeignKeys(sinkOptions, dfMap)
@@ -21,7 +18,7 @@ class ForeignKeyUtilTest extends SparkSuite {
   }
 
   test("Can link foreign keys between data sets") {
-    val sinkOptions = SinkOptions(Map("postgres.account.account_id" -> List("postgres.transaction.account_id")))
+    val sinkOptions = SinkOptions(None, Map("postgres.account.account_id" -> List("postgres.transaction.account_id")))
     val accountsList = List(Account("acc1", "peter", Date.valueOf(LocalDate.now()), 10))
     val transactionList = List(
       Transaction("some_acc9", "id123", Date.valueOf(LocalDate.now()), 10.0),

@@ -8,7 +8,7 @@ import scala.util.Try
 
 object OneOfDataGenerator {
 
-  def getGenerator(structField: StructField, faker: Faker): DataGenerator[Any] = {
+  def getGenerator(structField: StructField, faker: Faker = new Faker()): DataGenerator[Any] = {
     new RandomOneOfDataGenerator(structField, faker)
   }
 
