@@ -10,7 +10,7 @@ trait SparkProvider extends ConfigParser {
   def getSparkSession: SparkSession = {
     SparkSession.builder()
       .master(sparkMaster)
-      .appName("draven-datagen")
+      .appName("spartagen-datagen")
       .config("spark.sql.legacy.allowUntypedScalaUDF", "true")
       .getOrCreate()
   }

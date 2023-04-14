@@ -1,4 +1,4 @@
-# Draven - Data Generator
+# Spartagen - Data Generator
 
 ## Overview
 
@@ -6,7 +6,7 @@ Generator data for databases, files or HTTP request through a YAML based input a
 
 ## Flow
 
-![draven high level design](design/draven-design.png "High level design")
+![Spartagen high level design](design/spartagen-design.png "High level design")
 
 ## Generate data
 ### Quick start
@@ -158,7 +158,7 @@ steps:
 
 #### Supported data sinks
 
-Draven is able to support the following data sinks:
+Spartagen is able to support the following data sinks:
 
 1. Database
    1. JDBC

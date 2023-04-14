@@ -1,4 +1,4 @@
-# Draven - Data Generator
+# Spartagen - Data Generator
 
 ## Overview
 Ability to generate production like data based on any source/target system whether it be a CSV file, database table, etc.
