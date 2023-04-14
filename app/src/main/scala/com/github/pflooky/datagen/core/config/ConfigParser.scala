@@ -1,19 +1,22 @@
 package com.github.pflooky.datagen.core.config
 
-import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, JDBC, JSON, PARQUET, S3}
+import com.github.pflooky.datagen.core.model.Constants._
 import com.typesafe.config.{Config, ConfigFactory}
+import org.apache.log4j.Logger
 
-import scala.jdk.CollectionConverters.{CollectionHasAsScala, MapHasAsScala}
+import scala.collection.JavaConverters.{collectionAsScalaIterableConverter, mapAsScalaMapConverter}
 import scala.util.Try
 
 trait ConfigParser {
 
-  private val supportedConnectionConfigurations = List(JDBC, PARQUET, JSON, CASSANDRA, S3)
+  private val LOGGER = Logger.getLogger(getClass.getName)
+  private val supportedConnectionConfigurations = List(CSV, JSON, PARQUET, CASSANDRA, JDBC)
 
   lazy val config: Config = getConfig
-  lazy val planFilePath: String = config.getString("plan-file-path")
-  lazy val taskFolderPath: String = config.getString("task-folder-path")
-  lazy val sparkMaster: String = config.getString("spark.master")
+  lazy val planFilePath: String = config.getString(PLAN_FILE_PATH)
+  lazy val taskFolderPath: String = config.getString(TASK_FOLDER_PATH)
+  lazy val enableCount: Boolean = config.getBoolean(ENABLE_COUNT)
+  lazy val sparkMaster: String = config.getString(SPARK_MASTER)
   lazy val connectionConfigs: Map[String, Map[String, String]] = getConnectionConfigs
 
   def getConfig: Config = {
@@ -21,6 +24,7 @@ trait ConfigParser {
   }
 
   def getConnectionConfigs: Map[String, Map[String, String]] = {
+    LOGGER.info(s"Following data sinks are supported: ${supportedConnectionConfigurations.mkString(",")}")
     supportedConnectionConfigurations.map(s => {
       val tryBaseConfig = Try(config.getConfig(s))
       tryBaseConfig.map(baseConfig => {
@@ -28,7 +32,7 @@ trait ConfigParser {
         val valueMap = baseConfig.entrySet().asScala
           .map(entry => entry.getKey.replace(s"$baseKey.", "") -> entry.getValue.render().replaceAll("\"", ""))
           .toMap
-        Map(baseKey -> (valueMap ++ Map("format" -> s)))
+        Map(baseKey -> (valueMap ++ Map(FORMAT -> s)))
       }).getOrElse(Map())
     }).reduce((x, y) => x ++ y)
   }

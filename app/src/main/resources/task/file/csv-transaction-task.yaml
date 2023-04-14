@@ -1,14 +1,15 @@
-name: "parquet_transaction_file"
+name: "csv_transaction_file"
 steps:
   - name: "transactions"
-    type: "parquet"
+    type: "csv"
     options:
-      path: "app/src/test/resources/sample/parquet/transactions"
+      path: "app/src/test/resources/sample/csv/transactions"
     count:
       total: 1000
       perColumn:
         columnNames:
           - "account_id"
+          - "name"
         generator:
           type: "random"
           options:
@@ -20,7 +21,15 @@ steps:
         - name: "account_id"
           type: "string"
           generator:
+            type: "regex"
+            options:
+              regex: "ACC1[0-9]{9}"
+        - name: "name"
+          type: "string"
+          generator:
             type: "random"
+            options:
+              expression: "#{Name.name}"
         - name: "year"
           type: "int"
           generator:

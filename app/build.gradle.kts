@@ -29,16 +29,21 @@ dependencies {
 
     implementation("org.apache.spark:spark-sql_$scalaVersion:$sparkVersion")
 
-    // connections
+    // connectors
+    // postgres
     implementation("org.postgresql:postgresql:42.5.1")
-
-    implementation("com.google.guava:guava:31.0.1-jre")
-    implementation("com.github.pureconfig:pureconfig_$scalaVersion:0.17.1")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.0")
-    implementation("com.fasterxml.jackson.module:jackson-module-scala_$scalaVersion:2.13.4")
+    // cassandra
+    implementation("com.datastax.spark:spark-cassandra-connector_$scalaVersion:3.3.0")
 
     // data generation helpers
     implementation("net.datafaker:datafaker:1.8.1")
+
+    // misc
+    implementation("joda-time:joda-time:2.12.5")
+    implementation("com.google.guava:guava:31.0.1-jre")
+    implementation("com.github.pureconfig:pureconfig_$scalaVersion:0.17.2")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.14.2")
+    implementation("com.fasterxml.jackson.module:jackson-module-scala_$scalaVersion:2.14.2")
 }
 
 testing {

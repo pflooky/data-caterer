@@ -17,6 +17,6 @@ object App {
     new DataGeneratorProcessor().generateData()
     val endTime = LocalDateTime.now()
     val duration = Duration.between(startTime, endTime)
-    LOGGER.info(s"Completed in: ${duration.toSeconds}s")
+    LOGGER.info(s"Completed in ${duration.toSeconds}s")
   }
 }

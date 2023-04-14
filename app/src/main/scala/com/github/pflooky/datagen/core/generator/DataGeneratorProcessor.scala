@@ -13,12 +13,15 @@ class DataGeneratorProcessor extends SparkProvider {
 
   def generateData(): Unit = {
     val plan = PlanParser.parsePlan(planFilePath)
-    val plannedTasks = plan.tasks.filter(_.enabled).map(t => (t.name, t))
+    val enabledPlannedTasks = plan.tasks.filter(_.enabled)
+    val enabledTaskDetails = enabledPlannedTasks.map(x => s"name=${x.name} => sink=${x.sinkName}").mkString(", ")
+    LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${enabledPlannedTasks.size}, tasks: ($enabledTaskDetails)")
+    val enabledTaskMap = enabledPlannedTasks.map(t => (t.name, t))
 
     val tasks = PlanParser.parseTasks(taskFolderPath)
     val tasksByName = tasks.map(t => (t.name, t)).toMap
-
-    val executableTasks = plannedTasks.map(pt => (pt._2, tasksByName(pt._1)))
+    val executableTasks = enabledTaskMap.map(pt => (pt._2, tasksByName(pt._1)))
+    executableTasks.foreach(t => LOGGER.info(s"Enabled task details: ${t._2.toTaskDetailString}"))
     val sinkDf = getAllStepDf(plan, executableTasks)
 
     pushDataToSinks(executableTasks, sinkDf)
@@ -46,9 +49,7 @@ class DataGeneratorProcessor extends SparkProvider {
 
     sinkDf.foreach(df => {
       val sinkName = df._1.split("\\.").head
-      LOGGER.info(s"Pushing data to sink, sink-name=$sinkName")
-      sinkFactory.pushToSink(df._2, sinkName, stepOptionsBySink(df._1))
-      LOGGER.info(s"Successfully pushed data to sink, sink-name=$sinkName")
+      sinkFactory.pushToSink(df._2, sinkName, stepOptionsBySink(df._1), enableCount)
     })
   }
 

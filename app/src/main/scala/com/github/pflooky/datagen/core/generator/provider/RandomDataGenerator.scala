@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.provider
 
 import com.github.pflooky.datagen.core.exception.UnsupportedDataGeneratorType
-import com.github.pflooky.datagen.core.model.Constants.{EXPRESSION, MAXIMUM_LENGTH, MAXIMUM_VALUE, MINIMUM_LENGTH, MINIMUM_VALUE}
+import com.github.pflooky.datagen.core.model.Constants._
 import net.datafaker.Faker
 import org.apache.spark.sql.types._
 
@@ -29,8 +29,8 @@ object RandomDataGenerator {
   }
 
   class RandomStringDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends NullableDataGenerator[String] {
-    private lazy val minLength = Try(structField.metadata.getLong(MINIMUM_LENGTH)).getOrElse(1L)
-    private lazy val maxLength = Try(structField.metadata.getLong(MAXIMUM_LENGTH)).getOrElse(20L)
+    private lazy val minLength = Try(structField.metadata.getLong(MINIMUM_LENGTH)).getOrElse(1L).toInt
+    private lazy val maxLength = Try(structField.metadata.getLong(MAXIMUM_LENGTH)).getOrElse(20L).toInt
     private lazy val tryExpression = Try(structField.metadata.getString(EXPRESSION))
 
     override val edgeCases: List[String] = List("", "\n", "\r", "\t", " ")
@@ -38,8 +38,10 @@ object RandomDataGenerator {
     override def generate: String = {
       if (tryExpression.isSuccess) {
         faker.expression(tryExpression.get)
+      } else {
+        val stringLength = (random.nextDouble() * (maxLength - minLength) + minLength).toInt
+        random.alphanumeric.take(stringLength).mkString
       }
-      random.alphanumeric.take(random.between(minLength, maxLength).toInt).mkString
     }
   }
 
@@ -50,7 +52,7 @@ object RandomDataGenerator {
     override val edgeCases: List[Int] = List(Int.MaxValue, Int.MinValue, 0)
 
     override def generate: Int = {
-      random.between(minValue, maxValue)
+      (random.nextDouble() * (maxValue - minValue) + minValue).toInt
     }
   }
 
@@ -62,7 +64,7 @@ object RandomDataGenerator {
       0.0, -0.0, Double.MinValue, Double.NegativeInfinity)
 
     override def generate: Double = {
-      random.between(minValue, maxValue)
+      random.nextDouble() * (maxValue - minValue) + minValue
     }
   }
 
@@ -107,7 +109,7 @@ object RandomDataGenerator {
     )
 
     override def generate: Timestamp = {
-      val milliSecondsSinceEpoch = random.between(minValue, maxValue)
+      val milliSecondsSinceEpoch = (random.nextDouble() * (maxValue - minValue) + minValue).toLong
       Timestamp.from(Instant.ofEpochMilli(milliSecondsSinceEpoch))
     }
 

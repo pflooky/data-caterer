@@ -13,6 +13,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
+import java.io.Serializable
 import java.util.Random
 import scala.util.{Failure, Success, Try}
 
@@ -32,9 +33,9 @@ class DataGeneratorFactory(optSeed: Option[String])(implicit val sparkSession: S
         case Success(value) => value
       }
       LOGGER.info(s"Seed is defined at Plan level. All data will be generated with the set seed. seed-value=$seedValue")
-      new Faker(new Random(seedValue))
+      new Faker(new Random(seedValue)) with Serializable
     } else {
-      new Faker()
+      new Faker() with Serializable
     }
   }
 
@@ -83,8 +84,8 @@ class DataGeneratorFactory(optSeed: Option[String])(implicit val sparkSession: S
     val perColumnRange = if (perColumnCount.generator.isDefined) {
       val metadata = Metadata.fromJson(OBJECT_MAPPER.writeValueAsString(perColumnCount.generator.get.options))
       val countStructField = StructField(RECORD_COUNT_GENERATOR_COL, IntegerType, false, metadata)
-      val generatedCount = getDataGenerator(perColumnCount.generator.get, countStructField)
-      val numList = generateDataWithSchema(generatedCount.generate.asInstanceOf[Int], fieldsToBeGenerated)
+      val generatedCount = getDataGenerator(perColumnCount.generator.get, countStructField).asInstanceOf[DataGenerator[Int]]
+      val numList = generateDataWithSchema(generatedCount, fieldsToBeGenerated)
       df.withColumn(PER_COLUMN_COUNT, numList())
     } else if (perColumnCount.count.isDefined) {
       val numList = generateDataWithSchema(perColumnCount.count.get, fieldsToBeGenerated)
@@ -96,6 +97,14 @@ class DataGeneratorFactory(optSeed: Option[String])(implicit val sparkSession: S
     val explodeCount = perColumnRange.withColumn(PER_COLUMN_INDEX_COL, explode(col(PER_COLUMN_COUNT)))
       .drop(col(PER_COLUMN_COUNT))
     explodeCount.select(PER_COLUMN_INDEX_COL + ".*", perColumnCount.columnNames: _*)
+  }
+
+  private def generateDataWithSchema(countGenerator: DataGenerator[Int], dataGenerators: List[DataGenerator[_]]): UserDefinedFunction = {
+    udf(() => {
+      (1L to countGenerator.generate)
+        .toList
+        .map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper)))
+    }, ArrayType(StructType(dataGenerators.map(_.structField))))
   }
 
   private def generateDataWithSchema(count: Long, dataGenerators: List[DataGenerator[_]]): UserDefinedFunction = {

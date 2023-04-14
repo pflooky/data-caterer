@@ -1,4 +1,4 @@
-# Draven - spark-datagen
+# Draven - Data Generator
 
 ## Overview
 
@@ -8,15 +8,21 @@ Generator data for databases, files or HTTP request through a YAML based input a
 
 ![draven high level design](design/draven-design.png "High level design")
 
-## How to use
+## Generate data
+### Quick start
+1. Run [App.scala](app/src/main/scala/com/github/pflooky/datagen/App.scala)
+2. Check generated data under [here](app/src/test/resources/csv/transactions)
 
+### Manually create data
 1. Create plan like [here](app/src/main/resources/plan/customer-create-plan.yaml)
 2. Create tasks like [here](app/src/main/resources/task/postgres/postgres-customer-task.yaml)
 3. Run job from [here](app/src/main/scala/com/github/pflooky/datagen/App.scala)
-   1. Set plan file path to run via environment variable [PLAN_FILE_PATH](app/src/main/resources/application.conf)
-   2. Set task folder path via environment variable [TASK_FOLDER_PATH](app/src/main/resources/application.conf)
+   1. Alter [application.conf](app/src/main/resources/application.conf)
+      1. Set plan file path to run via environment variable [PLAN_FILE_PATH](app/src/main/resources/application.conf)
+      2. Set task folder path via environment variable [TASK_FOLDER_PATH](app/src/main/resources/application.conf)
 
-### Datagen Plan
+## Configuration/Customisation
+### Datagen plan
 
 [Sample plan](app/src/main/resources/plan/customer-create-plan.yaml)
 
@@ -148,9 +154,9 @@ steps:
 
 </details>
 
-### Datagen Input
+### Datagen input
 
-#### Supported Data Sinks
+#### Supported data sinks
 
 Draven is able to support the following data sinks:
 
@@ -169,7 +175,7 @@ Draven is able to support the following data sinks:
    1. Solace
    2. ActiveMq
 
-#### Supported Use Cases
+#### Supported use cases
 
 1. Insert into single data sink
 2. Insert into multiple data sinks

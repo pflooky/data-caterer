@@ -4,10 +4,11 @@ CREATE KEYSPACE IF NOT EXISTS account WITH REPLICATION = {
 };
 CREATE TABLE IF NOT EXISTS account.accounts(
     account_id TEXT,
-    status TEXT,
-    open_time TIMESTAMP,
-    name TEXT,
     amount DOUBLE,
+    created_by TEXT,
+    name TEXT,
+    open_time TIMESTAMP,
+    status TEXT,
     PRIMARY KEY (account_id)
 );
 CREATE TABLE IF NOT EXISTS account.account_status_history(

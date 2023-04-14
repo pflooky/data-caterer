@@ -7,16 +7,22 @@ services:
       POSTGRES_PASSWORD: "postgres"
       PGDATA: "/data/postgres"
     volumes:
-      - "/data/docker/postgres:/data/postgres"
+      - "${HOME}/data/postgres:/data/postgres"
       - "./app/src/test/resources/sample/sql/customer.sql:/docker-entrypoint-initdb.d/customer.sql"
     ports:
       - "5432:5432"
 
-#  dse:
-#    image: "datastax/dse-server:6.8.26"
-#    environment:
-#      DS_LICENSE: "accept"
-#    volumes:
-#      - "/data/docker/postgres:/data"
-#    ports:
-#      - "9042:9042"
+  cassandra:
+    image: "datastax/dse-server:6.8.33"
+    environment:
+      DS_LICENSE: "accept"
+    volumes:
+      - "${HOME}/data/cassandra:/var/lib/cassandra"
+      - "./app/src/test/resources/sample/cql/customer.cql:/docker-entrypoint-initdb.d/customer.cql"
+    # Allow DSE to lock memory with mlock
+    cap_add:
+      - IPC_LOCK
+    ulimits:
+      memlock: -1
+    ports:
+      - "9042:9042"

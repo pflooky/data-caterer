@@ -2,13 +2,28 @@ package com.github.pflooky.datagen.core.model
 
 object Constants {
 
+  //base config
+  val PLAN_FILE_PATH = "planFilePath"
+  val TASK_FOLDER_PATH = "taskFolderPath"
+  val ENABLE_COUNT = "enableCount"
+  val SPARK_MASTER = "spark.master"
+
+  //spark data options
+  val FORMAT = "format"
+  val SAVE_MODE = "saveMode"
+  val CASSANDRA_KEYSPACE = "keyspace"
+  val CASSANDRA_TABLE = "table"
+  val JDBC_TABLE = "dbtable"
+
   //supported data formats
-  val CASSANDRA = "cassandra"
+  val CASSANDRA = "org.apache.spark.sql.cassandra"
   val JDBC = "jdbc"
   val POSTGRES = "postgres"
-  val PARQUET = "parquet"
+
+  val CSV = "csv"
   val JSON = "json"
-  val S3 = "postgres"
+  val PARQUET = "parquet"
+  val XML = "xml"
 
   //generator types
   val RANDOM = "random"
@@ -36,4 +51,9 @@ object Constants {
   val ONE_OF_LONG = "long"
   val ONE_OF_DOUBLE = "double"
   val ONE_OF_BOOLEAN = "boolean"
+
+  //status
+  val STARTED = "started"
+  val FINISHED = "finished"
+  val FAILED = "failed"
 }
