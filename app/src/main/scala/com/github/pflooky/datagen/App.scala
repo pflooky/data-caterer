@@ -3,7 +3,7 @@
  */
 package com.github.pflooky.datagen
 
-import com.github.pflooky.datagen.core.generator.DataGeneratorProcessor
+import com.github.pflooky.datagen.core.generator.plan.datasource.DataSourceMetadataFactory
 import org.apache.log4j.Logger
 
 import java.time.{Duration, LocalDateTime}
@@ -14,7 +14,8 @@ object App {
 
   def main(args: Array[String]): Unit = {
     val startTime = LocalDateTime.now()
-    new DataGeneratorProcessor().generateData()
+    new DataSourceMetadataFactory().extractAllDataSourceMetadata()
+//    new DataGeneratorProcessor().generateData()
     val endTime = LocalDateTime.now()
     val duration = Duration.between(startTime, endTime)
     LOGGER.info(s"Completed in ${duration.toSeconds}s")

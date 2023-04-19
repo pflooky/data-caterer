@@ -20,6 +20,7 @@ object RandomDataGenerator {
     structField.dataType match {
       case StringType => new RandomStringDataGenerator(structField, faker)
       case IntegerType => new RandomIntDataGenerator(structField, faker)
+      case LongType => new RandomLongDataGenerator(structField, faker)
       case DoubleType => new RandomDoubleDataGenerator(structField, faker)
       case DateType => new RandomDateDataGenerator(structField, faker)
       case TimestampType => new RandomTimestampDataGenerator(structField, faker)
@@ -53,6 +54,17 @@ object RandomDataGenerator {
 
     override def generate: Int = {
       (random.nextDouble() * (maxValue - minValue) + minValue).toInt
+    }
+  }
+
+  class RandomLongDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Long] {
+    private lazy val minValue = Try(structField.metadata.getLong(MINIMUM_VALUE)).getOrElse(Long.MinValue)
+    private lazy val maxValue = Try(structField.metadata.getLong(MAXIMUM_VALUE)).getOrElse(Long.MaxValue)
+
+    override val edgeCases: List[Long] = List(Long.MaxValue, Long.MinValue, 0)
+
+    override def generate: Long = {
+      random.nextLong() * (maxValue - minValue) + minValue
     }
   }
 

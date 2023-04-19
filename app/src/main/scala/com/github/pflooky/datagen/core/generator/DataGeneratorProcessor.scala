@@ -27,6 +27,13 @@ class DataGeneratorProcessor extends SparkProvider {
     pushDataToSinks(executableTasks, sinkDf)
   }
 
+  def generateData(plan: Plan, tasks: List[Task]): Unit = {
+    val tasksByName = tasks.map(t => (t.name, t)).toMap
+    val summaryWithTask = plan.tasks.map(t => (t, tasksByName(t.name)))
+    val sinkDf = getAllStepDf(plan, summaryWithTask)
+    pushDataToSinks(summaryWithTask, sinkDf)
+  }
+
   private def getAllStepDf(plan: Plan, executableTasks: List[(TaskSummary, Task)]): Map[String, DataFrame] = {
     val dataGeneratorFactory = new DataGeneratorFactory(plan.sinkOptions.flatMap(_.seed))
     val generatedDataForeachTask = executableTasks.flatMap(task =>

@@ -13,9 +13,11 @@ trait ConfigParser {
   private val supportedConnectionConfigurations = List(CSV, JSON, PARQUET, CASSANDRA, JDBC)
 
   lazy val config: Config = getConfig
+  lazy val baseFolderPath: String = config.getString(PLAN_FILE_PATH)
   lazy val planFilePath: String = config.getString(PLAN_FILE_PATH)
   lazy val taskFolderPath: String = config.getString(TASK_FOLDER_PATH)
   lazy val enableCount: Boolean = config.getBoolean(ENABLE_COUNT)
+  lazy val enableGeneratePlanAndTasks: Boolean = config.getBoolean(ENABLE_GENERATE_PLAN_AND_TASKS)
   lazy val sparkMaster: String = config.getString(SPARK_MASTER)
   lazy val connectionConfigs: Map[String, Map[String, String]] = getConnectionConfigs
 

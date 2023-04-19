@@ -35,3 +35,5 @@ steps:
           type: "int"
           generator:
             type: "random"
+            options:
+              unique: true  #TODO: make unique values when generating

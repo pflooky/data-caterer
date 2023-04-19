@@ -24,21 +24,6 @@ class DataGeneratorFactory(optSeed: Option[String])(implicit val sparkSession: S
   private val OBJECT_MAPPER = new ObjectMapper()
   OBJECT_MAPPER.registerModule(DefaultScalaModule)
 
-  private def getDataFaker = {
-    if (optSeed.isDefined) {
-      val trySeed = Try(optSeed.get.toInt)
-      val seedValue = trySeed match {
-        case Failure(exception) =>
-          throw new RuntimeException(s"Failed to get seed value from plan sink options. seed-value=${optSeed.get}", exception)
-        case Success(value) => value
-      }
-      LOGGER.info(s"Seed is defined at Plan level. All data will be generated with the set seed. seed-value=$seedValue")
-      new Faker(new Random(seedValue)) with Serializable
-    } else {
-      new Faker() with Serializable
-    }
-  }
-
   def generateDataForStep(step: Step, sinkName: String): DataFrame = {
     val structFieldsWithDataGenerators = if (step.schema.fields.isDefined) {
       getStructWithGenerators(step.schema.fields.get)
@@ -46,6 +31,13 @@ class DataGeneratorFactory(optSeed: Option[String])(implicit val sparkSession: S
       List()
     }
 
+    step.`type`.toLowerCase match {
+      case HTTP | JMS =>
+        LOGGER.info(s"Given the step type is either HTTP or JMS, data will be generated in real-time mode. " +
+          s"It will be based on requests per second defined at plan level, step-name=${step.name}, step-type=${step.`type`}")
+      case _ =>
+        LOGGER.info(s"Will generate data in batch mode for step, step-name=${step.name}, step-type=${step.`type`}")
+    }
     //TODO: separate batch service to determine how to batch generate the data base on Count details
     //TODO: batch service should go through all the tasks per batch run
     generateData(structFieldsWithDataGenerators, step.count)
@@ -134,6 +126,21 @@ class DataGeneratorFactory(optSeed: Option[String])(implicit val sparkSession: S
       case ONE_OF => OneOfDataGenerator.getGenerator(structField, FAKER)
       case REGEX => RegexDataGenerator.getGenerator(structField, FAKER)
       case x => throw new UnsupportedDataGeneratorType(x)
+    }
+  }
+
+  private def getDataFaker = {
+    if (optSeed.isDefined) {
+      val trySeed = Try(optSeed.get.toInt)
+      val seedValue = trySeed match {
+        case Failure(exception) =>
+          throw new RuntimeException(s"Failed to get seed value from plan sink options. seed-value=${optSeed.get}", exception)
+        case Success(value) => value
+      }
+      LOGGER.info(s"Seed is defined at Plan level. All data will be generated with the set seed. seed-value=$seedValue")
+      new Faker(new Random(seedValue)) with Serializable
+    } else {
+      new Faker() with Serializable
     }
   }
 }
