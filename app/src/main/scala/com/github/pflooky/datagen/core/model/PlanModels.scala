@@ -1,13 +1,11 @@
 package com.github.pflooky.datagen.core.model
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.github.pflooky.datagen.core.exception.ForeignKeyFormatException
+import com.github.pflooky.datagen.core.generator.plan.datasource.DataSourceDetail
 import com.github.pflooky.datagen.core.model.Constants.{GENERATED, RANDOM}
 import com.github.pflooky.datagen.core.util.MetadataUtil
-import org.apache.spark.sql.types.{Metadata, MetadataBuilder, StructField, StructType}
+import org.apache.spark.sql.types.{StructField, StructType}
 
 import scala.language.implicitConversions
 
@@ -15,21 +13,24 @@ case class Plan(name: String, description: String, tasks: List[TaskSummary], sin
 
 case class SinkOptions(seed: Option[String], foreignKeys: Map[String, List[String]] = Map()) {
   def getForeignKeyRelations(key: String): (ForeignKeyRelation, List[ForeignKeyRelation]) = {
-    val sourceSpt = key.split("\\.")
-    if (sourceSpt.length != 3) throw new ForeignKeyFormatException(key)
-    val source = ForeignKeyRelation(sourceSpt.head, sourceSpt(1), sourceSpt.last)
-
+    val source = ForeignKeyRelation.fromString(key)
     val targets = foreignKeys(key)
-    val targetForeignKeys = targets.map(t => {
-      val targetSpt = t.split("\\.")
-      if (targetSpt.length != 3) throw new ForeignKeyFormatException(t)
-      ForeignKeyRelation(targetSpt.head, targetSpt(1), targetSpt.last)
-    })
+    val targetForeignKeys = targets.map(ForeignKeyRelation.fromString)
     (source, targetForeignKeys)
   }
 }
 case class ForeignKeyRelation(sink: String, step: String, column: String) {
-  def getDataFrameName = s"${sink}.$step"
+  override def toString: String = s"$sink.$step.$column"
+
+  def getDataFrameName = s"$sink.$step"
+}
+
+object ForeignKeyRelation {
+  def fromString(str: String): ForeignKeyRelation = {
+    val strSpt = str.split("\\.")
+    if (strSpt.length != 3) throw new ForeignKeyFormatException(str)
+    ForeignKeyRelation(strSpt.head, strSpt(1), strSpt.last)
+  }
 }
 
 case class TaskSummary(name: String, sinkName: String, enabled: Boolean = true)
@@ -43,9 +44,9 @@ case class Task(name: String, steps: List[Step]) {
 }
 
 object Task {
-  implicit def fromMetadata(name: String, stepType: String, structTypes: List[(Map[String, String], StructType)]): Task = {
+  implicit def fromMetadata(name: String, stepType: String, structTypes: List[DataSourceDetail]): Task = {
     val steps = structTypes.zipWithIndex.map(structType => {
-      Step(s"${name}_${structType._2}", stepType, Count(), structType._1._1, Schema.fromStructType(GENERATED, structType._1._2))
+      Step(structType._1.dataSourceMetadata.toStepName(structType._1.sparkOptions), stepType, Count(), structType._1.sparkOptions, Schema.fromStructType(GENERATED, structType._1.structType))
     })
     Task(name, steps)
   }

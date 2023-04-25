@@ -1,8 +1,8 @@
 package com.github.pflooky.datagen.core.util
 
 import org.apache.spark.sql.SparkSession
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
 
 trait SparkSuite extends AnyFunSuite with BeforeAndAfterAll with BeforeAndAfterEach {
 

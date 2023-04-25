@@ -49,7 +49,7 @@ class DataGeneratorProcessor extends SparkProvider {
   }
 
   private def pushDataToSinks(executableTasks: List[(TaskSummary, Task)], sinkDf: Map[String, DataFrame]): Unit = {
-    val sinkFactory = new SinkFactory(executableTasks, connectionConfigs)
+    val sinkFactory = new SinkFactory(executableTasks, connectionConfigsByName)
     val stepOptionsBySink = executableTasks.flatMap(task =>
       task._2.steps.map(s => (getSinkName(task._1, s), s.options))
     ).toMap

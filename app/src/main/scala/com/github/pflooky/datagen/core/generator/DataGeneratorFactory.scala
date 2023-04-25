@@ -51,9 +51,9 @@ class DataGeneratorFactory(optSeed: Option[String])(implicit val sparkSession: S
       val metadata = Metadata.fromJson(OBJECT_MAPPER.writeValueAsString(count.generator.get.options))
       val countStructField = StructField(RECORD_COUNT_GENERATOR_COL, IntegerType, false, metadata)
       val generatedCount = getDataGenerator(count.generator.get, countStructField).generate.asInstanceOf[Int].toLong
-      (1L to generatedCount).map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper)))
+      (1L to generatedCount).map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper())))
     } else if (count.total.isDefined) {
-      (1L to count.total.get.asInstanceOf[Number].longValue()).map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper)))
+      (1L to count.total.get.asInstanceOf[Number].longValue()).map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper())))
     } else {
       throw new RuntimeException("Need to defined 'total' or 'generator' for generating rows")
     }
@@ -95,7 +95,7 @@ class DataGeneratorFactory(optSeed: Option[String])(implicit val sparkSession: S
     udf(() => {
       (1L to countGenerator.generate)
         .toList
-        .map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper)))
+        .map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper())))
     }, ArrayType(StructType(dataGenerators.map(_.structField))))
   }
 
@@ -103,7 +103,7 @@ class DataGeneratorFactory(optSeed: Option[String])(implicit val sparkSession: S
     udf(() => {
       (1L to count)
         .toList
-        .map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper)))
+        .map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper())))
     }, ArrayType(StructType(dataGenerators.map(_.structField))))
   }
 

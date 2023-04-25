@@ -3,79 +3,89 @@ package com.github.pflooky.datagen.core.model
 object Constants {
 
   //base config
-  val BASE_FOLDER_PATH = "baseFolderPath"
-  val PLAN_FILE_PATH = "planFilePath"
-  val TASK_FOLDER_PATH = "taskFolderPath"
-  val ENABLE_COUNT = "enableCount"
-  val ENABLE_GENERATE_PLAN_AND_TASKS = "enableGeneratePlanAndTasks"
-  val SPARK_MASTER = "spark.master"
+  lazy val BASE_FOLDER_PATH = "baseFolderPath"
+  lazy val PLAN_FILE_PATH = "planFilePath"
+  lazy val TASK_FOLDER_PATH = "taskFolderPath"
+  lazy val ENABLE_COUNT = "enableCount"
+  lazy val ENABLE_GENERATE_PLAN_AND_TASKS = "enableGeneratePlanAndTasks"
+  lazy val SPARK_MASTER = "spark.master"
 
   //spark data options
-  val FORMAT = "format"
-  val SAVE_MODE = "saveMode"
-  val CASSANDRA_KEYSPACE = "keyspace"
-  val CASSANDRA_TABLE = "table"
-  val JDBC_TABLE = "dbtable"
-  val DRIVER = "driver"
+  lazy val FORMAT = "format"
+  lazy val SAVE_MODE = "saveMode"
+  lazy val CASSANDRA_KEYSPACE = "keyspace"
+  lazy val CASSANDRA_TABLE = "table"
+  lazy val JDBC_TABLE = "dbtable"
+  lazy val JDBC_QUERY = "query"
+  lazy val DRIVER = "driver"
+
+  //custom spark options
+  lazy val METADATA_FILTER_SCHEMA = "filterSchema"
+  lazy val METADATA_FILTER_TABLE = "filterTable"
 
   //supported data formats
-  val CASSANDRA = "org.apache.spark.sql.cassandra"
-  val JDBC = "jdbc"
-  val POSTGRES = "postgres"
-  val HTTP = "http"
-  val JMS = "jms"
+  lazy val CASSANDRA = "org.apache.spark.sql.cassandra"
+  lazy val JDBC = "jdbc"
+  lazy val POSTGRES = "postgres"
+  lazy val HTTP = "http"
+  lazy val JMS = "jms"
   //file formats
-  val CSV = "csv"
-  val DELTA = "delta"
-  val JSON = "json"
-  val PARQUET = "parquet"
-  val XML = "xml"
+  lazy val CSV = "csv"
+  lazy val DELTA = "delta"
+  lazy val JSON = "json"
+  lazy val PARQUET = "parquet"
+  lazy val XML = "xml"
+  lazy val SUPPORTED_CONNECTION_CONFIGURATIONS: List[String] = List(CSV, JSON, PARQUET, CASSANDRA, JDBC)
 
   //supported jdbc drivers
-  val POSTGRES_DRIVER = "org.postgresql.Driver"
+  lazy val POSTGRES_DRIVER = "org.postgresql.Driver"
 
   //generator types
-  val RANDOM = "random"
-  val ONE_OF = "oneOf"
-  val REGEX = "regex"
+  lazy val RANDOM = "random"
+  lazy val ONE_OF = "oneOf"
+  lazy val REGEX = "regex"
 
   //per column generator
-  val PER_COLUMN_COUNT = "_per_col_count"
-  val PER_COLUMN_INDEX_COL = "_per_col_index"
-  val RECORD_COUNT_GENERATOR_COL = "record_count_generator"
+  lazy val PER_COLUMN_COUNT = "_per_col_count"
+  lazy val PER_COLUMN_INDEX_COL = "_per_col_index"
+  lazy val RECORD_COUNT_GENERATOR_COL = "record_count_generator"
 
   //field metadata
-  val RANDOM_SEED = "seed"
-  val ENABLED_NULL = "enableNull"
-  val ENABLED_EDGE_CASES = "enableEdgeCases"
-  val MINIMUM_LENGTH = "minLength"
-  val MAXIMUM_LENGTH = "maxLength"
-  val MINIMUM_VALUE = "minValue"
-  val MAXIMUM_VALUE = "maxValue"
-  val ARRAY_TYPE = "arrayType"
-  val EXPRESSION = "expression"
-
-  //summary statistics
-  val SUMMARY_COL = "summary"
-  val COUNT = "count"
-  val COUNT_DISTINCT = "count_distinct"
-  val MAX = "max"
-  val MEAN = "mean"
-  val MIN = "min"
-  val STANDARD_DEVIATION = "stddev"
+  lazy val RANDOM_SEED = "seed"
+  lazy val ENABLED_NULL = "enableNull"
+  lazy val ENABLED_EDGE_CASES = "enableEdgeCases"
+  lazy val AVERAGE_LENGTH = "avgLen"
+  lazy val MINIMUM_LENGTH = "minLen"
+  lazy val MAXIMUM_LENGTH = "maxLen"
+  lazy val MINIMUM_VALUE = "min"
+  lazy val MAXIMUM_VALUE = "max"
+  lazy val ARRAY_TYPE = "arrayType"
+  lazy val EXPRESSION = "expression"
+  lazy val DISTINCT_COUNT = "distinctCount"
+  lazy val IS_PRIMARY_KEY = "isPrimaryKey"
+  lazy val PRIMARY_KEY_POSITION = "primaryKeyPosition"
+  lazy val IS_UNIQUE = "isUnique"
+  lazy val IS_NULLABLE = "isNullable"
+  lazy val NULL_COUNT = "nullCount"
+  lazy val HISTOGRAM = "histogram"
+  lazy val COLUMN_SOURCE_DATA_TYPE = "sourceDataType"
+  lazy val NUMERIC_PRECISION = "numericPrecision"
+  lazy val NUMERIC_SCALE = "numericScale"
+  lazy val DEFAULT_VALUE = "defaultValue"
+  lazy val CONSTRAINT_TYPE = "constraintType"
 
   //one of generator types
-  val ONE_OF_STRING = "string"
-  val ONE_OF_LONG = "long"
-  val ONE_OF_DOUBLE = "double"
-  val ONE_OF_BOOLEAN = "boolean"
+  lazy val ONE_OF_STRING = "string"
+  lazy val ONE_OF_LONG = "long"
+  lazy val ONE_OF_DOUBLE = "double"
+  lazy val ONE_OF_BOOLEAN = "boolean"
 
   //schema type
-  val MANUAL = "manual"
-  val GENERATED = "generated"
+  lazy val MANUAL = "manual"
+  lazy val GENERATED = "generated"
 
   //status
-  val STARTED = "started"
-  val FINISHED = "finished"
-  val FAILED = "failed"
+  lazy val STARTED = "started"
+  lazy val FINISHED = "finished"
+  lazy val FAILED = "failed"
 }

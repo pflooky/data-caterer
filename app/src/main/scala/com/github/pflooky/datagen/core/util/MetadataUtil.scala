@@ -2,55 +2,84 @@ package com.github.pflooky.datagen.core.util
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.github.pflooky.datagen.core.model.Constants.{COUNT, COUNT_DISTINCT, MAX, MAXIMUM_LENGTH, MAXIMUM_VALUE, MEAN, MIN, MINIMUM_LENGTH, MINIMUM_VALUE, STANDARD_DEVIATION, SUMMARY_COL}
-import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.types.{DoubleType, IntegerType, LongType, Metadata, MetadataBuilder, StringType, StructField, StructType}
+import com.github.pflooky.datagen.core.generator.plan.datasource.database.ColumnMetadata
+import com.github.pflooky.datagen.core.model.Constants.{HISTOGRAM, IS_NULLABLE}
+import org.apache.log4j.Logger
+import org.apache.spark.sql.catalyst.TableIdentifier
+import org.apache.spark.sql.execution.command.AnalyzeColumnCommand
+import org.apache.spark.sql.types.{Metadata, MetadataBuilder, StructField}
+import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
+
+import scala.util.{Failure, Success, Try}
 
 object MetadataUtil {
 
+  private val LOGGER = Logger.getLogger(getClass.getName)
   private val OBJECT_MAPPER = new ObjectMapper()
   OBJECT_MAPPER.registerModule(DefaultScalaModule)
   private val mapStringToAnyClass = Map[String, Any]()
+  private val TEMP_CACHED_TABLE_NAME = "temp_table"
 
   def toMap(metadata: Metadata): Map[String, Any] = {
     OBJECT_MAPPER.readValue(metadata.json, mapStringToAnyClass.getClass)
   }
 
-  def getFieldMetadata(sourceData: DataFrame): Array[StructField] = {
-    val schema = sourceData.schema
-    val summaryStatisticsDf = sourceData.summary(COUNT, COUNT_DISTINCT, MEAN, STANDARD_DEVIATION, MIN, MAX)
-
-    val fieldsWithMetadata = schema.fields.map(field => {
+  def mapToStructFields(sparkSession: SparkSession, sourceData: DataFrame, dataSourceReadOptions: Map[String, String],
+                        columnDataProfilingMetadata: Map[String, Map[String, String]],
+                        additionalColumnMetadata: Dataset[ColumnMetadata]): Array[StructField] = {
+    val fieldsWithMetadata = sourceData.schema.fields.map(field => {
       val baseMetadata = new MetadataBuilder().withMetadata(field.metadata)
-      if (summaryStatisticsDf.columns.contains(field.name)) {
-        val fieldSummary = summaryStatisticsDf.select(SUMMARY_COL, field.name)
-        val count = fieldSummary.filter(s"$SUMMARY_COL == '$COUNT'").first()
-        val countDistinct = fieldSummary.filter(s"$SUMMARY_COL == '$COUNT_DISTINCT'").first()
-        val max = fieldSummary.filter(s"$SUMMARY_COL == '$MAX'").first()
-        val mean = fieldSummary.filter(s"$SUMMARY_COL == '$MEAN'").first()
-        val min = fieldSummary.filter(s"$SUMMARY_COL == '$MIN'").first()
-        val stddev = fieldSummary.filter(s"$SUMMARY_COL == '$STANDARD_DEVIATION'").first()
-
-        baseMetadata.putString(COUNT, count.getString(1))
-        baseMetadata.putString(COUNT_DISTINCT, countDistinct.getString(1))
-        field.dataType match {
-          case StringType =>
-            baseMetadata.putLong(MAXIMUM_LENGTH, max.getString(1).length)
-            baseMetadata.putLong(MINIMUM_LENGTH, min.getString(1).length)
-          case DoubleType =>
-            baseMetadata.putDouble(MAXIMUM_VALUE, max.getString(1).toDouble)
-            baseMetadata.putDouble(MINIMUM_VALUE, min.getString(1).toDouble)
-            baseMetadata.putDouble(MEAN, mean.getString(1).toDouble)
-            baseMetadata.putDouble(STANDARD_DEVIATION, stddev.getString(1).toDouble)
-          case IntegerType | LongType =>
-            baseMetadata.putLong(MAXIMUM_VALUE, max.getString(1).toLong)
-            baseMetadata.putLong(MINIMUM_VALUE, min.getString(1).toLong)
-            baseMetadata.putDouble(MEAN, mean.getString(1).toDouble)
-            baseMetadata.putDouble(STANDARD_DEVIATION, stddev.getString(1).toDouble)
-        }
+      if (columnDataProfilingMetadata.contains(field.name)) {
+        columnDataProfilingMetadata(field.name).foreach(s => baseMetadata.putString(s._1.replace(s"${field.name}.", ""), s._2))
       }
-      StructField(field.name, field.dataType, field.nullable, baseMetadata.build())
+
+      var nullable = field.nullable
+      val optFieldAdditionalMetadata = additionalColumnMetadata.filter(c => c.dataSourceReadOptions.equals(dataSourceReadOptions) && c.column == field.name)
+      if (!optFieldAdditionalMetadata.isEmpty) {
+        val fieldAdditionalMetadata = optFieldAdditionalMetadata.first()
+        fieldAdditionalMetadata.metadata.foreach(m => {
+          if (m._1.equals(IS_NULLABLE)) {
+            nullable = m._2.toBoolean
+          }
+          baseMetadata.putString(m._1, String.valueOf(m._2))
+        })
+      }
+      StructField(field.name, field.dataType, nullable, baseMetadata.build())
     })
+
+    sparkSession.catalog.uncacheTable(TEMP_CACHED_TABLE_NAME)
     fieldsWithMetadata
+  }
+
+  def getFieldDataProfilingMetadata(sparkSession: SparkSession, sourceData: DataFrame, dataSourceReadOptions: Map[String, String],
+                                    dataSourceName: String, dataSourceFormat: String): Map[String, Map[String, String]] = {
+    computeColumnStatistics(sparkSession, sourceData, dataSourceReadOptions, dataSourceName, dataSourceFormat)
+    val columnLevelStatistics = sparkSession.sharedState.cacheManager.lookupCachedData(sourceData).get.cachedRepresentation.stats
+    LOGGER.info(s"Computed metadata statistics for data source, name=$dataSourceName, format=$dataSourceFormat, " +
+      s"rows-analysed=${columnLevelStatistics.rowCount.getOrElse(BigInt(0))}, size-in-bytes=${columnLevelStatistics.sizeInBytes}, " +
+      s"num-columns-analysed=${columnLevelStatistics.attributeStats.size}")
+
+    columnLevelStatistics.attributeStats.map(x => {
+      val columnName = x._1.name
+      val statisticsMap = x._2.toCatalogColumnStat(columnName, x._1.dataType).toMap(columnName)
+      LOGGER.info(s"Column summary statistics, name=$dataSourceName, format=$dataSourceFormat, column-name=$columnName, " +
+        s"statistics=${statisticsMap - s"$columnName.$HISTOGRAM"}")
+      (columnName, statisticsMap)
+    })
+  }
+
+  private def computeColumnStatistics(sparkSession: SparkSession, sourceData: DataFrame, dataSourceReadOptions: Map[String, String],
+                                      dataSourceName: String, dataSourceFormat: String): Unit = {
+    //have to create temp view then analyze the column stats which can be found in the cached data
+    sourceData.createOrReplaceTempView(TEMP_CACHED_TABLE_NAME)
+    sparkSession.catalog.cacheTable(TEMP_CACHED_TABLE_NAME)
+    val tryAnalyzeData = Try(AnalyzeColumnCommand(TableIdentifier(TEMP_CACHED_TABLE_NAME), None, true).run(sparkSession))
+    tryAnalyzeData match {
+      case Failure(exception) =>
+        LOGGER.error(s"Failed to analyze all columns in data source, name=$dataSourceName, format=$dataSourceFormat, " +
+          s"options=$dataSourceReadOptions, error-message=${exception.getMessage}")
+      case Success(_) =>
+        LOGGER.debug(s"Successfully analyzed all columns in data source, name=$dataSourceName, format=$dataSourceFormat, options=$dataSourceReadOptions")
+    }
   }
 }
