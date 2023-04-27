@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.provider
 
-import com.github.pflooky.datagen.core.model.Constants.{ENABLED_EDGE_CASES, ENABLED_NULL, IS_UNIQUE, RANDOM_SEED}
+import com.github.pflooky.datagen.core.model.Constants.{ENABLED_EDGE_CASES, ENABLED_NULL, HISTOGRAM, IS_UNIQUE, RANDOM_SEED}
 import net.datafaker.Faker
 import org.apache.spark.sql.types.StructField
 
@@ -32,7 +32,7 @@ trait DataGenerator[T] extends Serializable {
     } else {
       generate
     }
-    if (count > 3) {
+    if (count > 10) {
       throw new RuntimeException(s"Failed to generate new unique value for field, retries=$count, name=${structField.name}, " +
         s"metadata=${structField.metadata}, sample-previously-generated=${prevGenerated.take(3)}")
     } else if (isUnique) {

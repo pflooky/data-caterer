@@ -12,30 +12,38 @@ class DataGeneratorProcessor extends SparkProvider {
   private val LOGGER = Logger.getLogger(getClass.getName)
 
   def generateData(): Unit = {
-    val plan = PlanParser.parsePlan(planFilePath)
-    val enabledPlannedTasks = plan.tasks.filter(_.enabled)
-    val enabledTaskDetails = enabledPlannedTasks.map(x => s"name=${x.name} => sink=${x.sinkName}").mkString(", ")
-    LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${enabledPlannedTasks.size}, tasks: ($enabledTaskDetails)")
-    val enabledTaskMap = enabledPlannedTasks.map(t => (t.name, t))
+    if (enableGenerateData) {
+      val plan = PlanParser.parsePlan(planFilePath)
+      val enabledPlannedTasks = plan.tasks.filter(_.enabled)
+      val enabledTaskDetails = enabledPlannedTasks.map(x => s"name=${x.name} => sink=${x.sinkName}").mkString(", ")
+      LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${enabledPlannedTasks.size}, tasks: ($enabledTaskDetails)")
+      val enabledTaskMap = enabledPlannedTasks.map(t => (t.name, t))
 
-    val tasks = PlanParser.parseTasks(taskFolderPath)
-    val tasksByName = tasks.map(t => (t.name, t)).toMap
-    val executableTasks = enabledTaskMap.map(pt => (pt._2, tasksByName(pt._1)))
-    executableTasks.foreach(t => LOGGER.info(s"Enabled task details: ${t._2.toTaskDetailString}"))
-    val sinkDf = getAllStepDf(plan, executableTasks)
+      val tasks = PlanParser.parseTasks(taskFolderPath)
+      val tasksByName = tasks.map(t => (t.name, t)).toMap
+      val executableTasks = enabledTaskMap.map(pt => (pt._2, tasksByName(pt._1)))
+      executableTasks.foreach(t => LOGGER.info(s"Enabled task details: ${t._2.toTaskDetailString}"))
+      val sinkDf = getAllStepDf(plan, executableTasks)
 
-    pushDataToSinks(executableTasks, sinkDf)
+      pushDataToSinks(executableTasks, sinkDf)
+    } else {
+      LOGGER.info("Data generation is disabled")
+    }
   }
 
   def generateData(plan: Plan, tasks: List[Task]): Unit = {
-    val tasksByName = tasks.map(t => (t.name, t)).toMap
-    val summaryWithTask = plan.tasks.map(t => (t, tasksByName(t.name)))
-    val sinkDf = getAllStepDf(plan, summaryWithTask)
-    pushDataToSinks(summaryWithTask, sinkDf)
+    if (enableGenerateData) {
+      val tasksByName = tasks.map(t => (t.name, t)).toMap
+      val summaryWithTask = plan.tasks.map(t => (t, tasksByName(t.name)))
+      val sinkDf = getAllStepDf(plan, summaryWithTask)
+      pushDataToSinks(summaryWithTask, sinkDf)
+    } else {
+      LOGGER.info("Data generation is disabled")
+    }
   }
 
   private def getAllStepDf(plan: Plan, executableTasks: List[(TaskSummary, Task)]): Map[String, DataFrame] = {
-    val dataGeneratorFactory = new DataGeneratorFactory(plan.sinkOptions.flatMap(_.seed))
+    val dataGeneratorFactory = new DataGeneratorFactory(plan.sinkOptions.flatMap(_.seed), plan.sinkOptions.flatMap(_.locale))
     val generatedDataForeachTask = executableTasks.flatMap(task =>
       task._2.steps.map(s => (getSinkName(task._1, s), dataGeneratorFactory.generateDataForStep(s, task._1.sinkName)))
     ).toMap

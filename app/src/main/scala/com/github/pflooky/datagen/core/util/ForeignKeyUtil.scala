@@ -55,7 +55,6 @@ object ForeignKeyUtil {
   }
 
   //TODO: Need some way to understand potential relationships between fields of different data sources (i.e. correlations, word2vec) https://spark.apache.org/docs/latest/ml-features
-
   /**
    * Can have logic like this:
    * 1. Using column metadata, find columns in other data sources that have similar metadata based on data profiling
@@ -63,8 +62,8 @@ object ForeignKeyUtil {
    * 3. Get those pairs that are greater than a threshold score
    * 4. Group all foreign keys together
    * 4.1. Unsure how to determine what is the primary source of the foreign key (the one that has the most references to it?)
-   * @param dataSourceForeignKeys
-   * @return
+   * @param dataSourceForeignKeys Foreign key relationships for each data source
+   * @return Map of data source columns to respective foreign key columns (which may be in other data sources)
    */
   def getAllForeignKeyRelationships(dataSourceForeignKeys: List[Dataset[ForeignKeyRelationship]]): Map[String, List[String]] = {
     dataSourceForeignKeys.flatMap(_.collect())

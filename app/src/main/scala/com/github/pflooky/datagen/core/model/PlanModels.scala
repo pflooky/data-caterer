@@ -11,7 +11,7 @@ import scala.language.implicitConversions
 
 case class Plan(name: String, description: String, tasks: List[TaskSummary], sinkOptions: Option[SinkOptions] = None)
 
-case class SinkOptions(seed: Option[String], foreignKeys: Map[String, List[String]] = Map()) {
+case class SinkOptions(seed: Option[String], locale: Option[String], foreignKeys: Map[String, List[String]] = Map()) {
   def getForeignKeyRelations(key: String): (ForeignKeyRelation, List[ForeignKeyRelation]) = {
     val source = ForeignKeyRelation.fromString(key)
     val targets = foreignKeys(key)
@@ -91,13 +91,56 @@ object Schema {
     val fields = structType.fields.map(Field.fromStructField).toList
     Schema(schemaType, Some(fields))
   }
+
+  def flattenFields(listFields: List[Field]): List[Field] = {
+    listFields.flatMap(field => {
+      field.schema match {
+        case Some(schema) =>
+          schema.fields
+            .map(schemaFields =>
+              flattenFields(
+                schemaFields.map(f => f.copy(name = s"${field.name}||${f.name}"))
+              )).getOrElse(List())
+        case None =>
+          List(field)
+      }
+    })
+  }
+
+//  def unwrapFields(listFields: List[Field]): List[Field] = {
+//    val baseFields = listFields.filter(!_.name.contains("||"))
+//    val nestedFields = listFields.filter(field => field.name.contains("||"))
+//      .map(f => {
+//        val spt = f.name.split("\\|\\|")
+//        (spt.head, f.copy(name = spt.tail.mkString("||")))
+//      })
+//      .groupBy(_._1)
+//      .map(groupedFields => {
+//        Field(groupedFields._1, schema = Some(Schema("manual", Some(unwrapFields(groupedFields._2.map(_._2))))))
+//      }).toList
+//    baseFields ++ nestedFields
+//  }
+
+  def unwrapFields(fields: Array[StructField]): Array[StructField] = {
+    val baseFields = fields.filter(!_.name.contains("||"))
+    val nestedFields = fields.filter(field => field.name.contains("||"))
+      .map(f => {
+        val spt = f.name.split("\\|\\|")
+        (spt.head, f.copy(name = spt.tail.mkString("||")))
+      })
+      .groupBy(_._1)
+      .map(groupedFields => {
+        StructField(groupedFields._1, StructType(unwrapFields(groupedFields._2.map(_._2))))
+      }).toArray
+    baseFields ++ nestedFields
+  }
 }
 
-case class Field(name: String, `type`: String, generator: Generator, nullable: Boolean = false, defaultValue: Option[Any] = None)
+case class Field(name: String, `type`: Option[String] = None, generator: Option[Generator] = None, nullable: Boolean = false, defaultValue: Option[Any] = None, schema: Option[Schema] = None)
 
 object Field {
   implicit def fromStructField(structField: StructField): Field = {
-    Field(structField.name, structField.dataType.typeName, Generator(RANDOM, MetadataUtil.toMap(structField.metadata)), structField.nullable)
+    Field(structField.name, Some(structField.dataType.typeName), Some(Generator(RANDOM, MetadataUtil.toMap(structField.metadata))), structField.nullable)
   }
 }
 

@@ -1,0 +1,11 @@
+name: "account_create_plan"
+description: "Create account data in JSON"
+tasks:
+  - name: "json_account_file"
+    sinkName: "json"
+    enabled: true
+    
+#sinkOptions:
+#  foreignKeys:
+#    "postgres.accounts.account_number":
+#      - "parquet.transactions.account_id"

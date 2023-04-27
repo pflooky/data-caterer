@@ -195,6 +195,9 @@ Spartagen is able to support the following data sinks:
 - Data cleanup after run
   - Save data into parquet files. Can read and delete when needed
   - Have option to truncate/delete directly
+- Relationships between fields
+  - e.g. if transaction has type purchase, then it is a debit
+  - if country is Australia, then country code should be AU
 
 ## Resources
 

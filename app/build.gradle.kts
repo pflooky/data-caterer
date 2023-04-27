@@ -36,7 +36,8 @@ dependencies {
     implementation("com.datastax.spark:spark-cassandra-connector_$scalaVersion:3.3.0")
 
     // data generation helpers
-    implementation("net.datafaker:datafaker:1.8.1")
+    implementation("net.datafaker:datafaker:1.9.0")
+    implementation("org.reflections:reflections:0.10.2")
 
     // misc
     implementation("joda-time:joda-time:2.12.5")

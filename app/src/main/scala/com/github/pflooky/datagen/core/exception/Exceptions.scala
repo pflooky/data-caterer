@@ -1,5 +1,8 @@
 package com.github.pflooky.datagen.core.exception
 
+import com.github.pflooky.datagen.core.model.{Count, Field, PerColumnCount, Step}
+import org.apache.spark.sql.types.StructField
+
 class PlanFileNotFoundException(filePath: String) extends RuntimeException {
   override def getMessage: String = s"Plan file does not exist. Define in application.conf under plan-file-path or via env var PLAN_FILE_PATH, plan-file-path: $filePath"
 }
@@ -17,4 +20,18 @@ class ForeignKeyFormatException(foreignKey: String) extends RuntimeException {
 
 class UnsupportedDataGeneratorType(returnType: String) extends RuntimeException {
   override def getMessage: String = s"Unsupported return type for data generator: type=$returnType"
+}
+
+class InvalidDataGeneratorConfigurationException(structField: StructField, undefinedMetadataField: String) extends RuntimeException {
+  override def getMessage: String = s"Undefined configuration in metadata for the data generator defined. Please help to define 'undefined-metadata-field' " +
+    s"in field 'metadata' to allow data to be generated, " +
+    s"name=${structField.name}, data-type=${structField.dataType}, undefined-metadata-field=$undefinedMetadataField, metadata=${structField.metadata}"
+}
+
+class InvalidCountGeneratorConfigurationException(step: Step) extends RuntimeException {
+  override def getMessage: String = s"'total' or 'generator' needs to be defined in count for step, step-name=${step.name}, schema=${step.schema}, count=${step.count}"
+}
+
+class InvalidFieldConfigurationException(field: Field) extends RuntimeException {
+  override def getMessage: String = s"Field should have ('generator' and 'type' defined) or 'schema' defined, name=${field.name}"
 }

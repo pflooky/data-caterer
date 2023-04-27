@@ -14,6 +14,8 @@ import scala.util.Try
 
 object RandomDataGenerator {
 
+  //TODO: Support ArrayType
+  //case ArrayType(baseType, isNullable) =>
   def getGeneratorForStructType(structType: StructType, faker: Faker = new Faker()): Array[DataGenerator[_]] = {
     structType.fields.map(getGeneratorForStructField(_, faker))
   }
@@ -31,13 +33,14 @@ object RandomDataGenerator {
       case TimestampType => new RandomTimestampDataGenerator(structField, faker)
       case BooleanType => new RandomBooleanDataGenerator(structField, faker)
       case BinaryType => new RandomBinaryDataGenerator(structField, faker)
+      case ByteType => new RandomByteDataGenerator(structField, faker)
       case x => throw new UnsupportedDataGeneratorType(s"Unsupported type for random data generation: name=${structField.name}, type=${x.typeName}")
     }
   }
 
   class RandomStringDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends NullableDataGenerator[String] {
-    private lazy val minLength = Try(structField.metadata.getLong(MINIMUM_LENGTH)).getOrElse(1L).toInt
-    private lazy val maxLength = Try(structField.metadata.getLong(MAXIMUM_LENGTH)).getOrElse(10L).toInt
+    private lazy val minLength = Try(structField.metadata.getString(MINIMUM_LENGTH).toInt).getOrElse(1)
+    private lazy val maxLength = Try(structField.metadata.getString(MAXIMUM_LENGTH).toInt).getOrElse(10)
     assert(minLength <= maxLength, s"minLength has to be less than or equal to maxLength, field-name${structField.name}")
     private lazy val tryExpression = Try(structField.metadata.getString(EXPRESSION))
 
@@ -55,7 +58,7 @@ object RandomDataGenerator {
 
   class RandomIntDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Int] {
     private lazy val minValue = Try(structField.metadata.getString(MINIMUM_VALUE).toInt).getOrElse(0)
-    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toInt).getOrElse(Int.MaxValue - 1)
+    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toInt).getOrElse(1000)
     assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
 
     override val edgeCases: List[Int] = List(Int.MaxValue, Int.MinValue, 0)
@@ -67,7 +70,7 @@ object RandomDataGenerator {
 
   class RandomShortDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Short] {
     private lazy val minValue = Try(structField.metadata.getString(MINIMUM_VALUE).toShort).getOrElse(0.toShort)
-    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toShort).getOrElse(Short.MaxValue)
+    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toShort).getOrElse(1000.toShort)
     assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
 
     override val edgeCases: List[Short] = List(Short.MaxValue, Short.MinValue, 0)
@@ -79,7 +82,7 @@ object RandomDataGenerator {
 
   class RandomLongDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Long] {
     private lazy val minValue = Try(structField.metadata.getString(MINIMUM_VALUE).toLong).getOrElse(0L)
-    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toLong).getOrElse(Long.MaxValue)
+    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toLong).getOrElse(1000L)
     assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
 
     override val edgeCases: List[Long] = List(Long.MaxValue, Long.MinValue, 0)
@@ -90,11 +93,11 @@ object RandomDataGenerator {
   }
 
   class RandomDecimalDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[BigDecimal] {
-    private lazy val minValue = Try(BigDecimal.valueOf(structField.metadata.getString(MINIMUM_VALUE).toLong)).getOrElse(BigDecimal.valueOf(0))
-    private lazy val maxValue = Try(BigDecimal.valueOf(structField.metadata.getString(MAXIMUM_VALUE).toLong)).getOrElse(BigDecimal.valueOf(Long.MaxValue))
+    private lazy val minValue = Try(BigDecimal(structField.metadata.getString(MINIMUM_VALUE))).getOrElse(BigDecimal.valueOf(0))
+    private lazy val maxValue = Try(BigDecimal(structField.metadata.getString(MAXIMUM_VALUE))).getOrElse(BigDecimal.valueOf(1000))
     assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
 
-    override val edgeCases: List[BigDecimal] = List(BigDecimal.valueOf(Long.MaxValue), Long.MinValue, 0)
+    override val edgeCases: List[BigDecimal] = List(Long.MaxValue, Long.MinValue, 0)
 
     override def generate: BigDecimal = {
       random.nextDouble() * (maxValue - minValue) + minValue
@@ -103,7 +106,7 @@ object RandomDataGenerator {
 
   class RandomDoubleDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Double] {
     private lazy val minValue = Try(structField.metadata.getString(MINIMUM_VALUE).toDouble).getOrElse(0.0)
-    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toDouble).getOrElse(Double.MaxValue)
+    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toDouble).getOrElse(1000.0)
     assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
 
     override val edgeCases: List[Double] = List(Double.PositiveInfinity, Double.MaxValue, Double.MinPositiveValue,
@@ -116,7 +119,7 @@ object RandomDataGenerator {
 
   class RandomFloatDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Float] {
     private lazy val minValue = Try(structField.metadata.getString(MINIMUM_VALUE).toFloat).getOrElse(0.0.toFloat)
-    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toFloat).getOrElse(Float.MaxValue)
+    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toFloat).getOrElse(1000.0.toFloat)
     assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
 
     override val edgeCases: List[Float] = List(Float.PositiveInfinity, Float.MaxValue, Float.MinPositiveValue,
@@ -194,8 +197,8 @@ object RandomDataGenerator {
   }
 
   class RandomBinaryDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends NullableDataGenerator[Array[Byte]] {
-    private lazy val minLength = Try(structField.metadata.getString(MINIMUM_LENGTH).toLong).getOrElse(1L).toInt
-    private lazy val maxLength = Try(structField.metadata.getString(MAXIMUM_LENGTH).toLong).getOrElse(20L).toInt
+    private lazy val minLength = Try(structField.metadata.getString(MINIMUM_LENGTH).toInt).getOrElse(1)
+    private lazy val maxLength = Try(structField.metadata.getString(MAXIMUM_LENGTH).toInt).getOrElse(20)
     assert(minLength <= maxLength, s"minLength has to be less than or equal to maxLength, field-name${structField.name}")
 
     override val edgeCases: List[Array[Byte]] = List(Array(), "\n".getBytes, "\r".getBytes, "\t".getBytes,
@@ -204,6 +207,14 @@ object RandomDataGenerator {
     override def generate: Array[Byte] = {
       val byteLength = (random.nextDouble() * (maxLength - minLength) + minLength).toInt
       faker.random().nextRandomBytes(byteLength)
+    }
+  }
+
+  class RandomByteDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Byte] {
+    override val edgeCases: List[Byte] = List(Byte.MinValue, Byte.MaxValue)
+
+    override def generate: Byte = {
+      faker.random().nextRandomBytes(1).head
     }
   }
 }

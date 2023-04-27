@@ -4,12 +4,11 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.github.pflooky.datagen.core.generator.plan.datasource.database.{CassandraMetadata, DatabaseMetadata, DatabaseMetadataProcessor, ForeignKeyRelationship, PostgresMetadata}
+import com.github.pflooky.datagen.core.generator.plan.datasource.database.{CassandraMetadata, DatabaseMetadata, DatabaseMetadataProcessor, PostgresMetadata}
 import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, DRIVER, FORMAT, JDBC, POSTGRES_DRIVER}
 import com.github.pflooky.datagen.core.model.{Plan, SinkOptions, Task, TaskSummary}
 import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, MetadataUtil, SparkProvider}
 import org.apache.log4j.Logger
-import org.apache.spark.sql.Dataset
 import org.apache.spark.sql.types.StructType
 import org.joda.time.DateTime
 
@@ -74,7 +73,7 @@ class DataSourceMetadataFactory extends SparkProvider {
         .format(dataSourceMetadata.format)
         .options(dataSourceMetadata.connectionConfig ++ dataSourceReadOptions)
         .load()
-      val fieldsWithDataProfilingMetadata = MetadataUtil.getFieldDataProfilingMetadata(sparkSession, data, dataSourceReadOptions, dataSourceMetadata.name, dataSourceMetadata.format)
+      val fieldsWithDataProfilingMetadata = MetadataUtil.getFieldDataProfilingMetadata(sparkSession, data, dataSourceReadOptions, dataSourceMetadata)
       val structFields = MetadataUtil.mapToStructFields(sparkSession, data, dataSourceReadOptions, fieldsWithDataProfilingMetadata, additionalColumnMetadata)
       DataSourceDetail(dataSourceMetadata, dataSourceReadOptions, StructType(structFields))
     }).toList
@@ -96,7 +95,7 @@ class DataSourceMetadataFactory extends SparkProvider {
   private def writePlanToFile(tasks: List[(String, Task)], foreignKeys: Map[String, List[String]], planFolder: File): Plan = {
     val currentTime = new DateTime().toString("yyyy-MM-dd_HH:mm")
     val taskSummary = tasks.map(t => TaskSummary(t._2.name, t._1))
-    val plan = Plan(s"plan_$currentTime", "Generated plan", taskSummary, Some(SinkOptions(None, foreignKeys)))
+    val plan = Plan(s"plan_$currentTime", "Generated plan", taskSummary, Some(SinkOptions(None, None, foreignKeys)))
     val generatedPlanFilePath = new File(s"$planFolder/plan_$currentTime.yaml")
     LOGGER.info(s"Writing plan to file, plan=${plan.name}, num-tasks=${plan.tasks.size}, file-path=$generatedPlanFilePath")
     generatedPlanFilePath.createNewFile()

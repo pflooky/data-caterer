@@ -20,9 +20,4 @@ class DatabaseMetadataProcessor(sparkSession: SparkSession) {
     filteredSchemasAndTables.collect()
       .map(r => databaseMetadata.getTableDataOptions(r.getAs[String]("schema"), r.getAs[String]("table")))
   }
-
-  def getAdditionalColumnMetadata(databaseMetadata: DatabaseMetadata): Map[String, String] = {
-
-    Map()
-  }
 }

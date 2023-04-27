@@ -7,6 +7,7 @@ object Constants {
   lazy val PLAN_FILE_PATH = "planFilePath"
   lazy val TASK_FOLDER_PATH = "taskFolderPath"
   lazy val ENABLE_COUNT = "enableCount"
+  lazy val ENABLE_GENERATE_DATA = "enableGenerateData"
   lazy val ENABLE_GENERATE_PLAN_AND_TASKS = "enableGeneratePlanAndTasks"
   lazy val SPARK_MASTER = "spark.master"
 
@@ -35,7 +36,7 @@ object Constants {
   lazy val JSON = "json"
   lazy val PARQUET = "parquet"
   lazy val XML = "xml"
-  lazy val SUPPORTED_CONNECTION_CONFIGURATIONS: List[String] = List(CSV, JSON, PARQUET, CASSANDRA, JDBC)
+  lazy val SUPPORTED_CONNECTION_FORMATS: List[String] = List(CSV, JSON, PARQUET, CASSANDRA, JDBC)
 
   //supported jdbc drivers
   lazy val POSTGRES_DRIVER = "org.postgresql.Driver"
@@ -73,6 +74,8 @@ object Constants {
   lazy val NUMERIC_SCALE = "numericScale"
   lazy val DEFAULT_VALUE = "defaultValue"
   lazy val CONSTRAINT_TYPE = "constraintType"
+  lazy val LONG_TYPE_METADATA: List[String] = List(MAXIMUM_LENGTH, MINIMUM_LENGTH, AVERAGE_LENGTH, MAXIMUM_VALUE, MINIMUM_VALUE)
+  lazy val DOUBLE_TYPE_METADATA: List[String] = List(MAXIMUM_VALUE, MINIMUM_VALUE)
 
   //one of generator types
   lazy val ONE_OF_STRING = "string"

@@ -12,9 +12,11 @@ object OneOfDataGenerator {
     new RandomOneOfDataGenerator(structField, faker)
   }
 
-  class RandomOneOfDataGenerator(val structField: StructField, val faker: Faker) extends DataGenerator[Any] {
+  class RandomOneOfDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Any] {
     private lazy val oneOfValues = getOneOfList
     private lazy val oneOfArrayLength = oneOfValues.length
+    assert(structField.metadata.contains(ONE_OF), s"$ONE_OF not defined for data generator in metadata, unable to generate data, name=${structField.name}, " +
+      s"type=${structField.dataType}, metadata=${structField.metadata}")
 
     override def generate: Any = {
       oneOfValues(random.nextInt(oneOfArrayLength))

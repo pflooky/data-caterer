@@ -3,8 +3,7 @@ package com.github.pflooky.datagen.core.generator.plan.datasource.database
 import com.github.pflooky.datagen.core.generator.plan.datasource.DataSourceMetadata
 import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, COLUMN_SOURCE_DATA_TYPE, DEFAULT_VALUE, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_QUERY, JDBC_TABLE, MAXIMUM_LENGTH, METADATA_FILTER_SCHEMA, METADATA_FILTER_TABLE, NUMERIC_PRECISION, NUMERIC_SCALE, PRIMARY_KEY_POSITION}
 import com.github.pflooky.datagen.core.model.ForeignKeyRelation
-import org.apache.spark.sql.functions.{col, collect_list, concat, lit}
-import org.apache.spark.sql.{DataFrame, Dataset, Encoder, Encoders, SparkSession, functions}
+import org.apache.spark.sql.{DataFrame, Dataset, Encoder, Encoders, SparkSession}
 
 trait DatabaseMetadata extends DataSourceMetadata {
   val metadataTable: Map[String, String]
@@ -14,7 +13,7 @@ trait DatabaseMetadata extends DataSourceMetadata {
 
   def getTableDataOptions(schema: String, table: String): Map[String, String]
 
-  def createFilterQuery: Option[String] = {
+  val createFilterQuery: Option[String] = {
     val filterSchema = if (connectionConfig.contains(METADATA_FILTER_SCHEMA)) {
       val configFilterSchema = connectionConfig(METADATA_FILTER_SCHEMA).split(",").map(_.trim).toList
       configFilterSchema ++ baseFilterSchema
@@ -86,14 +85,7 @@ case class PostgresMetadata(name: String, connectionConfig: Map[String, String])
         |                                           tc1.table_schema = kcu.table_schema AND tc1.table_name = kcu.table_name
         |                          WHERE constraint_type = 'PRIMARY KEY') pc
         |                         ON pc.column_name = c.column_name AND pc.table_schema = c.table_schema AND pc.table_name = c.table_name""".stripMargin
-    val tableConstraintData = sparkSession.read
-      .format(JDBC)
-      .options(connectionConfig ++ Map(JDBC_QUERY -> query))
-      .load()
-    val optCreateFilterQuery = createFilterQuery
-    val filteredTableConstraintData = if (optCreateFilterQuery.isDefined) {
-      tableConstraintData.filter(optCreateFilterQuery.get)
-    } else tableConstraintData
+    val filteredTableConstraintData: DataFrame = runQuery(sparkSession, query)
 
     val mappedColumnMetadata = filteredTableConstraintData.map(r => {
       val isPrimaryKey = if (r.getAs[String]("is_primary_key").equalsIgnoreCase("yes")) "true" else "false"
@@ -138,14 +130,7 @@ case class PostgresMetadata(name: String, connectionConfig: Map[String, String])
         |             ON ccu.constraint_name = tc.constraint_name
         |                 AND ccu.table_schema = tc.table_schema
         |WHERE tc.constraint_type = 'FOREIGN KEY'""".stripMargin
-    val foreignKeyData = sparkSession.read
-      .format(JDBC)
-      .options(connectionConfig ++ Map(JDBC_QUERY -> query))
-      .load()
-    val optCreateFilterQuery = createFilterQuery
-    val filteredForeignKeyData = if (optCreateFilterQuery.isDefined) {
-      foreignKeyData.filter(optCreateFilterQuery.get)
-    } else foreignKeyData
+    val filteredForeignKeyData: DataFrame = runQuery(sparkSession, query)
 
     filteredForeignKeyData.map(r =>
       ForeignKeyRelationship(
@@ -160,6 +145,19 @@ case class PostgresMetadata(name: String, connectionConfig: Map[String, String])
       )
     )
   }
+
+  private def runQuery(sparkSession: SparkSession, query: String): DataFrame = {
+    val queryData = sparkSession.read
+      .format(JDBC)
+      .options(connectionConfig ++ Map(JDBC_QUERY -> query))
+      .load()
+    val optCreateFilterQuery = createFilterQuery
+    if (optCreateFilterQuery.isDefined) {
+      queryData.filter(optCreateFilterQuery.get)
+    } else {
+      queryData
+    }
+  }
 }
 
 case class CassandraMetadata(name: String, connectionConfig: Map[String, String]) extends DatabaseMetadata {
@@ -173,9 +171,7 @@ case class CassandraMetadata(name: String, connectionConfig: Map[String, String]
     Map(CASSANDRA_KEYSPACE -> schema, CASSANDRA_TABLE -> table)
   }
 
-  override def getAdditionalColumnMetadata(implicit sparkSession: SparkSession): Dataset[ColumnMetadata] = {
-    ???
-  }
+  override def getAdditionalColumnMetadata(implicit sparkSession: SparkSession): Dataset[ColumnMetadata] = ???
 
   override def getForeignKeys(implicit sparkSession: SparkSession): Dataset[ForeignKeyRelationship] = ???
 
