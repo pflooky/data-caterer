@@ -107,20 +107,6 @@ object Schema {
     })
   }
 
-//  def unwrapFields(listFields: List[Field]): List[Field] = {
-//    val baseFields = listFields.filter(!_.name.contains("||"))
-//    val nestedFields = listFields.filter(field => field.name.contains("||"))
-//      .map(f => {
-//        val spt = f.name.split("\\|\\|")
-//        (spt.head, f.copy(name = spt.tail.mkString("||")))
-//      })
-//      .groupBy(_._1)
-//      .map(groupedFields => {
-//        Field(groupedFields._1, schema = Some(Schema("manual", Some(unwrapFields(groupedFields._2.map(_._2))))))
-//      }).toList
-//    baseFields ++ nestedFields
-//  }
-
   def unwrapFields(fields: Array[StructField]): Array[StructField] = {
     val baseFields = fields.filter(!_.name.contains("||"))
     val nestedFields = fields.filter(field => field.name.contains("||"))

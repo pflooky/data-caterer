@@ -47,8 +47,6 @@ class ForeignKeyUtilTest extends SparkSuite {
     val json = sparkSession.createDataset(Seq(sampleJson))
     val data = sparkSession.read.option("inferTimestamp", "true").option("inferDate", "true").json(json)
     data.show(false)
-    val flatFields = flattenFields(data.schema.fields)
-    val unwrapField = unwrapFields(flatFields)
     sampleJsonFile.close()
   }
 
