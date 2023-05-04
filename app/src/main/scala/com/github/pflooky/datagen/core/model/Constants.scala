@@ -9,15 +9,22 @@ object Constants {
   lazy val ENABLE_COUNT = "enableCount"
   lazy val ENABLE_GENERATE_DATA = "enableGenerateData"
   lazy val ENABLE_GENERATE_PLAN_AND_TASKS = "enableGeneratePlanAndTasks"
+  lazy val ENABLE_RECORD_TRACKING = "enableRecordTracking"
+  lazy val RECORD_TRACKING_FOLDER_PATH = "recordTrackingFolderPath"
+  lazy val ENABLE_DELETE_GENERATED_RECORDS = "enableDeleteGeneratedRecords"
   lazy val SPARK_MASTER = "spark.master"
 
   //spark data options
   lazy val FORMAT = "format"
+  lazy val PATH = "path"
   lazy val SAVE_MODE = "saveMode"
   lazy val CASSANDRA_KEYSPACE = "keyspace"
   lazy val CASSANDRA_TABLE = "table"
   lazy val JDBC_TABLE = "dbtable"
   lazy val JDBC_QUERY = "query"
+  lazy val JDBC_USERNAME = "user"
+  lazy val URL = "url"
+  lazy val PASSWORD = "password"
   lazy val DRIVER = "driver"
 
   //custom spark options
@@ -40,6 +47,7 @@ object Constants {
 
   //supported jdbc drivers
   lazy val POSTGRES_DRIVER = "org.postgresql.Driver"
+  lazy val MYSQL_DRIVER = "com.mysql.cj.jdbc.Driver"
 
   //generator types
   lazy val RANDOM = "random"
@@ -58,6 +66,7 @@ object Constants {
   lazy val AVERAGE_LENGTH = "avgLen"
   lazy val MINIMUM_LENGTH = "minLen"
   lazy val MAXIMUM_LENGTH = "maxLen"
+  lazy val SOURCE_MAXIMUM_LENGTH = "sourceMaxLen"
   lazy val MINIMUM_VALUE = "min"
   lazy val MAXIMUM_VALUE = "max"
   lazy val ARRAY_TYPE = "arrayType"
@@ -69,13 +78,11 @@ object Constants {
   lazy val IS_NULLABLE = "isNullable"
   lazy val NULL_COUNT = "nullCount"
   lazy val HISTOGRAM = "histogram"
-  lazy val COLUMN_SOURCE_DATA_TYPE = "sourceDataType"
+  lazy val SOURCE_COLUMN_DATA_TYPE = "sourceDataType"
   lazy val NUMERIC_PRECISION = "numericPrecision"
   lazy val NUMERIC_SCALE = "numericScale"
   lazy val DEFAULT_VALUE = "defaultValue"
   lazy val CONSTRAINT_TYPE = "constraintType"
-  lazy val LONG_TYPE_METADATA: List[String] = List(MAXIMUM_LENGTH, MINIMUM_LENGTH, AVERAGE_LENGTH, MAXIMUM_VALUE, MINIMUM_VALUE)
-  lazy val DOUBLE_TYPE_METADATA: List[String] = List(MAXIMUM_VALUE, MINIMUM_VALUE)
 
   //one of generator types
   lazy val ONE_OF_STRING = "string"
@@ -91,4 +98,8 @@ object Constants {
   lazy val STARTED = "started"
   lazy val FINISHED = "finished"
   lazy val FAILED = "failed"
+
+  //misc
+  lazy val NESTED_FIELD_NAME_DELIMITER = "||"
+  lazy val APPLICATION_CONFIG_PATH = "APPLICATION_CONFIG_PATH"
 }

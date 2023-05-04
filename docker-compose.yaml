@@ -8,21 +8,32 @@ services:
       PGDATA: "/data/postgres"
     volumes:
       - "${HOME}/data/postgres:/data/postgres"
-      - "./app/src/test/resources/sample/sql/customer.sql:/docker-entrypoint-initdb.d/customer.sql"
+      - "./app/src/test/resources/sample/sql/postgres/customer.sql:/docker-entrypoint-initdb.d/customer.sql"
     ports:
       - "5432:5432"
 
-  cassandra:
-    image: "datastax/dse-server:6.8.33"
+  mysql:
+    image: "mysql:8.0.33"
     environment:
-      DS_LICENSE: "accept"
+      MYSQL_ROOT_PASSWORD: "root"
+    command: "--default-authentication-plugin=mysql_native_password"
     volumes:
-      - "${HOME}/data/cassandra:/var/lib/cassandra"
-      - "./app/src/test/resources/sample/cql/customer.cql:/docker-entrypoint-initdb.d/customer.cql"
-    # Allow DSE to lock memory with mlock
-    cap_add:
-      - IPC_LOCK
-    ulimits:
-      memlock: -1
+      - "${HOME}/data/mysql:/var/lib/mysql"
+      - "./app/src/test/resources/sample/sql/mysql/customer.sql:/docker-entrypoint-initdb.d/customer.sql"
     ports:
-      - "9042:9042"
+      - "3306:3306"
+
+#  cassandra:
+#    image: "datastax/dse-server:6.8.33"
+#    environment:
+#      DS_LICENSE: "accept"
+#    volumes:
+#      - "${HOME}/data/cassandra:/var/lib/cassandra"
+#      - "./app/src/test/resources/sample/cql/customer.cql:/docker-entrypoint-initdb.d/customer.cql"
+#    # Allow DSE to lock memory with mlock
+#    cap_add:
+#      - IPC_LOCK
+#    ulimits:
+#      memlock: -1
+#    ports:
+#      - "9042:9042"

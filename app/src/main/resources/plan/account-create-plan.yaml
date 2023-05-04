@@ -2,7 +2,7 @@ name: "account_create_plan"
 description: "Create account data in JSON"
 tasks:
   - name: "json_account_file"
-    sinkName: "json"
+    dataSourceName: "json"
     enabled: true
     
 #sinkOptions:

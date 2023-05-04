@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.exception
 
 import com.github.pflooky.datagen.core.model.{Count, Field, PerColumnCount, Step}
-import org.apache.spark.sql.types.StructField
+import org.apache.spark.sql.types.{DataType, StructField}
 
 class PlanFileNotFoundException(filePath: String) extends RuntimeException {
   override def getMessage: String = s"Plan file does not exist. Define in application.conf under plan-file-path or via env var PLAN_FILE_PATH, plan-file-path: $filePath"
@@ -15,11 +15,15 @@ class TaskParseException(taskFileName: String, throwable: Throwable) extends Run
 }
 
 class ForeignKeyFormatException(foreignKey: String) extends RuntimeException {
-  override def getMessage: String = s"Foreign key should be split by '.' according to format: <sinkName>.<stepName>.<columnName>, foreign-key=$foreignKey"
+  override def getMessage: String = s"Foreign key should be split by '.' according to format: <dataSourceName>.<stepName>.<columnName>, foreign-key=$foreignKey"
 }
 
 class UnsupportedDataGeneratorType(returnType: String) extends RuntimeException {
   override def getMessage: String = s"Unsupported return type for data generator: type=$returnType"
+}
+
+class UnsupportedJdbcDeleteDataType(dataType: DataType, table: String) extends RuntimeException {
+  override def getMessage: String = s"Unsupported data type for deleting from JDBC data source: type=$dataType, table=$table"
 }
 
 class InvalidDataGeneratorConfigurationException(structField: StructField, undefinedMetadataField: String) extends RuntimeException {
@@ -34,4 +38,8 @@ class InvalidCountGeneratorConfigurationException(step: Step) extends RuntimeExc
 
 class InvalidFieldConfigurationException(field: Field) extends RuntimeException {
   override def getMessage: String = s"Field should have ('generator' and 'type' defined) or 'schema' defined, name=${field.name}"
+}
+
+class InvalidDataSourceOptions(dataSourceName: String, missingConfig: String) extends RuntimeException {
+  override def getMessage: String = s"Missing config for data source connection, data-source-name=$dataSourceName, missing-config=$missingConfig"
 }

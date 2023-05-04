@@ -2,16 +2,16 @@ name: "customer_create_plan"
 description: "Create customers in JDBC and Cassandra"
 tasks:
   - name: "jdbc_customer_accounts_table_create"
-    sinkName: "postgres"
+    dataSourceName: "postgres"
     enabled: true
   - name: "parquet_transaction_file"
-    sinkName: "parquet"
+    dataSourceName: "parquet"
     enabled: true
   - name: "cassandra_customer_status_table_create"
-    sinkName: "cassandra"
+    dataSourceName: "cassandra"
     enabled: false
   - name: "cassandra_customer_transactions_table_create"
-    sinkName: "cassandra"
+    dataSourceName: "cassandra"
     enabled: false
     
 #sinkOptions:

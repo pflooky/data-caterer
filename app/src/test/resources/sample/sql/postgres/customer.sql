@@ -45,3 +45,9 @@ CREATE TABLE IF NOT EXISTS account.transactions
     PRIMARY KEY (id, create_time, transaction_id),
     CONSTRAINT fk_txn_account_number FOREIGN KEY (id) REFERENCES account.accounts (id)
 );
+
+CREATE TABLE IF NOT EXISTS account.mapping
+(
+    key TEXT,
+    value TEXT
+);

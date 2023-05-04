@@ -24,7 +24,7 @@ For example, if I have the column `account_number` in a data source named `custo
 ```yaml
 sinkOptions:
   foreignKeys:
-    #The foreign key name with naming convention [sinkName].[schema].[column name]
+    #The foreign key name with naming convention [dataSourceName].[schema].[column name]
     "customer-postgres.accounts.account_number":
       #List of columns to match with same naming convention
       - "transaction-cassandra.transactions.account_id"

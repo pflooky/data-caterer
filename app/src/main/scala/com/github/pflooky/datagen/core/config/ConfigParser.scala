@@ -1,9 +1,9 @@
 package com.github.pflooky.datagen.core.config
 
-import com.github.pflooky.datagen.core.model.Constants.{BASE_FOLDER_PATH, ENABLE_COUNT, ENABLE_GENERATE_DATA, ENABLE_GENERATE_PLAN_AND_TASKS, FORMAT, PLAN_FILE_PATH, SPARK_MASTER, SUPPORTED_CONNECTION_FORMATS, TASK_FOLDER_PATH}
+import com.github.pflooky.datagen.core.model.Constants.{APPLICATION_CONFIG_PATH, BASE_FOLDER_PATH, ENABLE_COUNT, ENABLE_DELETE_GENERATED_RECORDS, ENABLE_GENERATE_DATA, ENABLE_GENERATE_PLAN_AND_TASKS, ENABLE_RECORD_TRACKING, FORMAT, PLAN_FILE_PATH, RECORD_TRACKING_FOLDER_PATH, SPARK_MASTER, SUPPORTED_CONNECTION_FORMATS, TASK_FOLDER_PATH}
 import com.typesafe.config.{Config, ConfigFactory}
 
-import scala.collection.JavaConverters.{collectionAsScalaIterableConverter, mapAsScalaMapConverter}
+import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.util.Try
 
 trait ConfigParser {
@@ -15,11 +15,22 @@ trait ConfigParser {
   lazy val enableCount: Boolean = config.getBoolean(ENABLE_COUNT)
   lazy val enableGenerateData: Boolean = config.getBoolean(ENABLE_GENERATE_DATA)
   lazy val enableGeneratePlanAndTasks: Boolean = config.getBoolean(ENABLE_GENERATE_PLAN_AND_TASKS)
+  lazy val enableRecordTracking: Boolean = config.getBoolean(ENABLE_RECORD_TRACKING)
+  lazy val recordTrackingFolderPath: String = config.getString(RECORD_TRACKING_FOLDER_PATH)
+  lazy val enableDeleteGeneratedRecords: Boolean = config.getBoolean(ENABLE_DELETE_GENERATED_RECORDS)
   lazy val sparkMaster: String = config.getString(SPARK_MASTER)
   lazy val connectionConfigsByName: Map[String, Map[String, String]] = getConnectionConfigsByName
 
   def getConfig: Config = {
-    ConfigFactory.load()
+    val appConfEnv = System.getenv(APPLICATION_CONFIG_PATH)
+    val appConfProp = System.getProperty(APPLICATION_CONFIG_PATH)
+    val applicationConfPath = (appConfEnv, appConfProp) match {
+      case (null, null) => "application.conf"
+      case (env, _) if env != null => env
+      case (_, prop) if prop != null => prop
+      case _ => "application.conf"
+    }
+    ConfigFactory.load(applicationConfPath)
   }
 
   def getConnectionConfigsByName: Map[String, Map[String, String]] = {

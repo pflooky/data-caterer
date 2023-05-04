@@ -50,14 +50,22 @@ class ForeignKeyUtilTest extends SparkSuite {
     sampleJsonFile.close()
   }
 
-  def flattenFields(fields: Array[StructField]): Array[StructField] = {
-    fields.flatMap(field => {
-      field.dataType match {
-        case structType: StructType =>
-          flattenFields(structType.fields.map(f => f.copy(name = s"${field.name}||${f.name}")))
-        case _ => Array(field)
-      }
-    })
+  test("Can get delete order based on foreign keys defined") {
+    val foreignKeys = Map(
+      "postgres.account.accounts.account_id" -> List("postgres.account.balances.account_id", "postgres.account.transactions.account_id")
+    )
+    val deleteOrder = ForeignKeyUtil.getDeleteOrder(foreignKeys)
+    assert(deleteOrder == List("postgres.account.balances.account_id", "postgres.account.transactions.account_id", "postgres.account.accounts.account_id"))
+  }
+
+  test("Can get delete order based on nested foreign keys") {
+    val foreignKeys = Map(
+      "postgres.account.accounts.account_id" -> List("postgres.account.balances.account_id"),
+      "postgres.account.balances.account_id" -> List("postgres.account.transactions.account_id"),
+    )
+    val deleteOrder = ForeignKeyUtil.getDeleteOrder(foreignKeys)
+    assert(
+      deleteOrder == List("postgres.account.transactions.account_id", "postgres.account.balances.account_id", "postgres.account.accounts.account_id"))
   }
 
   case class Account(account_id: String, name: String, open_date: Date, age: Int)

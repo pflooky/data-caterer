@@ -35,15 +35,15 @@ tasks:
   #list of tasks to execute
   - name: "jdbc_customer_accounts_table_create"
     #Name of the data source with configuration as defined in application.conf
-    sinkName: "postgres"
+    dataSourceName: "postgres"
   - name: "parquet_transaction_file"
-    sinkName: "parquet"
+    dataSourceName: "parquet"
   - name: "cassandra_customer_status_table_create"
-    sinkName: "cassandra"
+    dataSourceName: "cassandra"
     #Can disable tasks
     enabled: false
   - name: "cassandra_customer_transactions_table_create"
-    sinkName: "cassandra"
+    dataSourceName: "cassandra"
     enabled: false
 
 sinkOptions:
@@ -51,7 +51,7 @@ sinkOptions:
   seed: "1"
   #Define any foreign keys that should match across data tasks
   foreignKeys:
-    #The foreign key name with naming convention [sinkName].[schema].[column name]
+    #The foreign key name with naming convention [dataSourceName].[schema].[column name]
     "postgres.accounts.account_number":
       #List of columns to match with same naming convention
       - "parquet.transactions.account_id"
@@ -179,12 +179,18 @@ Spartagen is able to support the following data sinks:
 
 1. Insert into single data sink
 2. Insert into multiple data sinks
-   1. Foreign keys associated with data sinks
+   1. Foreign keys associated between data sources
    2. Number of records per column value
 3. Set random seed at column level
-4. Send events progressively
-5. Automatically insert data into database
-   1. Read metadata from database and insert for all tables defined
+4. Generate real looking data (via DataFaker) and edge cases
+   1. Names, addresses, places etc.
+   2. Edge cases for each data type (e.g. newline character in string, maximum integer, NaN, 0)
+   3. Nullability
+5. Send events progressively
+6. Automatically insert data into data source
+   1. Read metadata from data source and insert for all sub data sources (e.g. tables)
+   2. Get statistics from existing data in data source if exists
+7. Delete generated data
 
 ## Challenges
 
@@ -194,11 +200,15 @@ Spartagen is able to support the following data sinks:
 - How to process the data in batches
 - Data cleanup after run
   - Save data into parquet files. Can read and delete when needed
-  - Have option to truncate/delete directly
+  - Have option to delete directly
 - Relationships/constraints between fields
   - e.g. if transaction has type purchase, then it is a debit
   - if country is Australia, then country code should be AU
   - could be one to one, one to many, many to many mapping
+- Predict the type of string expression to use from DataFaker
+  - Utilise the metadata for the field
+- Having intermediate fields and not including them into the output
+  - Allow for SQL expressions
 
 ## Resources
 

@@ -1,5 +1,7 @@
 package com.github.pflooky.datagen.core.generator
 
+import com.github.pflooky.datagen.core.generator.track.RecordTrackingProcessor
+import com.github.pflooky.datagen.core.model.Constants.FORMAT
 import com.github.pflooky.datagen.core.model.{Plan, Step, Task, TaskSummary}
 import com.github.pflooky.datagen.core.parser.PlanParser
 import com.github.pflooky.datagen.core.sink.SinkFactory
@@ -10,31 +12,33 @@ import org.apache.spark.sql.DataFrame
 class DataGeneratorProcessor extends SparkProvider {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
+  private val recordTrackingFactory = new RecordTrackingProcessor(s"$baseFolderPath/$recordTrackingFolderPath")
 
   def generateData(): Unit = {
-    if (enableGenerateData) {
-      val plan = PlanParser.parsePlan(planFilePath)
-      val enabledPlannedTasks = plan.tasks.filter(_.enabled)
-      val enabledTaskDetails = enabledPlannedTasks.map(x => s"name=${x.name} => sink=${x.sinkName}").mkString(", ")
-      LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${enabledPlannedTasks.size}, tasks: ($enabledTaskDetails)")
-      val enabledTaskMap = enabledPlannedTasks.map(t => (t.name, t))
+    val plan = PlanParser.parsePlan(planFilePath)
+    val enabledPlannedTasks = plan.tasks.filter(_.enabled)
+    val enabledTaskMap = enabledPlannedTasks.map(t => (t.name, t)).toMap
+    val tasks = PlanParser.parseTasks(taskFolderPath)
 
-      val tasks = PlanParser.parseTasks(taskFolderPath)
-      val tasksByName = tasks.map(t => (t.name, t)).toMap
-      val executableTasks = enabledTaskMap.map(pt => (pt._2, tasksByName(pt._1)))
-      executableTasks.foreach(t => LOGGER.info(s"Enabled task details: ${t._2.toTaskDetailString}"))
-      val sinkDf = getAllStepDf(plan, executableTasks)
-
-      pushDataToSinks(executableTasks, sinkDf)
-    } else {
-      LOGGER.info("Data generation is disabled")
-    }
+    generateData(plan, tasks.filter(t => enabledTaskMap.contains(t.name)).toList)
   }
 
   def generateData(plan: Plan, tasks: List[Task]): Unit = {
-    if (enableGenerateData) {
-      val tasksByName = tasks.map(t => (t.name, t)).toMap
-      val summaryWithTask = plan.tasks.map(t => (t, tasksByName(t.name)))
+    val tasksByName = tasks.map(t => (t.name, t)).toMap
+    val summaryWithTask = plan.tasks.map(t => (t, tasksByName(t.name)))
+
+    if (enableDeleteGeneratedRecords) {
+      plan.sinkOptions.get.foreignKeys
+      summaryWithTask.foreach(task => {
+        task._2.steps.foreach(step => {
+          val connectionConfig = connectionConfigsByName(task._1.dataSourceName)
+          val format = connectionConfig(FORMAT)
+          recordTrackingFactory.deleteRecords(task._1.dataSourceName, format, step.options ++ connectionConfig)
+        })
+      })
+    } else if (enableGenerateData) {
+      LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks: ($summaryWithTask)")
+      summaryWithTask.foreach(t => LOGGER.info(s"Enabled task details: ${t._2.toTaskDetailString}"))
       val sinkDf = getAllStepDf(plan, summaryWithTask)
       pushDataToSinks(summaryWithTask, sinkDf)
     } else {
@@ -45,7 +49,7 @@ class DataGeneratorProcessor extends SparkProvider {
   private def getAllStepDf(plan: Plan, executableTasks: List[(TaskSummary, Task)]): Map[String, DataFrame] = {
     val dataGeneratorFactory = new DataGeneratorFactory(plan.sinkOptions.flatMap(_.seed), plan.sinkOptions.flatMap(_.locale))
     val generatedDataForeachTask = executableTasks.flatMap(task =>
-      task._2.steps.map(s => (getSinkName(task._1, s), dataGeneratorFactory.generateDataForStep(s, task._1.sinkName)))
+      task._2.steps.map(s => (getDataSourceName(task._1, s), dataGeneratorFactory.generateDataForStep(s, task._1.dataSourceName)))
     ).toMap
 
     val sinkDf = if (plan.sinkOptions.isDefined) {
@@ -58,17 +62,22 @@ class DataGeneratorProcessor extends SparkProvider {
 
   private def pushDataToSinks(executableTasks: List[(TaskSummary, Task)], sinkDf: Map[String, DataFrame]): Unit = {
     val sinkFactory = new SinkFactory(executableTasks, connectionConfigsByName)
-    val stepOptionsBySink = executableTasks.flatMap(task =>
-      task._2.steps.map(s => (getSinkName(task._1, s), s.options))
+    val stepByDataSourceName = executableTasks.flatMap(task =>
+      task._2.steps.map(s => (getDataSourceName(task._1, s), s))
     ).toMap
 
     sinkDf.foreach(df => {
-      val sinkName = df._1.split("\\.").head
-      sinkFactory.pushToSink(df._2, sinkName, stepOptionsBySink(df._1), enableCount)
+      val dataSourceName = df._1.split("\\.").head
+      val step = stepByDataSourceName(df._1)
+      sinkFactory.pushToSink(df._2, dataSourceName, step.options, enableCount)
+      if (enableRecordTracking) {
+        val format = connectionConfigsByName(dataSourceName)(FORMAT)
+        recordTrackingFactory.trackRecords(df._2, dataSourceName, format, step)
+      }
     })
   }
 
-  private def getSinkName(taskSummary: TaskSummary, step: Step): String = {
-    s"${taskSummary.sinkName}.${step.name}"
+  private def getDataSourceName(taskSummary: TaskSummary, step: Step): String = {
+    s"${taskSummary.dataSourceName}.${step.name}"
   }
 }

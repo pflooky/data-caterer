@@ -2,5 +2,5 @@ name: "transaction_create_plan"
 description: "Create CSV transaction file"
 tasks:
   - name: "csv_transaction_file"
-    sinkName: "csv"
+    dataSourceName: "csv"
     enabled: true

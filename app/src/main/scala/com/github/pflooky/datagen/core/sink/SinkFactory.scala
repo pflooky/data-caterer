@@ -14,21 +14,21 @@ class SinkFactory(
 
   private val LOGGER = Logger.getLogger(getClass.getName)
 
-  def pushToSink(df: DataFrame, sinkName: String, stepOptions: Map[String, String], enableCount: Boolean): Unit = {
-    if (!connectionConfigs.contains(sinkName)) {
-      throw new RuntimeException(s"Cannot find sink connection details in application.conf for sink: $sinkName")
+  def pushToSink(df: DataFrame, dataSourceName: String, stepOptions: Map[String, String], enableCount: Boolean): Unit = {
+    if (!connectionConfigs.contains(dataSourceName)) {
+      throw new RuntimeException(s"Cannot find sink connection details in application.conf for data source: $dataSourceName")
     }
-    val connectionConfig = connectionConfigs(sinkName)
+    val connectionConfig = connectionConfigs(dataSourceName)
     val saveMode = connectionConfig.get(SAVE_MODE).map(_.toLowerCase.capitalize).map(SaveMode.valueOf).getOrElse(SaveMode.Append)
     val saveModeName = saveMode.name()
     df.cache()
     val count = if (enableCount) {
       df.count().toString
     } else {
-      LOGGER.warn("Count is disabled. It will help with Spark performance. Defaulting to -1 as the count")
+      LOGGER.warn("Count is disabled. It will help with performance. Defaulting to -1")
       "-1"
     }
-    LOGGER.info(s"Pushing data to sink, sink-name=$sinkName, save-mode=$saveModeName, num-records=$count, status=$STARTED")
+    LOGGER.info(s"Pushing data to sink, data-source-name=$dataSourceName, save-mode=$saveModeName, num-records=$count, status=$STARTED")
 
     val trySaveData = Try(df.write
       .format(connectionConfig(FORMAT))
@@ -38,9 +38,9 @@ class SinkFactory(
       .save())
     trySaveData match {
       case Failure(exception) =>
-        throw new RuntimeException(s"Failed to save data for sink, sink-name=$sinkName, save-mode=$saveModeName, num-records=$count, status=$FAILED", exception)
+        throw new RuntimeException(s"Failed to save data for sink, data-source-name=$dataSourceName, save-mode=$saveModeName, num-records=$count, status=$FAILED", exception)
       case Success(_) =>
-        LOGGER.info(s"Successfully saved data to sink, sink-name=$sinkName, save-mode=$saveModeName, num-records=$count, status=$FINISHED")
+        LOGGER.info(s"Successfully saved data to sink, data-source-name=$dataSourceName, save-mode=$saveModeName, num-records=$count, status=$FINISHED")
     }
   }
 

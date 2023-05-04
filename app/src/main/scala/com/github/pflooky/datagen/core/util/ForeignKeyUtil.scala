@@ -14,8 +14,8 @@ object ForeignKeyUtil {
    * Apply same values from source data frame columns to target foreign key columns
    *
    * @param sinkOptions where foreign key definitions are defined
-   * @param generatedDataForeachTask map of <sinkName>.<stepName> => generated data as dataframe
-   * @return map of <sinkName>.<stepName> => dataframe
+   * @param generatedDataForeachTask map of <dataSourceName>.<stepName> => generated data as dataframe
+   * @return map of <dataSourceName>.<stepName> => dataframe
    */
   def getDataFramesWithForeignKeys(sinkOptions: SinkOptions, generatedDataForeachTask: Map[String, DataFrame]): Map[String, DataFrame] = {
     val foreignKeyAppliedDfs = sinkOptions.foreignKeys
@@ -67,7 +67,26 @@ object ForeignKeyUtil {
    */
   def getAllForeignKeyRelationships(dataSourceForeignKeys: List[Dataset[ForeignKeyRelationship]]): Map[String, List[String]] = {
     dataSourceForeignKeys.flatMap(_.collect())
-      .groupBy(x => x.foreignKeyRelation)
+      .groupBy(_.key)
       .map(x => (x._1.toString, x._2.map(_.foreignKey.toString)))
+  }
+
+  def getDeleteOrder(foreignKeys: Map[String, List[String]]): List[String] = {
+    //given map of foreign key relationships, need to order the foreign keys by leaf nodes first, parents after
+    //could be nested foreign keys
+    //e.g. key1 -> key2
+    //key2 -> key3
+    //resulting order of deleting should be key3, key2, key1
+    val res = foreignKeys.flatMap(fk => {
+      val childDeleteOrder = fk._2.flatMap(child => {
+        if (foreignKeys.contains(child)) {
+          getDeleteOrder(foreignKeys - fk._1)
+        } else {
+          List(child)
+        }
+      })
+      childDeleteOrder ++ List(fk._1)
+    }).toList
+    res
   }
 }
