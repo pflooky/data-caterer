@@ -12,16 +12,38 @@ services:
     ports:
       - "5432:5432"
 
-  mysql:
-    image: "mysql:8.0.33"
-    environment:
-      MYSQL_ROOT_PASSWORD: "root"
-    command: "--default-authentication-plugin=mysql_native_password"
+#  mysql:
+#    image: "mysql:8.0.33"
+#    environment:
+#      MYSQL_ROOT_PASSWORD: "root"
+#    command: "--default-authentication-plugin=mysql_native_password"
+#    volumes:
+#      - "${HOME}/data/mysql:/var/lib/mysql"
+#      - "./app/src/test/resources/sample/sql/mysql/customer.sql:/docker-entrypoint-initdb.d/customer.sql"
+#    ports:
+#      - "3306:3306"
+
+  solace:
+    image: "solace/solace-pubsub-standard:10.4"
     volumes:
-      - "${HOME}/data/mysql:/var/lib/mysql"
-      - "./app/src/test/resources/sample/sql/mysql/customer.sql:/docker-entrypoint-initdb.d/customer.sql"
+      - "${HOME}/data/solace:/var/lib/solace"
+    shm_size: "1g"
+    ulimits:
+      core: -1
+      nofile:
+        soft: 2448
+        hard: 6592
+    deploy:
+      restart_policy:
+        condition: "on-failure"
+        max_attempts: 1
     ports:
-      - "3306:3306"
+      - '8080:8080'
+      - '55554:55555'
+    environment:
+      - "username_admin_globalaccesslevel=admin"
+      - "username_admin_password=admin"
+      - "system_scaling_maxconnectioncount=100"
 
 #  cassandra:
 #    image: "datastax/dse-server:6.8.33"

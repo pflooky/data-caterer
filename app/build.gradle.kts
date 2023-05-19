@@ -38,6 +38,10 @@ dependencies {
     implementation("mysql:mysql-connector-java:8.0.33")
     // cassandra
     implementation("com.datastax.spark:spark-cassandra-connector_$scalaVersion:3.3.0")
+    // http
+    implementation("org.dispatchhttp:dispatch-core_$scalaVersion:1.2.0")
+    // jms
+    implementation("javax.jms:javax.jms-api:2.0.1")
 
     // data generation helpers
     implementation("net.datafaker:datafaker:1.9.0")
@@ -62,6 +66,7 @@ testing {
                 // Use Scalatest for testing our library
                 implementation("org.scalatest:scalatest_$scalaVersion:3.2.10")
                 implementation("org.scalatestplus:junit-4-13_$scalaVersion:3.2.2.0")
+                implementation("org.scalamock:scalamock_$scalaVersion:5.2.0")
 
                 // Need scala-xml at test runtime
                 runtimeOnly("org.scala-lang.modules:scala-xml_$scalaVersion:1.2.0")
@@ -73,6 +78,10 @@ testing {
 application {
     // Define the main class for the application.
     mainClass.set("com.github.pflooky.datagen.App")
+}
+
+tasks.shadowJar {
+    isZip64 = true
 }
 
 //tasks.register<Copy>("unpackShadow") {

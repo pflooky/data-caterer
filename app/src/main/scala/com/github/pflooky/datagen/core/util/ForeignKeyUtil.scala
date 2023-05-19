@@ -13,7 +13,7 @@ object ForeignKeyUtil {
   /**
    * Apply same values from source data frame columns to target foreign key columns
    *
-   * @param sinkOptions where foreign key definitions are defined
+   * @param sinkOptions              where foreign key definitions are defined
    * @param generatedDataForeachTask map of <dataSourceName>.<stepName> => generated data as dataframe
    * @return map of <dataSourceName>.<stepName> => dataframe
    */
@@ -55,6 +55,7 @@ object ForeignKeyUtil {
   }
 
   //TODO: Need some way to understand potential relationships between fields of different data sources (i.e. correlations, word2vec) https://spark.apache.org/docs/latest/ml-features
+
   /**
    * Can have logic like this:
    * 1. Using column metadata, find columns in other data sources that have similar metadata based on data profiling
@@ -62,6 +63,7 @@ object ForeignKeyUtil {
    * 3. Get those pairs that are greater than a threshold score
    * 4. Group all foreign keys together
    * 4.1. Unsure how to determine what is the primary source of the foreign key (the one that has the most references to it?)
+   *
    * @param dataSourceForeignKeys Foreign key relationships for each data source
    * @return Map of data source columns to respective foreign key columns (which may be in other data sources)
    */
@@ -77,16 +79,40 @@ object ForeignKeyUtil {
     //e.g. key1 -> key2
     //key2 -> key3
     //resulting order of deleting should be key3, key2, key1
-    val res = foreignKeys.flatMap(fk => {
-      val childDeleteOrder = fk._2.flatMap(child => {
-        if (foreignKeys.contains(child)) {
-          getDeleteOrder(foreignKeys - fk._1)
+    var visited = Set[String]()
+
+    def getForeignKeyOrder(currKey: String): List[String] = {
+      if (!visited.contains(currKey)) {
+        visited = visited ++ Set(currKey)
+
+        if (foreignKeys.contains(currKey)) {
+          val children = foreignKeys(currKey)
+          val nested = children.flatMap(c => {
+            if (!visited.contains(c)) {
+              val nestedChildren = getForeignKeyOrder(c)
+              visited = visited ++ Set(c)
+              nestedChildren
+            } else {
+              List()
+            }
+          })
+          nested ++ List(currKey)
         } else {
-          List(child)
+          List(currKey)
         }
-      })
-      childDeleteOrder ++ List(fk._1)
-    }).toList
-    res
+      } else {
+        List()
+      }
+    }
+    foreignKeys.flatMap(x => getForeignKeyOrder(x._1)).toList
+
+    //    foreignKeys.foreach(fk => {
+    //      val parent = fk._1
+    //      fk._2.map(child => {
+    //        val nestedChildFks = foreignKeys.getOrElse(child, List())
+    //
+    //      })
+    //    })
+    //    List()
   }
 }

@@ -1,10 +1,11 @@
 package com.github.pflooky.datagen.core.generator.provider
 
-import com.github.pflooky.datagen.core.model.Constants.{ENABLED_EDGE_CASES, ENABLED_NULL, HISTOGRAM, IS_UNIQUE, RANDOM_SEED}
+import com.github.pflooky.datagen.core.model.Constants.{ENABLED_EDGE_CASES, ENABLED_NULL, IS_UNIQUE, LIST_MAXIMUM_LENGTH, LIST_MINIMUM_LENGTH, MAXIMUM_LENGTH, RANDOM_SEED}
 import net.datafaker.Faker
-import org.apache.spark.sql.types.StructField
+import org.apache.spark.sql.types.{DataType, StructField}
 
 import scala.collection.mutable
+import scala.language.higherKinds
 import scala.util.Random
 
 trait DataGenerator[T] extends Serializable {
@@ -61,5 +62,20 @@ trait NullableDataGenerator[T >: Null] extends DataGenerator[T] {
     } else {
       generate
     }
+  }
+}
+
+trait ListDataGenerator[T] extends DataGenerator[List[T]] {
+
+  lazy val listMaxSize: Int = if (structField.metadata.contains(LIST_MAXIMUM_LENGTH)) structField.metadata.getString(LIST_MAXIMUM_LENGTH).toInt else 5
+  lazy val listMinSize: Int = if (structField.metadata.contains(LIST_MINIMUM_LENGTH)) structField.metadata.getString(LIST_MINIMUM_LENGTH).toInt else 0
+
+  def elementGenerator: DataGenerator[T]
+
+  override def generate: List[T] = {
+    val listSize = faker.random().nextInt(listMaxSize) + listMinSize
+    (listMinSize to listSize)
+      .map(_ => elementGenerator.generate)
+      .toList
   }
 }

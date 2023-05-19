@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.exception
 
-import com.github.pflooky.datagen.core.model.{Count, Field, PerColumnCount, Step}
+import com.github.pflooky.datagen.core.model.{Field, Step}
 import org.apache.spark.sql.types.{DataType, StructField}
 
 class PlanFileNotFoundException(filePath: String) extends RuntimeException {
@@ -20,6 +20,10 @@ class ForeignKeyFormatException(foreignKey: String) extends RuntimeException {
 
 class UnsupportedDataGeneratorType(returnType: String) extends RuntimeException {
   override def getMessage: String = s"Unsupported return type for data generator: type=$returnType"
+}
+
+class UnsupportedRealTimeDataSourceFormat(format: String) extends RuntimeException {
+  override def getMessage: String = s"Unsupported data source format for creating real-time data, format=$format"
 }
 
 class UnsupportedJdbcDeleteDataType(dataType: DataType, table: String) extends RuntimeException {

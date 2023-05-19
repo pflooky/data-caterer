@@ -32,15 +32,6 @@ class DataGeneratorFactory(optSeed: Option[String], optLocale: Option[String])(i
       List()
     }
 
-    step.`type`.toLowerCase match {
-      case HTTP | JMS =>
-        LOGGER.info(s"Given the step type is either HTTP or JMS, data will be generated in real-time mode. " +
-          s"It will be based on requests per second defined at plan level, step-name=${step.name}, step-type=${step.`type`}")
-      case _ =>
-        LOGGER.info(s"Will generate data in batch mode for step, step-name=${step.name}, step-type=${step.`type`}")
-    }
-    //TODO: separate batch service to determine how to batch generate the data base on Count details
-    //TODO: batch service should go through all the tasks per batch run
     generateData(structFieldsWithDataGenerators, step)
       .alias(s"$dataSourceName.${step.name}")
   }
@@ -148,31 +139,6 @@ class DataGeneratorFactory(optSeed: Option[String], optLocale: Option[String])(i
       case x => throw new UnsupportedDataGeneratorType(x)
     }
   }
-//
-//  private def unwrapFields(df: DataFrame): DataFrame = {
-//    val unwrappedFields = Schema.unwrapFields(df.schema.fields)
-//    val selectExpr = unwrappedFields.map(field => {
-//      if (field.dataType.isInstanceOf[StructType]) {
-//        val structType = field.dataType.asInstanceOf[StructType]
-//        s"named_struct(${structType.fields.map(f => fieldToNestedStruct(f.copy(name = s"${field.name}$NESTED_FIELD_NAME_DELIMITER${f.name}"))).mkString(",")}) AS ${field.name}"
-//      } else {
-//        field.name
-//      }
-//    })
-//    val unwrappedDf = df.selectExpr(selectExpr: _*)
-//    sparkSession.createDataFrame(unwrappedDf.toJavaRDD, StructType(unwrappedFields))
-//  }
-//
-//  private def fieldToNestedStruct(field: StructField): String = {
-//    val cleanName = field.name.split("\\|\\|").last
-//    if (field.dataType.isInstanceOf[StructType]) {
-//      val structType = field.dataType.asInstanceOf[StructType]
-//      val mapFields = structType.fields.map(f => fieldToNestedStruct(f.copy(name = s"${field.name}$NESTED_FIELD_NAME_DELIMITER${f.name}"))).mkString(",")
-//      s"'$cleanName', named_struct($mapFields)"
-//    } else {
-//      s"'$cleanName', CAST(`${field.name}` AS ${field.dataType.sql})"
-//    }
-//  }
 
   private def getDataFaker = {
     val trySeed = Try(optSeed.map(_.toInt).get)

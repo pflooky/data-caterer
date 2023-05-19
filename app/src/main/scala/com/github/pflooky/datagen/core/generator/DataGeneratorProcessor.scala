@@ -2,7 +2,7 @@ package com.github.pflooky.datagen.core.generator
 
 import com.github.pflooky.datagen.core.generator.track.RecordTrackingProcessor
 import com.github.pflooky.datagen.core.model.Constants.FORMAT
-import com.github.pflooky.datagen.core.model.{Plan, Step, Task, TaskSummary}
+import com.github.pflooky.datagen.core.model.{ForeignKeyRelation, Plan, Step, Task, TaskSummary}
 import com.github.pflooky.datagen.core.parser.PlanParser
 import com.github.pflooky.datagen.core.sink.SinkFactory
 import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, SparkProvider}
@@ -25,17 +25,11 @@ class DataGeneratorProcessor extends SparkProvider {
 
   def generateData(plan: Plan, tasks: List[Task]): Unit = {
     val tasksByName = tasks.map(t => (t.name, t)).toMap
+    val stepsByName = tasks.flatMap(_.steps).map(s => (s.name, s)).toMap
     val summaryWithTask = plan.tasks.map(t => (t, tasksByName(t.name)))
 
     if (enableDeleteGeneratedRecords) {
-      plan.sinkOptions.get.foreignKeys
-      summaryWithTask.foreach(task => {
-        task._2.steps.foreach(step => {
-          val connectionConfig = connectionConfigsByName(task._1.dataSourceName)
-          val format = connectionConfig(FORMAT)
-          recordTrackingFactory.deleteRecords(task._1.dataSourceName, format, step.options ++ connectionConfig)
-        })
-      })
+      deleteGeneratedRecords(plan, stepsByName, summaryWithTask)
     } else if (enableGenerateData) {
       LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks: ($summaryWithTask)")
       summaryWithTask.foreach(t => LOGGER.info(s"Enabled task details: ${t._2.toTaskDetailString}"))
@@ -43,6 +37,27 @@ class DataGeneratorProcessor extends SparkProvider {
       pushDataToSinks(summaryWithTask, sinkDf)
     } else {
       LOGGER.info("Data generation is disabled")
+    }
+  }
+
+  private def deleteGeneratedRecords(plan: Plan, stepsByName: Map[String, Step], summaryWithTask: List[(TaskSummary, Task)]): Unit = {
+    if (plan.sinkOptions.isDefined && plan.sinkOptions.get.foreignKeys.nonEmpty) {
+      val deleteOrder = ForeignKeyUtil.getDeleteOrder(plan.sinkOptions.get.foreignKeys)
+      deleteOrder.foreach(foreignKeyName => {
+        val foreignKeyRelation = ForeignKeyRelation.fromString(foreignKeyName)
+        val connectionConfig = connectionConfigsByName(foreignKeyRelation.dataSource)
+        val format = connectionConfig(FORMAT)
+        val step = stepsByName(foreignKeyRelation.step)
+        recordTrackingFactory.deleteRecords(foreignKeyRelation.dataSource, format, step.options, connectionConfig)
+      })
+    } else {
+      summaryWithTask.foreach(task => {
+        task._2.steps.foreach(step => {
+          val connectionConfig = connectionConfigsByName(task._1.dataSourceName)
+          val format = connectionConfig(FORMAT)
+          recordTrackingFactory.deleteRecords(task._1.dataSourceName, format, step.options, connectionConfig)
+        })
+      })
     }
   }
 
@@ -61,7 +76,7 @@ class DataGeneratorProcessor extends SparkProvider {
   }
 
   private def pushDataToSinks(executableTasks: List[(TaskSummary, Task)], sinkDf: Map[String, DataFrame]): Unit = {
-    val sinkFactory = new SinkFactory(executableTasks, connectionConfigsByName)
+    val sinkFactory = new SinkFactory(connectionConfigsByName)
     val stepByDataSourceName = executableTasks.flatMap(task =>
       task._2.steps.map(s => (getDataSourceName(task._1, s), s))
     ).toMap
@@ -69,7 +84,7 @@ class DataGeneratorProcessor extends SparkProvider {
     sinkDf.foreach(df => {
       val dataSourceName = df._1.split("\\.").head
       val step = stepByDataSourceName(df._1)
-      sinkFactory.pushToSink(df._2, dataSourceName, step.options, enableCount)
+      sinkFactory.pushToSink(df._2, dataSourceName, step, enableCount)
       if (enableRecordTracking) {
         val format = connectionConfigsByName(dataSourceName)(FORMAT)
         recordTrackingFactory.trackRecords(df._2, dataSourceName, format, step)

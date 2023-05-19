@@ -3,9 +3,9 @@ package com.github.pflooky.datagen.core.model
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.github.pflooky.datagen.core.exception.ForeignKeyFormatException
 import com.github.pflooky.datagen.core.generator.plan.datasource.DataSourceDetail
-import com.github.pflooky.datagen.core.model.Constants.{GENERATED, NESTED_FIELD_NAME_DELIMITER, RANDOM}
+import com.github.pflooky.datagen.core.model.Constants.{ARRAY_NESTED_FIELD_NAME_DELIMITER, GENERATED, NESTED_FIELD_NAME_DELIMITER, RANDOM}
 import com.github.pflooky.datagen.core.util.MetadataUtil
-import org.apache.spark.sql.types.{StructField, StructType}
+import org.apache.spark.sql.types.{ArrayType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import scala.language.implicitConversions
@@ -20,10 +20,10 @@ case class SinkOptions(seed: Option[String], locale: Option[String], foreignKeys
     (source, targetForeignKeys)
   }
 }
-case class ForeignKeyRelation(sink: String, step: String, column: String) {
-  override def toString: String = s"$sink.$step.$column"
+case class ForeignKeyRelation(dataSource: String, step: String, column: String) {
+  override def toString: String = s"$dataSource.$step.$column"
 
-  def getDataFrameName = s"$sink.$step"
+  def getDataFrameName = s"$dataSource.$step"
 }
 
 object ForeignKeyRelation {
@@ -95,14 +95,19 @@ object Schema {
 
   def flattenFields(listFields: List[Field]): List[Field] = {
     listFields.flatMap(field => {
-      field.schema match {
-        case Some(schema) =>
+      (field.schema, field.`type`) match {
+        case (Some(schema), Some("array")) =>
+          schema.fields
+            .map(schemaFields =>
+              flattenFields(schemaFields.map(f => f.copy(name = s"${field.name}$ARRAY_NESTED_FIELD_NAME_DELIMITER${f.name}")))
+            ).getOrElse(List())
+        case (Some(schema), _) =>
           schema.fields
             .map(schemaFields =>
               flattenFields(
                 schemaFields.map(f => f.copy(name = s"${field.name}$NESTED_FIELD_NAME_DELIMITER${f.name}"))
               )).getOrElse(List())
-        case None =>
+        case _ =>
           List(field)
       }
     })
@@ -113,8 +118,16 @@ object Schema {
     val selectExpr = unwrappedFields.map(field => {
       field.dataType match {
         case structType: StructType =>
-          val mapFields = fieldToNestedFields(field, structType)
+          val mapFields = fieldToNestedFieldsString(field, structType)
           s"named_struct($mapFields) AS ${field.name}"
+        case arrayType: ArrayType =>
+          arrayType.elementType match {
+            case structType: StructType =>
+              val mapFields = fieldToNestedFieldsString(field, structType, ARRAY_NESTED_FIELD_NAME_DELIMITER)
+              s"array(named_struct($mapFields)) AS ${field.name}"
+            case _ =>
+              s"array(${field.name})"
+          }
         case _ =>
           field.name
       }
@@ -124,32 +137,40 @@ object Schema {
   }
 
   def unwrapFields(fields: Array[StructField]): Array[StructField] = {
-    val baseFields = fields.filter(!_.name.contains("||"))
-    val nestedFields = fields.filter(field => field.name.contains("||"))
+    val baseFields = fields.filter(f => !f.name.contains(NESTED_FIELD_NAME_DELIMITER) && !f.name.contains(ARRAY_NESTED_FIELD_NAME_DELIMITER))
+    val arrayNestedFields = fields.filter(field => field.name.contains(ARRAY_NESTED_FIELD_NAME_DELIMITER))
+      .map(f => {
+        val spt = f.name.split(ARRAY_NESTED_FIELD_NAME_DELIMITER)
+        (spt.head, f.copy(name = spt.tail.mkString(ARRAY_NESTED_FIELD_NAME_DELIMITER)))
+      })
+      .groupBy(_._1)
+      .map(groupedFields => StructField(groupedFields._1, ArrayType(StructType(unwrapFields(groupedFields._2.map(_._2))))))
+
+    val nestedFields = fields.filter(field => field.name.contains(NESTED_FIELD_NAME_DELIMITER))
       .map(f => {
         val spt = f.name.split("\\|\\|")
-        (spt.head, f.copy(name = spt.tail.mkString("||")))
+        (spt.head, f.copy(name = spt.tail.mkString(NESTED_FIELD_NAME_DELIMITER)))
       })
       .groupBy(_._1)
       .map(groupedFields => {
         StructField(groupedFields._1, StructType(unwrapFields(groupedFields._2.map(_._2))))
       }).toArray
-    baseFields ++ nestedFields
+    baseFields ++ nestedFields ++ arrayNestedFields
   }
 
-  private def fieldToNestedStruct(field: StructField): String = {
-    val cleanName = field.name.split("\\|\\|").last
+  private def fieldToNestedStructString(field: StructField): String = {
+    val cleanName = field.name.split("\\|\\||>>").last
     field.dataType match {
       case structType: StructType =>
-        val mapFields = fieldToNestedFields(field, structType)
+        val mapFields = fieldToNestedFieldsString(field, structType)
         s"'$cleanName', named_struct($mapFields)"
       case _ =>
         s"'$cleanName', CAST(`${field.name}` AS ${field.dataType.sql})"
     }
   }
 
-  private def fieldToNestedFields(baseField: StructField, structType: StructType): String = {
-    structType.fields.map(f => fieldToNestedStruct(f.copy(name = s"${baseField.name}$NESTED_FIELD_NAME_DELIMITER${f.name}"))).mkString(",")
+  private def fieldToNestedFieldsString(baseField: StructField, structType: StructType, delimiter: String = NESTED_FIELD_NAME_DELIMITER): String = {
+    structType.fields.map(f => fieldToNestedStructString(f.copy(name = s"${baseField.name}$delimiter${f.name}"))).mkString(",")
   }
 }
 

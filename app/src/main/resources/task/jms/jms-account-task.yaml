@@ -1,11 +1,9 @@
-name: "json_account_file"
+name: "json_account_jms"
 steps:
   - name: "account"
     type: "json"
     count:
       total: 1000
-    options:
-      path: "app/src/test/resources/sample/json/account-gen"
     schema:
       type: "manual"
       fields:
@@ -65,9 +63,5 @@ steps:
                   type: "random"
               - name: "amount"
                 type: "double"
-                generator:
-                  type: "random"
-              - name: "tags"
-                type: "array<string>"
                 generator:
                   type: "random"

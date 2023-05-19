@@ -22,6 +22,18 @@ Generator data for databases, files or HTTP request through a YAML based input a
       2. Set task folder path via environment variable [TASK_FOLDER_PATH](app/src/main/resources/application.conf)
 
 ## Configuration/Customisation
+### Configuration
+
+| Config | Value   | Description                                                                                             |
+|--------|---------|---------------------------------------------------------------------------------------------------------|
+| BASE_FOLDER_PATH | /tmp    | Defines base folder pathway to be used for plan and task files                                          |
+| PLAN_FILE_PATH | <empty> | Defines plan file path                                                                                  |
+| TASK_FOLDER_PATH | <empty> | Defines folder path where all task files can be found                                                   |
+| ENABLE_GENERATE_DATA | true    | Enable/disable data generation                                                                          |
+| ENABLE_GENERATE_PLAN_AND_TASKS | true    | Enable/disable plan and task auto generation based off data source connections                          |
+| ENABLE_RECORD_TRACKING | true    | Enable/disable which data records have been generated for any data source                               |
+| ENABLE_DELETE_GENERATED_RECORDS | false   | Delete all generated records based off record tracking (if ENABLE_RECORD_TRACKING has been set to true) |
+
 ### Datagen plan
 
 [Sample plan](app/src/main/resources/plan/customer-create-plan.yaml)

@@ -23,15 +23,15 @@ class RecordTrackingProcessor(recordTrackingFolderPath: String)(implicit sparkSe
       .save()
   }
 
-  def deleteRecords(dataSourceName: String, format: String, options: Map[String, String]): Unit = {
+  def deleteRecords(dataSourceName: String, format: String, options: Map[String, String], connectionConfig: Map[String, String]): Unit = {
     val subDataSourcePath = getSubDataSourcePath(dataSourceName, format, options)
     val deleteRecordService = format.toLowerCase match {
       case JDBC => new JdbcDeleteRecordService
       case CASSANDRA => new CassandraDeleteRecordService
     }
     LOGGER.warn(s"Delete generated records is enabled. If 'enableRecordTracking' has been enabled, all generated records for this data source will be deleted, " +
-      s"data-source-name=$dataSourceName, format=$format")
-    deleteRecordService.deleteRecords(dataSourceName, subDataSourcePath, options)
+      s"data-source-name=$dataSourceName, format=$format, details=$options")
+    deleteRecordService.deleteRecords(dataSourceName, subDataSourcePath, options ++ connectionConfig)
   }
 
   private def getSubDataSourcePath(dataSourceName: String, format: String, options: Map[String, String]): String = {

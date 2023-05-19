@@ -52,20 +52,36 @@ class ForeignKeyUtilTest extends SparkSuite {
 
   test("Can get delete order based on foreign keys defined") {
     val foreignKeys = Map(
-      "postgres.account.accounts.account_id" -> List("postgres.account.balances.account_id", "postgres.account.transactions.account_id")
+      "postgres.accounts.account_id" -> List("postgres.balances.account_id", "postgres.transactions.account_id")
     )
     val deleteOrder = ForeignKeyUtil.getDeleteOrder(foreignKeys)
-    assert(deleteOrder == List("postgres.account.balances.account_id", "postgres.account.transactions.account_id", "postgres.account.accounts.account_id"))
+    assert(deleteOrder == List("postgres.balances.account_id", "postgres.transactions.account_id", "postgres.accounts.account_id"))
   }
 
   test("Can get delete order based on nested foreign keys") {
     val foreignKeys = Map(
-      "postgres.account.accounts.account_id" -> List("postgres.account.balances.account_id"),
-      "postgres.account.balances.account_id" -> List("postgres.account.transactions.account_id"),
+      "postgres.accounts.account_id" -> List("postgres.balances.account_id"),
+      "postgres.balances.account_id" -> List("postgres.transactions.account_id"),
     )
     val deleteOrder = ForeignKeyUtil.getDeleteOrder(foreignKeys)
-    assert(
-      deleteOrder == List("postgres.account.transactions.account_id", "postgres.account.balances.account_id", "postgres.account.accounts.account_id"))
+    val expected = List("postgres.transactions.account_id", "postgres.balances.account_id", "postgres.accounts.account_id")
+    assert(deleteOrder == expected)
+
+    val foreignKeys1 = Map(
+      "postgres.balances.account_id" -> List("postgres.transactions.account_id"),
+      "postgres.accounts.account_id" -> List("postgres.balances.account_id"),
+    )
+    val deleteOrder1 = ForeignKeyUtil.getDeleteOrder(foreignKeys1)
+    assert(deleteOrder1 == expected)
+
+    val foreignKeys2 = Map(
+      "postgres.accounts.account_id" -> List("postgres.balances.account_id"),
+      "postgres.balances.account_id" -> List("postgres.transactions.account_id"),
+      "postgres.transactions.account_id" -> List("postgres.customer.account_id"),
+    )
+    val deleteOrder2 = ForeignKeyUtil.getDeleteOrder(foreignKeys2)
+    val expected2 = List("postgres.customer.account_id") ++ expected
+    assert(deleteOrder2 == expected2)
   }
 
   case class Account(account_id: String, name: String, open_date: Date, age: Int)

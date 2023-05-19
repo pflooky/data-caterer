@@ -1,6 +1,7 @@
 package com.github.pflooky.datagen.core.generator.provider
 
 import com.github.pflooky.datagen.core.generator.provider.RandomDataGenerator._
+import com.github.pflooky.datagen.core.model.Constants.LIST_MINIMUM_LENGTH
 import org.apache.spark.sql.types._
 import org.junit.runner.RunWith
 import org.scalatest.funsuite.AnyFunSuite
@@ -38,6 +39,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     val booleanGenerator = RandomDataGenerator.getGeneratorForStructField(StructField("field", BooleanType))
     val binaryGenerator = RandomDataGenerator.getGeneratorForStructField(StructField("field", BinaryType))
     val byteGenerator = RandomDataGenerator.getGeneratorForStructField(StructField("field", ByteType))
+    val listGenerator = RandomDataGenerator.getGeneratorForStructField(StructField("field", ArrayType(StringType)))
 
     assert(stringGenerator.isInstanceOf[RandomStringDataGenerator])
     assert(intGenerator.isInstanceOf[RandomIntDataGenerator])
@@ -51,6 +53,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(booleanGenerator.isInstanceOf[RandomBooleanDataGenerator])
     assert(binaryGenerator.isInstanceOf[RandomBinaryDataGenerator])
     assert(byteGenerator.isInstanceOf[RandomByteDataGenerator])
+    assert(listGenerator.isInstanceOf[RandomListDataGenerator[String]])
   }
 
   test("Can create random string generator") {
@@ -148,5 +151,23 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     val sampleData = byteGenerator.generate
 
     assert(byteGenerator.edgeCases.nonEmpty)
+    assert(sampleData.toString.nonEmpty)
+  }
+
+  test("Can create random list of string generator") {
+    val metadata = new MetadataBuilder().putString(LIST_MINIMUM_LENGTH, "1").build()
+    val listGenerator = new RandomListDataGenerator[String](StructField("random_list", ArrayType(StringType), false, metadata), StringType)
+    val sampleData = listGenerator.generate
+
+    assert(sampleData.nonEmpty)
+  }
+
+  ignore("Can create random list of struct type generator") {
+    val metadata = new MetadataBuilder().putString(LIST_MINIMUM_LENGTH, "1").build()
+    val innerStruct = StructType(Seq(StructField("random_acc", StringType), StructField("random_num", IntegerType)))
+    val listGenerator = new RandomListDataGenerator[StructType](StructField("random_list", ArrayType(innerStruct), false, metadata), new StructType())
+    val sampleData = listGenerator.generate
+
+    assert(sampleData.nonEmpty)
   }
 }

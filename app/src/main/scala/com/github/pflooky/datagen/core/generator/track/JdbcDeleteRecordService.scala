@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.track
 
 import com.github.pflooky.datagen.core.exception.{InvalidDataSourceOptions, UnsupportedJdbcDeleteDataType}
-import com.github.pflooky.datagen.core.model.Constants.{JDBC_TABLE, JDBC_USERNAME, PASSWORD, URL}
+import com.github.pflooky.datagen.core.model.Constants.{JDBC_TABLE, USERNAME, PASSWORD, URL}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{BooleanType, ByteType, DateType, DecimalType, DoubleType, FloatType, IntegerType, LongType, ShortType, StringType, TimestampType}
 
@@ -14,14 +14,9 @@ class JdbcDeleteRecordService extends DeleteRecordService {
     val table = options.getOrElse(JDBC_TABLE, throw new InvalidDataSourceOptions(dataSourceName, JDBC_TABLE))
     val whereClauseColumns = recordsForDelete.columns.map(c => s"$c = ?").mkString(" AND ")
 
-    //TODO: need to know the ordering in which data should be deleted
-    /*
-    e.g. if there are foreign key constraints, need to delete from child tables before trying to do any deletes in the main table
-    should apply across all data sources as foreign keys could be defined across or within data sources
-     */
     recordsForDelete.rdd.foreachPartition(partition => {
       val url = options.getOrElse(URL, throw new InvalidDataSourceOptions(dataSourceName, URL))
-      val username = options.getOrElse(JDBC_USERNAME, throw new InvalidDataSourceOptions(dataSourceName, JDBC_USERNAME))
+      val username = options.getOrElse(USERNAME, throw new InvalidDataSourceOptions(dataSourceName, USERNAME))
       val password = options.getOrElse(PASSWORD, throw new InvalidDataSourceOptions(dataSourceName, PASSWORD))
       val connection = DriverManager.getConnection(url, username, password)
       val preparedStatement = connection.prepareStatement(s"DELETE FROM $table WHERE $whereClauseColumns")

@@ -22,10 +22,17 @@ object Constants {
   lazy val CASSANDRA_TABLE = "table"
   lazy val JDBC_TABLE = "dbtable"
   lazy val JDBC_QUERY = "query"
-  lazy val JDBC_USERNAME = "user"
   lazy val URL = "url"
+  lazy val USERNAME = "user"
   lazy val PASSWORD = "password"
   lazy val DRIVER = "driver"
+  lazy val BODY_FIELD = "bodyField"
+  lazy val HTTP_METHOD = "httpMethod"
+  lazy val HTTP_HEADER_PREFIX = "httpHeader"
+  lazy val HTTP_CONTENT_TYPE = "httpContentType"
+  lazy val JMS_DESTINATION_NAME = "destinationName"
+  lazy val JMS_INITIAL_CONTEXT_FACTORY = "initialContextFactory"
+  lazy val JMS_VPN_NAME = "vpnName"
 
   //custom spark options
   lazy val METADATA_FILTER_SCHEMA = "filterSchema"
@@ -65,7 +72,9 @@ object Constants {
   lazy val ENABLED_EDGE_CASES = "enableEdgeCases"
   lazy val AVERAGE_LENGTH = "avgLen"
   lazy val MINIMUM_LENGTH = "minLen"
+  lazy val LIST_MINIMUM_LENGTH = "listMinLen"
   lazy val MAXIMUM_LENGTH = "maxLen"
+  lazy val LIST_MAXIMUM_LENGTH = "listMaxLen"
   lazy val SOURCE_MAXIMUM_LENGTH = "sourceMaxLen"
   lazy val MINIMUM_VALUE = "min"
   lazy val MAXIMUM_VALUE = "max"
@@ -101,5 +110,8 @@ object Constants {
 
   //misc
   lazy val NESTED_FIELD_NAME_DELIMITER = "||"
+  lazy val ARRAY_NESTED_FIELD_NAME_DELIMITER = ">>"
   lazy val APPLICATION_CONFIG_PATH = "APPLICATION_CONFIG_PATH"
+  lazy val BATCH = "batch"
+  lazy val REAL_TIME = "real-time"
 }

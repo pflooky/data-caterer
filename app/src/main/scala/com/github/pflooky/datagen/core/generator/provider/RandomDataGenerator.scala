@@ -34,6 +34,7 @@ object RandomDataGenerator {
       case BooleanType => new RandomBooleanDataGenerator(structField, faker)
       case BinaryType => new RandomBinaryDataGenerator(structField, faker)
       case ByteType => new RandomByteDataGenerator(structField, faker)
+      case ArrayType(dt, _) => new RandomListDataGenerator(structField, dt, faker)
       case x => throw new UnsupportedDataGeneratorType(s"Unsupported type for random data generation: name=${structField.name}, type=${x.typeName}")
     }
   }
@@ -215,6 +216,18 @@ object RandomDataGenerator {
 
     override def generate: Byte = {
       faker.random().nextRandomBytes(1).head
+    }
+  }
+
+  class RandomListDataGenerator[T](val structField: StructField, val dataType: DataType, val faker: Faker = new Faker()) extends ListDataGenerator[T] {
+    override def elementGenerator: DataGenerator[T] = {
+      dataType match {
+        case structType: StructType =>
+          // return back a string generator that is based off the nested struct to generate corresponding JSON
+          getGeneratorForStructField(structField.copy(dataType = dataType), faker).asInstanceOf[DataGenerator[T]]
+        case _ =>
+          getGeneratorForStructField(structField.copy(dataType = dataType), faker).asInstanceOf[DataGenerator[T]]
+      }
     }
   }
 }
