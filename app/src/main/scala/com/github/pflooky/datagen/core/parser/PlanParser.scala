@@ -1,11 +1,9 @@
 package com.github.pflooky.datagen.core.parser
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.github.pflooky.datagen.core.exception.{PlanFileNotFoundException, TaskParseException}
 import com.github.pflooky.datagen.core.model.Constants.ONE_OF
 import com.github.pflooky.datagen.core.model.{Plan, Schema, Step, Task}
+import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import org.apache.log4j.Logger
 
 import java.io.File
@@ -14,8 +12,7 @@ import scala.util.{Failure, Success, Try}
 object PlanParser {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
-  private val OBJECT_MAPPER = new ObjectMapper(new YAMLFactory())
-  OBJECT_MAPPER.registerModule(DefaultScalaModule)
+  private val OBJECT_MAPPER = ObjectMapperUtil.yamlObjectMapper
 
   def parsePlan(planFilePath: String): Plan = {
     val planFile = new File(planFilePath)

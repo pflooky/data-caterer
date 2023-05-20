@@ -3,19 +3,16 @@ package com.github.pflooky.datagen.core.generator.provider
 import com.github.pflooky.datagen.core.exception.UnsupportedDataGeneratorType
 import com.github.pflooky.datagen.core.model.Constants._
 import net.datafaker.Faker
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
 import java.sql.{Date, Timestamp}
 import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDate}
-import scala.annotation.tailrec
-import scala.collection.mutable
 import scala.util.Try
 
 object RandomDataGenerator {
 
-  //TODO: Support ArrayType
-  //case ArrayType(baseType, isNullable) =>
   def getGeneratorForStructType(structType: StructType, faker: Faker = new Faker()): Array[DataGenerator[_]] = {
     structType.fields.map(getGeneratorForStructField(_, faker))
   }
@@ -35,6 +32,7 @@ object RandomDataGenerator {
       case BinaryType => new RandomBinaryDataGenerator(structField, faker)
       case ByteType => new RandomByteDataGenerator(structField, faker)
       case ArrayType(dt, _) => new RandomListDataGenerator(structField, dt, faker)
+      case StructType(_) => new RandomStructTypeDataGenerator(structField, faker)
       case x => throw new UnsupportedDataGeneratorType(s"Unsupported type for random data generation: name=${structField.name}, type=${x.typeName}")
     }
   }
@@ -223,10 +221,22 @@ object RandomDataGenerator {
     override def elementGenerator: DataGenerator[T] = {
       dataType match {
         case structType: StructType =>
-          // return back a string generator that is based off the nested struct to generate corresponding JSON
-          getGeneratorForStructField(structField.copy(dataType = dataType), faker).asInstanceOf[DataGenerator[T]]
+          new RandomStructTypeDataGenerator(StructField(structField.name, structType), faker).asInstanceOf[DataGenerator[T]]
         case _ =>
           getGeneratorForStructField(structField.copy(dataType = dataType), faker).asInstanceOf[DataGenerator[T]]
+      }
+    }
+  }
+
+  class RandomStructTypeDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Row] {
+    override def generate: Row = {
+      structField.dataType match {
+        case ArrayType(dt, _) =>
+          val listGenerator = new RandomListDataGenerator(structField, dt, faker)
+          Row.fromSeq(listGenerator.generate)
+        case StructType(fields) =>
+          val dataGenerators = fields.map(field => getGeneratorForStructField(field, faker))
+          Row.fromSeq(dataGenerators.map(dg => dg.generateWrapper()))
       }
     }
   }

@@ -1,10 +1,7 @@
 package com.github.pflooky.datagen.core.generator.plan
 
-import com.fasterxml.jackson.annotation.JsonInclude.Include
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.github.pflooky.datagen.core.model.{Plan, SinkOptions, Task, TaskSummary}
+import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import org.apache.log4j.Logger
 import org.joda.time.DateTime
 
@@ -13,9 +10,7 @@ import java.io.File
 object PlanGenerator {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
-  private val OBJECT_MAPPER = new ObjectMapper(new YAMLFactory())
-  OBJECT_MAPPER.registerModule(DefaultScalaModule)
-  OBJECT_MAPPER.setSerializationInclusion(Include.NON_ABSENT)
+  private val OBJECT_MAPPER = ObjectMapperUtil.yamlObjectMapper
 
   def writePlanAndTasksToFiles(tasks: List[(String, Task)], foreignKeys: Map[String, List[String]], baseFolderPath: String): (Plan, List[Task]) = {
     val baseGeneratedFolder = new File(s"$baseFolderPath/generated")

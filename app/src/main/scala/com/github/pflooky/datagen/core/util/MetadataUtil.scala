@@ -1,7 +1,5 @@
 package com.github.pflooky.datagen.core.util
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.github.pflooky.datagen.core.generator.plan.datasource.DataSourceMetadata
 import com.github.pflooky.datagen.core.generator.plan.datasource.database.ColumnMetadata
 import com.github.pflooky.datagen.core.model.Constants.{HISTOGRAM, IS_NULLABLE}
@@ -16,8 +14,7 @@ import scala.util.{Failure, Success, Try}
 object MetadataUtil {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
-  private val OBJECT_MAPPER = new ObjectMapper()
-  OBJECT_MAPPER.registerModule(DefaultScalaModule)
+  private val OBJECT_MAPPER = ObjectMapperUtil.jsonObjectMapper
   private val mapStringToAnyClass = Map[String, Any]()
   private val TEMP_CACHED_TABLE_NAME = "temp_table"
 

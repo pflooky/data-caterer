@@ -162,7 +162,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(sampleData.nonEmpty)
   }
 
-  ignore("Can create random list of struct type generator") {
+  test("Can create random list of struct type generator") {
     val metadata = new MetadataBuilder().putString(LIST_MINIMUM_LENGTH, "1").build()
     val innerStruct = StructType(Seq(StructField("random_acc", StringType), StructField("random_num", IntegerType)))
     val listGenerator = new RandomListDataGenerator[StructType](StructField("random_list", ArrayType(innerStruct), false, metadata), new StructType())
