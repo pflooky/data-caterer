@@ -57,11 +57,13 @@ org.apache.spark.sql.cassandra {
 ```
 
 ## JMS
-Uses JNDI lookup to send messages to JMS queue.
+Uses JNDI lookup to send messages to JMS queue. Ensure that the messaging system you are using has your queue/topic registered 
+via JNDI otherwise a connection cannot be created.
 ```
 jms {
     solace {
         initialContextFactory = "com.solacesystems.jndi.SolJNDIInitialContextFactory"
+        connectionFactory = "/jms/cf/default"
         url = "smf://localhost:55555"
         vpnName = "default"
         user = "admin"
@@ -70,10 +72,12 @@ jms {
 }
 ```
 ## HTTP
+Define a URL to connect to when sending HTTP requests.  
+Later, can have the ability to define generated data as part of the URL.
 ```
 http {
     customer_api {
-        url = ""
+        url = "http://localhost:80/get"
         user = "admin"      #optional
         password = "admin"  #optional
     }

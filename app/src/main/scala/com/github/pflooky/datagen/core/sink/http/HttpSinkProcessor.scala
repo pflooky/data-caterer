@@ -37,7 +37,7 @@ class HttpSinkProcessor(override val connectionConfig: Map[String, String],
   }
 
   def createHttpRequest(row: Row): Req = {
-    val body = BODY_FIELD_OPT.map(row.getAs[String]).getOrElse(row.getString(0))
+    val body = BODY_FIELD_OPT.map(row.getAs[String]).getOrElse(row.json)
 
     url(HTTP_URL)
       .setMethod(METHOD)

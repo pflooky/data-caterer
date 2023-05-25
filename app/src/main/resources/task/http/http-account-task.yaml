@@ -1,11 +1,14 @@
-name: "json_account_jms"
+name: "json_account_http"
 steps:
   - name: "account"
     type: "json"
     count:
       total: 1000
     options:
-      destinationName: "/JNDI/Q/test_queue"
+      httpMethod: "PUT"
+      httpContentType: "application/json"
+      httpHeader.first-name: "peter"
+      httpHeader.amount: 100
     schema:
       type: "manual"
       fields:

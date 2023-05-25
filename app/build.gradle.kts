@@ -42,6 +42,7 @@ dependencies {
     implementation("org.dispatchhttp:dispatch-core_$scalaVersion:1.2.0")
     // jms
     implementation("javax.jms:javax.jms-api:2.0.1")
+    implementation("com.solacesystems:sol-jms:10.20.0")
 
     // data generation helpers
     implementation("net.datafaker:datafaker:1.9.0")

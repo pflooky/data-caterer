@@ -12,13 +12,13 @@ import org.apache.spark.sql.DataFrame
 class DataGeneratorProcessor extends SparkProvider {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
-  private val recordTrackingFactory = new RecordTrackingProcessor(s"$baseFolderPath/$recordTrackingFolderPath")
+  private val recordTrackingFactory = new RecordTrackingProcessor(s"${foldersConfig.baseFolderPath}/${foldersConfig.recordTrackingFolderPath}")
 
   def generateData(): Unit = {
-    val plan = PlanParser.parsePlan(planFilePath)
+    val plan = PlanParser.parsePlan(foldersConfig.planFilePath)
     val enabledPlannedTasks = plan.tasks.filter(_.enabled)
     val enabledTaskMap = enabledPlannedTasks.map(t => (t.name, t)).toMap
-    val tasks = PlanParser.parseTasks(taskFolderPath)
+    val tasks = PlanParser.parseTasks(foldersConfig.taskFolderPath)
 
     generateData(plan, tasks.filter(t => enabledTaskMap.contains(t.name)).toList)
   }
@@ -28,9 +28,9 @@ class DataGeneratorProcessor extends SparkProvider {
     val stepsByName = tasks.flatMap(_.steps).map(s => (s.name, s)).toMap
     val summaryWithTask = plan.tasks.map(t => (t, tasksByName(t.name)))
 
-    if (enableDeleteGeneratedRecords) {
+    if (flagsConfig.enableDeleteGeneratedRecords) {
       deleteGeneratedRecords(plan, stepsByName, summaryWithTask)
-    } else if (enableGenerateData) {
+    } else if (flagsConfig.enableGenerateData) {
       LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks: ($summaryWithTask)")
       summaryWithTask.foreach(t => LOGGER.info(s"Enabled task details: ${t._2.toTaskDetailString}"))
       val sinkDf = getAllStepDf(plan, summaryWithTask)
@@ -84,8 +84,8 @@ class DataGeneratorProcessor extends SparkProvider {
     sinkDf.foreach(df => {
       val dataSourceName = df._1.split("\\.").head
       val step = stepByDataSourceName(df._1)
-      sinkFactory.pushToSink(df._2, dataSourceName, step, enableCount)
-      if (enableRecordTracking) {
+      sinkFactory.pushToSink(df._2, dataSourceName, step, flagsConfig.enableCount)
+      if (flagsConfig.enableRecordTracking) {
         val format = connectionConfigsByName(dataSourceName)(FORMAT)
         recordTrackingFactory.trackRecords(df._2, dataSourceName, format, step)
       }

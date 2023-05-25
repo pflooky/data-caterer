@@ -69,9 +69,6 @@ class SinkFactory(
   }
 
   private def saveRealTimeData(df: DataFrame, format: String, connectionConfig: Map[String, String], step: Step): Unit = {
-    val bodyData = if (step.`type`.toLowerCase == JSON) {
-      df.selectExpr("to_json()")
-    } else df
     df.rdd.foreachPartition(partition => {
       val sinkProcessor = format match {
         case HTTP => new HttpSinkProcessor(connectionConfig, step)

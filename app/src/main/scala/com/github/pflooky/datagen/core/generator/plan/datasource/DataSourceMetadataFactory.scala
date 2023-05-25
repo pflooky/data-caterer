@@ -2,7 +2,8 @@ package com.github.pflooky.datagen.core.generator.plan.datasource
 
 import com.github.pflooky.datagen.core.generator.plan.PlanGenerator.writePlanAndTasksToFiles
 import com.github.pflooky.datagen.core.generator.plan.datasource.database.{CassandraMetadata, DatabaseMetadata, DatabaseMetadataProcessor, MysqlMetadata, PostgresMetadata}
-import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, DRIVER, FORMAT, JDBC, MYSQL_DRIVER, POSTGRES_DRIVER}
+import com.github.pflooky.datagen.core.generator.plan.datasource.file.{FileMetadata, FileMetadataProcessor}
+import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CSV, DELTA, DRIVER, FORMAT, JDBC, JSON, MYSQL_DRIVER, ORC, PARQUET, PATH, POSTGRES_DRIVER}
 import com.github.pflooky.datagen.core.model.{Plan, Task}
 import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, MetadataUtil, SparkProvider}
 import org.apache.log4j.Logger
@@ -12,9 +13,10 @@ class DataSourceMetadataFactory extends SparkProvider {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
   private val databaseMetadataProcessor = new DatabaseMetadataProcessor(sparkSession)
+  private val fileMetadataProcessor = new FileMetadataProcessor
 
   def extractAllDataSourceMetadata(): Option[(Plan, List[Task])] = {
-    if (enableGeneratePlanAndTasks) {
+    if (flagsConfig.enableGeneratePlanAndTasks) {
       LOGGER.info("Attempting to extract all data source metadata as defined in connection configurations in application.conf")
       val connectionMetadata = connectionConfigsByName.map(connectionConfig => {
         val connection = connectionConfig._2(FORMAT) match {
@@ -25,6 +27,7 @@ class DataSourceMetadataFactory extends SparkProvider {
               case MYSQL_DRIVER => Some(MysqlMetadata(connectionConfig._1, connectionConfig._2))
               case _ => None
             }
+          case CSV | JSON | PARQUET | DELTA | ORC => Some(FileMetadata(connectionConfig._1, connectionConfig._2(FORMAT), connectionConfig._2))
           case _ => None
         }
         if (connection.isEmpty) {
@@ -39,7 +42,7 @@ class DataSourceMetadataFactory extends SparkProvider {
       val generatedTasksFromMetadata = metadataPerConnection.map(m => (m._1.name, Task.fromMetadata(m._1.name, m._1.format, m._3)))
       //given all the foreign key relations in each data source, detect if there are any links between data sources, then pass that into plan
       val allForeignKeys = ForeignKeyUtil.getAllForeignKeyRelationships(metadataPerConnection.map(_._2))
-      Some(writePlanAndTasksToFiles(generatedTasksFromMetadata, allForeignKeys, baseFolderPath))
+      Some(writePlanAndTasksToFiles(generatedTasksFromMetadata, allForeignKeys, foldersConfig.baseFolderPath))
     } else None
   }
 
@@ -47,9 +50,7 @@ class DataSourceMetadataFactory extends SparkProvider {
     LOGGER.info(s"Extracting out metadata from data source, name=${dataSourceMetadata.name}, format=${dataSourceMetadata.format}")
     val allDataSourceReadOptions = dataSourceMetadata match {
       case databaseMetadata: DatabaseMetadata => databaseMetadataProcessor.getAllDatabaseTables(databaseMetadata)
-      case _ =>
-        //TODO: given file system based data source, traverse the folders to find all possible data paths (i.e. could be parquet files, csv, json, delta etc.)
-        Array[Map[String, String]]()
+      case _ => fileMetadataProcessor.getAllFiles(dataSourceMetadata)
     }
 
     val numSubDataSources = allDataSourceReadOptions.length

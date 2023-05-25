@@ -10,7 +10,6 @@ import org.scalatestplus.junit.JUnitRunner
 class RecordTrackingProcessorTest extends SparkSuite {
 
   test("Can get all primary keys in order") {
-    val recordTrackingProcessor = new RecordTrackingProcessor("/tmp")
     val schema = Schema("manual", Some(List(
       Field("name", generator = Some(
         Generator("random", Map(
@@ -26,7 +25,7 @@ class RecordTrackingProcessorTest extends SparkSuite {
         ))))
     )))
     val step = Step("create accounts", "jdbc", Count(), Map(), schema)
-    val primaryKeys = recordTrackingProcessor.getPrimaryKeys(step)
+    val primaryKeys = step.getPrimaryKeys
     assert(primaryKeys == List("account_id", "name"))
   }
 }

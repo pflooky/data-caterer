@@ -3,7 +3,7 @@ package com.github.pflooky.datagen.core.model
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.github.pflooky.datagen.core.exception.ForeignKeyFormatException
 import com.github.pflooky.datagen.core.generator.plan.datasource.DataSourceDetail
-import com.github.pflooky.datagen.core.model.Constants.{ARRAY_NESTED_FIELD_NAME_DELIMITER, GENERATED, NESTED_FIELD_NAME_DELIMITER, RANDOM}
+import com.github.pflooky.datagen.core.model.Constants.{ARRAY_NESTED_FIELD_NAME_DELIMITER, GENERATED, IS_PRIMARY_KEY, NESTED_FIELD_NAME_DELIMITER, PRIMARY_KEY_POSITION, RANDOM}
 import com.github.pflooky.datagen.core.util.MetadataUtil
 import org.apache.spark.sql.types.{ArrayType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -56,6 +56,21 @@ object Task {
 case class Step(name: String, `type`: String, count: Count, options: Map[String, String] = Map(), schema: Schema, enabled: Boolean = true) {
   def toStepDetailString: String = {
     s"name=$name, type=${`type`}, options=$options, step-num-records=(${count.numRecordsString}), schema-summary=(${schema.toString})"
+  }
+
+  def getPrimaryKeys: List[String] = {
+    if (schema.fields.isDefined) {
+      val fields = schema.fields.get
+      fields.filter(field => {
+        if (field.generator.isDefined) {
+          val metadata = field.generator.get.options
+          metadata.contains(IS_PRIMARY_KEY) && metadata(IS_PRIMARY_KEY).toString.toBoolean
+        } else false
+      })
+        .map(field => (field.name, field.generator.get.options(PRIMARY_KEY_POSITION).toString.toInt))
+        .sortBy(_._2)
+        .map(_._1)
+    } else List()
   }
 }
 

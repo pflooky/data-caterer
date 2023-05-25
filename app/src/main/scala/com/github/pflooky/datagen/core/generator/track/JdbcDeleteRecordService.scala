@@ -1,20 +1,19 @@
 package com.github.pflooky.datagen.core.generator.track
 
 import com.github.pflooky.datagen.core.exception.{InvalidDataSourceOptions, UnsupportedJdbcDeleteDataType}
-import com.github.pflooky.datagen.core.model.Constants.{JDBC_TABLE, USERNAME, PASSWORD, URL}
-import org.apache.spark.sql.SparkSession
+import com.github.pflooky.datagen.core.model.Constants.{JDBC_TABLE, PASSWORD, URL, USERNAME}
 import org.apache.spark.sql.types.{BooleanType, ByteType, DateType, DecimalType, DoubleType, FloatType, IntegerType, LongType, ShortType, StringType, TimestampType}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import java.sql.DriverManager
 
 class JdbcDeleteRecordService extends DeleteRecordService {
 
-  override def deleteRecords(dataSourceName: String, dataSourcePath: String, options: Map[String, String])(implicit sparkSession: SparkSession): Unit = {
-    val recordsForDelete = getTrackedRecords(dataSourcePath)
+  override def deleteRecords(dataSourceName: String, trackedRecords: DataFrame, options: Map[String, String])(implicit sparkSession: SparkSession): Unit = {
     val table = options.getOrElse(JDBC_TABLE, throw new InvalidDataSourceOptions(dataSourceName, JDBC_TABLE))
-    val whereClauseColumns = recordsForDelete.columns.map(c => s"$c = ?").mkString(" AND ")
+    val whereClauseColumns = trackedRecords.columns.map(c => s"$c = ?").mkString(" AND ")
 
-    recordsForDelete.rdd.foreachPartition(partition => {
+    trackedRecords.rdd.foreachPartition(partition => {
       val url = options.getOrElse(URL, throw new InvalidDataSourceOptions(dataSourceName, URL))
       val username = options.getOrElse(USERNAME, throw new InvalidDataSourceOptions(dataSourceName, USERNAME))
       val password = options.getOrElse(PASSWORD, throw new InvalidDataSourceOptions(dataSourceName, PASSWORD))

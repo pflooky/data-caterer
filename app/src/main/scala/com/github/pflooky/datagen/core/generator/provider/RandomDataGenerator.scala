@@ -236,7 +236,7 @@ object RandomDataGenerator {
           Row.fromSeq(listGenerator.generate)
         case StructType(fields) =>
           val dataGenerators = fields.map(field => getGeneratorForStructField(field, faker))
-          Row.fromSeq(dataGenerators.map(dg => dg.generateWrapper()))
+          Row.fromSeq(dataGenerators.map(_.generateWrapper()))
       }
     }
   }
