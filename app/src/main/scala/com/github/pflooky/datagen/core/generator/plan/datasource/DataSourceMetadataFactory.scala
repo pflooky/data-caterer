@@ -62,12 +62,17 @@ class DataSourceMetadataFactory extends SparkProvider {
     val additionalColumnMetadata = dataSourceMetadata.getAdditionalColumnMetadata
 
     allDataSourceReadOptions.map(dataSourceReadOptions => {
+      LOGGER.debug(s"Reading in records from data source for metadata analysis, name=${dataSourceMetadata.name}, options=$dataSourceReadOptions, " +
+        s"num-records-from-data-source=${metadataConfig.numRecordsFromDataSource}, num-records-for-analysis=${metadataConfig.numRecordsForAnalysis}")
       val data = sparkSession.read
         .format(dataSourceMetadata.format)
         .options(dataSourceMetadata.connectionConfig ++ dataSourceReadOptions)
         .load()
-      val fieldsWithDataProfilingMetadata = MetadataUtil.getFieldDataProfilingMetadata(sparkSession, data, dataSourceReadOptions, dataSourceMetadata)
-      val structFields = MetadataUtil.mapToStructFields(sparkSession, data, dataSourceReadOptions, fieldsWithDataProfilingMetadata, additionalColumnMetadata)
+        .limit(metadataConfig.numRecordsFromDataSource)
+        .sample(metadataConfig.numRecordsForAnalysis.toDouble / metadataConfig.numRecordsFromDataSource)
+
+      val fieldsWithDataProfilingMetadata = MetadataUtil.getFieldDataProfilingMetadata(data, dataSourceReadOptions, dataSourceMetadata, metadataConfig)
+      val structFields = MetadataUtil.mapToStructFields(data, dataSourceReadOptions, fieldsWithDataProfilingMetadata, additionalColumnMetadata)
       DataSourceDetail(dataSourceMetadata, dataSourceReadOptions, StructType(structFields))
     }).toList
   }

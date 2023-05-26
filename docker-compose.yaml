@@ -38,8 +38,8 @@ services:
         condition: "on-failure"
         max_attempts: 1
     ports:
-      - '8080:8080'
-      - '55554:55555'
+      - "8080:8080"
+      - "55554:55555"
     environment:
       - "username_admin_globalaccesslevel=admin"
       - "username_admin_password=admin"
@@ -59,3 +59,8 @@ services:
 #      memlock: -1
 #    ports:
 #      - "9042:9042"
+
+  httbin:
+    image: "kennethreitz/httpbin:latest"
+    ports:
+      - "80:80"

@@ -24,15 +24,15 @@ Generator data for databases, files or HTTP request through a YAML based input a
 ## Configuration/Customisation
 ### Configuration
 
-| Config | Value   | Description                                                                                             |
-|--------|---------|---------------------------------------------------------------------------------------------------------|
-| BASE_FOLDER_PATH | /tmp    | Defines base folder pathway to be used for plan and task files                                          |
-| PLAN_FILE_PATH | <empty> | Defines plan file path                                                                                  |
-| TASK_FOLDER_PATH | <empty> | Defines folder path where all task files can be found                                                   |
-| ENABLE_GENERATE_DATA | true    | Enable/disable data generation                                                                          |
-| ENABLE_GENERATE_PLAN_AND_TASKS | true    | Enable/disable plan and task auto generation based off data source connections                          |
-| ENABLE_RECORD_TRACKING | true    | Enable/disable which data records have been generated for any data source                               |
-| ENABLE_DELETE_GENERATED_RECORDS | false   | Delete all generated records based off record tracking (if ENABLE_RECORD_TRACKING has been set to true) |
+| Config | Default Value | Description                                                                                             |
+|--------|---------------|---------------------------------------------------------------------------------------------------------|
+| BASE_FOLDER_PATH | /tmp          | Defines base folder pathway to be used for plan and task files                                          |
+| PLAN_FILE_PATH | <empty>       | Defines plan file path                                                                                  |
+| TASK_FOLDER_PATH | <empty>       | Defines folder path where all task files can be found                                                   |
+| ENABLE_GENERATE_DATA | true          | Enable/disable data generation                                                                          |
+| ENABLE_GENERATE_PLAN_AND_TASKS | true          | Enable/disable plan and task auto generation based off data source connections                          |
+| ENABLE_RECORD_TRACKING | true          | Enable/disable which data records have been generated for any data source                               |
+| ENABLE_DELETE_GENERATED_RECORDS | false         | Delete all generated records based off record tracking (if ENABLE_RECORD_TRACKING has been set to true) |
 
 ### Datagen plan
 
@@ -52,7 +52,7 @@ tasks:
     dataSourceName: "parquet"
   - name: "cassandra_customer_status_table_create"
     dataSourceName: "cassandra"
-    #Can disable tasks
+    #Can disable tasks, enabled by default
     enabled: false
   - name: "cassandra_customer_transactions_table_create"
     dataSourceName: "cassandra"
@@ -138,7 +138,7 @@ steps:
               maxValue: 100  #Default: 1
 ```
 
-With multiple records per foreign key
+With multiple records per key (i.e. have X number of transactions per account)
 
 ```yaml
 name: "parquet_transaction_file"
@@ -177,15 +177,13 @@ Spartagen is able to support the following data sinks:
    2. Cassandra
    3. ElasticSearch
 2. HTTP
-   1. GET
-   2. POST
-3. Files (local or S3)
+3. Files (local or remote like S3)
    1. CSV
    2. Parquet
-   3. Delta
+   3. ORC
+   4. Delta
 4. JMS
    1. Solace
-   2. ActiveMq
 
 #### Supported use cases
 
@@ -203,6 +201,8 @@ Spartagen is able to support the following data sinks:
    1. Read metadata from data source and insert for all sub data sources (e.g. tables)
    2. Get statistics from existing data in data source if exists
 7. Delete generated data
+8. Generate based on all possible combinations of columns
+   1. Calculate the total number of combinations based on metadata
 
 ## Challenges
 

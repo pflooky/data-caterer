@@ -1,7 +1,6 @@
 package com.github.pflooky.datagen.core.util
 
 import com.github.pflooky.datagen.core.model.SinkOptions
-import org.apache.spark.sql.types.{StructField, StructType}
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
 
@@ -84,7 +83,8 @@ class ForeignKeyUtilTest extends SparkSuite {
     assert(deleteOrder2 == expected2)
   }
 
-  case class Account(account_id: String, name: String, open_date: Date, age: Int)
-
-  case class Transaction(account_id: String, transaction_id: String, created_date: Date, amount: Double)
 }
+
+case class Account(account_id: String, name: String, open_date: Date, age: Int)
+
+case class Transaction(account_id: String, transaction_id: String, created_date: Date, amount: Double)

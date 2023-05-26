@@ -52,11 +52,17 @@ class DataGeneratorFactory(optSeed: Option[String], optLocale: Option[String])(i
     val df = sparkSession.createDataFrame(rddGeneratedData, structType)
     df.cache()
 
-    if (count.perColumn.isDefined) {
+    var dfPerCol = if (count.perColumn.isDefined) {
       generateRecordsPerColumn(dataGenerators, step, count.perColumn.get, df)
     } else {
       df
     }
+    val sqlGeneratedFields = structType.fields.filter(f => f.metadata.contains(SQL))
+    sqlGeneratedFields.foreach(field => {
+      val allFields = structType.fields.filter(_ != field).map(_.name) ++ Array(s"${field.metadata.getString(SQL)} AS ${field.name}")
+      dfPerCol = dfPerCol.selectExpr(allFields: _*)
+    })
+    dfPerCol
   }
 
   private def generateRecordsPerColumn(dataGenerators: List[DataGenerator[_]], step: Step,
@@ -133,7 +139,8 @@ class DataGeneratorFactory(optSeed: Option[String], optLocale: Option[String])(i
   private def getDataGenerator(optGenerator: Option[Generator], structField: StructField): DataGenerator[_] = {
     if (optGenerator.isDefined) {
       optGenerator.get.`type` match {
-        case RANDOM => RandomDataGenerator.getGeneratorForStructField(structField, FAKER)
+        //TODO: Slightly abusing random data generator giving back correct data type for sql type generated data
+        case RANDOM | SQL => RandomDataGenerator.getGeneratorForStructField(structField, FAKER)
         case ONE_OF => OneOfDataGenerator.getGenerator(structField, FAKER)
         case REGEX => RegexDataGenerator.getGenerator(structField, FAKER)
         case x => throw new UnsupportedDataGeneratorType(x)

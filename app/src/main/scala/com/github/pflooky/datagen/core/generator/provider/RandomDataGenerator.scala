@@ -56,8 +56,10 @@ object RandomDataGenerator {
   }
 
   class RandomIntDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Int] {
-    private lazy val minValue = Try(structField.metadata.getString(MINIMUM_VALUE).toInt).getOrElse(0)
-    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toInt).getOrElse(1000)
+    private lazy val minValue = Try(structField.metadata.getString(MINIMUM_VALUE).toInt)
+      .getOrElse(Try(structField.metadata.getString(MINIMUM).toInt).getOrElse(0))
+    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toInt)
+      .getOrElse(Try(structField.metadata.getString(MAXIMUM).toInt).getOrElse(1000))
     assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
 
     override val edgeCases: List[Int] = List(Int.MaxValue, Int.MinValue, 0)
@@ -68,8 +70,10 @@ object RandomDataGenerator {
   }
 
   class RandomShortDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Short] {
-    private lazy val minValue = Try(structField.metadata.getString(MINIMUM_VALUE).toShort).getOrElse(0.toShort)
-    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toShort).getOrElse(1000.toShort)
+    private lazy val minValue = Try(structField.metadata.getString(MINIMUM_VALUE).toShort)
+      .getOrElse(Try(structField.metadata.getString(MINIMUM).toShort).getOrElse(0.toShort))
+    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toShort)
+      .getOrElse(Try(structField.metadata.getString(MAXIMUM).toShort).getOrElse(1000.toShort))
     assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
 
     override val edgeCases: List[Short] = List(Short.MaxValue, Short.MinValue, 0)
@@ -80,8 +84,10 @@ object RandomDataGenerator {
   }
 
   class RandomLongDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Long] {
-    private lazy val minValue = Try(structField.metadata.getString(MINIMUM_VALUE).toLong).getOrElse(0L)
-    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toLong).getOrElse(1000L)
+    private lazy val minValue = Try(structField.metadata.getString(MINIMUM_VALUE).toLong)
+      .getOrElse(Try(structField.metadata.getString(MINIMUM).toLong).getOrElse(0L))
+    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toLong)
+      .getOrElse(Try(structField.metadata.getString(MAXIMUM).toLong).getOrElse(1000L))
     assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
 
     override val edgeCases: List[Long] = List(Long.MaxValue, Long.MinValue, 0)
@@ -92,8 +98,10 @@ object RandomDataGenerator {
   }
 
   class RandomDecimalDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[BigDecimal] {
-    private lazy val minValue = Try(BigDecimal(structField.metadata.getString(MINIMUM_VALUE))).getOrElse(BigDecimal.valueOf(0))
-    private lazy val maxValue = Try(BigDecimal(structField.metadata.getString(MAXIMUM_VALUE))).getOrElse(BigDecimal.valueOf(1000))
+    private lazy val minValue = Try(BigDecimal(structField.metadata.getString(MINIMUM_VALUE)))
+      .getOrElse(Try(BigDecimal(structField.metadata.getString(MINIMUM))).getOrElse(BigDecimal.valueOf(0)))
+    private lazy val maxValue = Try(BigDecimal(structField.metadata.getString(MAXIMUM_VALUE).toInt))
+      .getOrElse(Try(BigDecimal(structField.metadata.getString(MAXIMUM))).getOrElse(BigDecimal.valueOf(1000)))
     assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
 
     override val edgeCases: List[BigDecimal] = List(Long.MaxValue, Long.MinValue, 0)
@@ -104,8 +112,8 @@ object RandomDataGenerator {
   }
 
   class RandomDoubleDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Double] {
-    private lazy val minValue = Try(structField.metadata.getString(MINIMUM_VALUE).toDouble).getOrElse(0.0)
-    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toDouble).getOrElse(1000.0)
+    private lazy val minValue = Try(structField.metadata.getString(MINIMUM_VALUE).toDouble).getOrElse(Try(structField.metadata.getString(MINIMUM).toDouble).getOrElse(0.0))
+    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toDouble).getOrElse(Try(structField.metadata.getString(MAXIMUM).toDouble).getOrElse(1000.0))
     assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
 
     override val edgeCases: List[Double] = List(Double.PositiveInfinity, Double.MaxValue, Double.MinPositiveValue,
@@ -117,8 +125,10 @@ object RandomDataGenerator {
   }
 
   class RandomFloatDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Float] {
-    private lazy val minValue = Try(structField.metadata.getString(MINIMUM_VALUE).toFloat).getOrElse(0.0.toFloat)
-    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toFloat).getOrElse(1000.0.toFloat)
+    private lazy val minValue = Try(structField.metadata.getString(MINIMUM_VALUE).toFloat)
+      .getOrElse(Try(structField.metadata.getString(MINIMUM).toFloat).getOrElse(0.0.toFloat))
+    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toFloat)
+      .getOrElse(Try(structField.metadata.getString(MAXIMUM).toFloat).getOrElse(1000.0.toFloat))
     assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
 
     override val edgeCases: List[Float] = List(Float.PositiveInfinity, Float.MaxValue, Float.MinPositiveValue,
@@ -148,12 +158,12 @@ object RandomDataGenerator {
     }
 
     private def getMinValue: LocalDate = {
-      Try(structField.metadata.getString(MINIMUM_VALUE)).map(LocalDate.parse)
+      Try(structField.metadata.getString(MINIMUM)).map(LocalDate.parse)
         .getOrElse(LocalDate.now().minusDays(365))
     }
 
     private def getMaxValue: LocalDate = {
-      Try(structField.metadata.getString(MAXIMUM_VALUE)).map(LocalDate.parse)
+      Try(structField.metadata.getString(MAXIMUM)).map(LocalDate.parse)
         .getOrElse(LocalDate.now())
     }
   }
@@ -177,13 +187,13 @@ object RandomDataGenerator {
     }
 
     private def getMinValue: Long = {
-      Try(structField.metadata.getString(MINIMUM_VALUE)).map(Timestamp.valueOf)
+      Try(structField.metadata.getString(MINIMUM)).map(Timestamp.valueOf)
         .getOrElse(Timestamp.from(Instant.now().minus(365, ChronoUnit.DAYS)))
         .toInstant.toEpochMilli
     }
 
     private def getMaxValue: Long = {
-      Try(structField.metadata.getString(MAXIMUM_VALUE)).map(Timestamp.valueOf)
+      Try(structField.metadata.getString(MAXIMUM)).map(Timestamp.valueOf)
         .getOrElse(Timestamp.from(Instant.now()))
         .toInstant.toEpochMilli + 1L
     }

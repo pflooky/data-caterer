@@ -3,7 +3,7 @@ package com.github.pflooky.datagen.core.model
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.github.pflooky.datagen.core.exception.ForeignKeyFormatException
 import com.github.pflooky.datagen.core.generator.plan.datasource.DataSourceDetail
-import com.github.pflooky.datagen.core.model.Constants.{ARRAY_NESTED_FIELD_NAME_DELIMITER, GENERATED, IS_PRIMARY_KEY, NESTED_FIELD_NAME_DELIMITER, PRIMARY_KEY_POSITION, RANDOM}
+import com.github.pflooky.datagen.core.model.Constants.{ARRAY_NESTED_FIELD_NAME_DELIMITER, GENERATED, IS_PRIMARY_KEY, NESTED_FIELD_NAME_DELIMITER, ONE_OF, PRIMARY_KEY_POSITION, RANDOM}
 import com.github.pflooky.datagen.core.util.MetadataUtil
 import org.apache.spark.sql.types.{ArrayType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -113,7 +113,13 @@ case class Field(name: String, `type`: Option[String] = None, generator: Option[
 
 object Field {
   implicit def fromStructField(structField: StructField): Field = {
-    Field(structField.name, Some(structField.dataType.typeName), Some(Generator(RANDOM, MetadataUtil.toMap(structField.metadata))), structField.nullable)
+    val metadataOptions = MetadataUtil.toMap(structField.metadata)
+    val generator = if (structField.metadata.contains(ONE_OF)) {
+      Generator(ONE_OF, metadataOptions)
+    } else {
+      Generator(RANDOM, metadataOptions)
+    }
+    Field(structField.name, Some(structField.dataType.typeName), Some(generator), structField.nullable)
   }
 }
 

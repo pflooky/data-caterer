@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.config
 
-import com.github.pflooky.datagen.core.model.Constants.{APPLICATION_CONFIG_PATH, BASE_FOLDER_PATH, ENABLE_COUNT, ENABLE_DELETE_GENERATED_RECORDS, ENABLE_GENERATE_DATA, ENABLE_GENERATE_PLAN_AND_TASKS, ENABLE_RECORD_TRACKING, FORMAT, PLAN_FILE_PATH, RECORD_TRACKING_FOLDER_PATH, SPARK_MASTER, SUPPORTED_CONNECTION_FORMATS, TASK_FOLDER_PATH}
+import com.github.pflooky.datagen.core.model.Constants.{APPLICATION_CONFIG_PATH, FORMAT, SPARK_MASTER, SUPPORTED_CONNECTION_FORMATS}
 import com.typesafe.config.{Config, ConfigBeanFactory, ConfigFactory, ConfigValueType}
 
 import scala.beans.BeanProperty
@@ -10,8 +10,9 @@ import scala.util.Try
 trait ConfigParser {
 
   lazy val config: Config = getConfig
-  lazy val flagsConfig: Flags = ConfigBeanFactory.create(config.getConfig("flags"), classOf[Flags])
-  lazy val foldersConfig: Folders = ConfigBeanFactory.create(config.getConfig("folders"), classOf[Folders])
+  lazy val flagsConfig: FlagsConfig = ConfigBeanFactory.create(config.getConfig("flags"), classOf[FlagsConfig])
+  lazy val foldersConfig: FoldersConfig = ConfigBeanFactory.create(config.getConfig("folders"), classOf[FoldersConfig])
+  lazy val metadataConfig: MetadataConfig = ConfigBeanFactory.create(config.getConfig("metadata"), classOf[MetadataConfig])
   lazy val sparkMaster: String = config.getString(SPARK_MASTER)
   lazy val connectionConfigsByName: Map[String, Map[String, String]] = getConnectionConfigsByName
 
@@ -47,7 +48,7 @@ trait ConfigParser {
 
 }
 
-case class Flags(
+case class FlagsConfig(
                   @BeanProperty var enableCount: Boolean,
                   @BeanProperty var enableGenerateData: Boolean,
                   @BeanProperty var enableGeneratePlanAndTasks: Boolean,
@@ -57,11 +58,19 @@ case class Flags(
   def this() = this(true, true, true, true, false)
 }
 
-case class Folders(
+case class FoldersConfig(
                     @BeanProperty var baseFolderPath: String,
                     @BeanProperty var planFilePath: String,
                     @BeanProperty var taskFolderPath: String,
                     @BeanProperty var recordTrackingFolderPath: String
                   ) {
   def this() = this("", "", "", "")
+}
+
+case class MetadataConfig(
+                           @BeanProperty var numRecordsFromDataSource: Int,
+                           @BeanProperty var numRecordsForAnalysis: Int,
+                           @BeanProperty var oneOfDistinctCountVsCountThreshold: Double,
+                         ) {
+  def this() = this(1000, 1000, 0.1)
 }

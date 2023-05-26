@@ -3,15 +3,6 @@ package com.github.pflooky.datagen.core.model
 object Constants {
 
   //base config
-  lazy val BASE_FOLDER_PATH = "baseFolderPath"
-  lazy val PLAN_FILE_PATH = "planFilePath"
-  lazy val TASK_FOLDER_PATH = "taskFolderPath"
-  lazy val ENABLE_COUNT = "enableCount"
-  lazy val ENABLE_GENERATE_DATA = "enableGenerateData"
-  lazy val ENABLE_GENERATE_PLAN_AND_TASKS = "enableGeneratePlanAndTasks"
-  lazy val ENABLE_RECORD_TRACKING = "enableRecordTracking"
-  lazy val RECORD_TRACKING_FOLDER_PATH = "recordTrackingFolderPath"
-  lazy val ENABLE_DELETE_GENERATED_RECORDS = "enableDeleteGeneratedRecords"
   lazy val SPARK_MASTER = "spark.master"
 
   //spark data options
@@ -62,6 +53,7 @@ object Constants {
   lazy val RANDOM = "random"
   lazy val ONE_OF = "oneOf"
   lazy val REGEX = "regex"
+  lazy val SQL = "sql"
 
   //per column generator
   lazy val PER_COLUMN_COUNT = "_per_col_count"
@@ -78,11 +70,14 @@ object Constants {
   lazy val MAXIMUM_LENGTH = "maxLen"
   lazy val LIST_MAXIMUM_LENGTH = "listMaxLen"
   lazy val SOURCE_MAXIMUM_LENGTH = "sourceMaxLen"
-  lazy val MINIMUM_VALUE = "min"
-  lazy val MAXIMUM_VALUE = "max"
+  lazy val MINIMUM = "min"
+  lazy val MINIMUM_VALUE = "minValue"
+  lazy val MAXIMUM = "max"
+  lazy val MAXIMUM_VALUE = "maxValue"
   lazy val ARRAY_TYPE = "arrayType"
   lazy val EXPRESSION = "expression"
   lazy val DISTINCT_COUNT = "distinctCount"
+  lazy val ROW_COUNT = "count"
   lazy val IS_PRIMARY_KEY = "isPrimaryKey"
   lazy val PRIMARY_KEY_POSITION = "primaryKeyPosition"
   lazy val IS_UNIQUE = "isUnique"

@@ -20,7 +20,7 @@ class DataGeneratorProcessor extends SparkProvider {
     val enabledTaskMap = enabledPlannedTasks.map(t => (t.name, t)).toMap
     val tasks = PlanParser.parseTasks(foldersConfig.taskFolderPath)
 
-    generateData(plan, tasks.filter(t => enabledTaskMap.contains(t.name)).toList)
+    generateData(plan.copy(tasks = enabledPlannedTasks), tasks.filter(t => enabledTaskMap.contains(t.name)).toList)
   }
 
   def generateData(plan: Plan, tasks: List[Task]): Unit = {
