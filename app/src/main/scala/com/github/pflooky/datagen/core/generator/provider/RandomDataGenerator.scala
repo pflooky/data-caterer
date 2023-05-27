@@ -112,8 +112,10 @@ object RandomDataGenerator {
   }
 
   class RandomDoubleDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Double] {
-    private lazy val minValue = Try(structField.metadata.getString(MINIMUM_VALUE).toDouble).getOrElse(Try(structField.metadata.getString(MINIMUM).toDouble).getOrElse(0.0))
-    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toDouble).getOrElse(Try(structField.metadata.getString(MAXIMUM).toDouble).getOrElse(1000.0))
+    private lazy val minValue = Try(structField.metadata.getString(MINIMUM_VALUE).toDouble)
+      .getOrElse(Try(structField.metadata.getString(MINIMUM).toDouble).getOrElse(0.0))
+    private lazy val maxValue = Try(structField.metadata.getString(MAXIMUM_VALUE).toDouble)
+      .getOrElse(Try(structField.metadata.getString(MAXIMUM).toDouble).getOrElse(1000.0))
     assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
 
     override val edgeCases: List[Double] = List(Double.PositiveInfinity, Double.MaxValue, Double.MinPositiveValue,

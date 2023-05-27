@@ -73,7 +73,7 @@ trait ListDataGenerator[T] extends DataGenerator[List[T]] {
   def elementGenerator: DataGenerator[T]
 
   override def generate: List[T] = {
-    val listSize = faker.random().nextInt(listMaxSize) + listMinSize
+    val listSize = random.nextInt(listMaxSize) + listMinSize
     (listMinSize to listSize)
       .map(_ => elementGenerator.generate)
       .toList

@@ -2,7 +2,7 @@ package com.github.pflooky.datagen.core.generator
 
 import com.github.pflooky.datagen.core.model._
 import com.github.pflooky.datagen.core.util.SparkSuite
-import org.apache.spark.sql.types.{DoubleType, StringType}
+import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType}
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
 
@@ -16,6 +16,7 @@ class DataGeneratorFactoryTest extends SparkSuite {
       Field("amount", Some("double"), Some(Generator("random", Map()))),
       Field("debit_credit", Some("string"), Some(Generator("oneOf", Map("oneOf" -> List("D", "C"))))),
       Field("name", Some("string"), Some(Generator("regex", Map("regex" -> "[A-Z][a-z]{2,6} [A-Z][a-z]{2,8}")))),
+      Field("code", Some("int"), Some(Generator("sql", Map("sql" -> "CASE WHEN debit_credit == 'D' THEN 1 ELSE 0 END")))),
     )
   ))
   private val simpleSchema = Schema("manual", Some(List(Field("id", Some("string"), Some(Generator("random", Map()))))))
@@ -26,18 +27,21 @@ class DataGeneratorFactoryTest extends SparkSuite {
     val df = dataGeneratorFactory.generateDataForStep(step, "parquet")
 
     assert(df.count() == 10L)
-    assert(df.columns sameElements Array("id", "amount", "debit_credit", "name"))
+    assert(df.columns sameElements Array("id", "amount", "debit_credit", "name", "code"))
     assert(df.schema.fields.map(x => (x.name, x.dataType)) sameElements Array(
       ("id", StringType),
       ("amount", DoubleType),
       ("debit_credit", StringType),
       ("name", StringType),
+      ("code", IntegerType),
     ))
     val sampleRow = df.head()
     assert(sampleRow.getString(0).nonEmpty && sampleRow.getString(0).length <= 20)
     assert(sampleRow.getDouble(1) >= 0.0)
-    assert(sampleRow.getString(2) == "D" || sampleRow.getString(2) == "C")
+    val debitCredit = sampleRow.getString(2)
+    assert(debitCredit == "D" || debitCredit == "C")
     assert(sampleRow.getString(3).matches("[A-Z][a-z]{2,6} [A-Z][a-z]{2,8}"))
+    if (debitCredit == "D") assert(sampleRow.getInt(4) == 1) else assert(sampleRow.getInt(4) == 0)
   }
 
   test("Can generate data when number of rows per column is defined") {

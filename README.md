@@ -11,7 +11,8 @@ Generator data for databases, files or HTTP request through a YAML based input a
 ## Generate data
 ### Quick start
 1. Run [App.scala](app/src/main/scala/com/github/pflooky/datagen/App.scala)
-2. Check generated data under [here](app/src/test/resources/csv/transactions)
+2. Set environment variables `ENABLE_GENERATE_PLAN_AND_TASKS=false;PLAN_FILE_PATH=/plan/account-create-plan.yaml`
+3. Check generated data under [here](app/src/test/resources/sample/json)
 
 ### Manually create data
 1. Create plan like [here](app/src/main/resources/plan/customer-create-plan.yaml)
