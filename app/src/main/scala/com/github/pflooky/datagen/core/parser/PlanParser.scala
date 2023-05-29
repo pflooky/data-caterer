@@ -15,12 +15,12 @@ object PlanParser {
   private val OBJECT_MAPPER = ObjectMapperUtil.yamlObjectMapper
 
   def parsePlan(planFilePath: String): Plan = {
-    val planFile = new File(planFilePath)
-    val parsedPlan = if (!planFile.exists()) {
+    val localPlanFile = new File(planFilePath)
+    val parsedPlan = if (!localPlanFile.exists()) {
       val mainPlanFile = getClass.getResource(planFilePath)
       OBJECT_MAPPER.readValue(mainPlanFile, classOf[Plan])
     } else {
-      throw new PlanFileNotFoundException(s"Failed to find plan file, plan-file-path=$planFilePath")
+      OBJECT_MAPPER.readValue(localPlanFile, classOf[Plan])
     }
     LOGGER.info(s"Found plan file and parsed successfully, plan-file-path=$planFilePath, plan-name=${parsedPlan.name}, plan-description=${parsedPlan.description}")
     parsedPlan
@@ -38,10 +38,15 @@ object PlanParser {
   }
 
   private def getTaskFiles(taskFolder: File): Array[File] = {
-    val current = taskFolder.listFiles().filter(_.getName.endsWith("-task.yaml"))
-    current ++ taskFolder.listFiles
-      .filter(_.isDirectory)
-      .flatMap(getTaskFiles)
+    if (!taskFolder.isDirectory) {
+      LOGGER.warn(s"Task folder is not a directory, unable to list files, path=${taskFolder.getPath}")
+      Array()
+    } else {
+      val current = taskFolder.listFiles().filter(_.getName.endsWith(".yaml"))
+      current ++ taskFolder.listFiles
+        .filter(_.isDirectory)
+        .flatMap(getTaskFiles)
+    }
   }
 
   private def parseTask(taskFile: File): Task = {

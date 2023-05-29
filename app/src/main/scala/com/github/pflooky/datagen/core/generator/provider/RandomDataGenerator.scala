@@ -144,7 +144,7 @@ object RandomDataGenerator {
   class RandomDateDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends NullableDataGenerator[Date] {
     private lazy val minValue = getMinValue
     private lazy val maxValue = getMaxValue
-    assert(minValue.isBefore(maxValue), s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
+    assert(minValue.isBefore(maxValue), s"min has to be less than or equal to max, field-name${structField.name}")
     private lazy val maxDays = java.time.temporal.ChronoUnit.DAYS.between(minValue, maxValue).toInt
 
     //from here: https://github.com/apache/spark/blob/master/sql/catalyst/src/test/scala/org/apache/spark/sql/RandomDataGenerator.scala#L206
@@ -173,7 +173,7 @@ object RandomDataGenerator {
   class RandomTimestampDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends NullableDataGenerator[Timestamp] {
     private lazy val minValue = getMinValue
     private lazy val maxValue = getMaxValue
-    assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
+    assert(minValue <= maxValue, s"min has to be less than or equal to max, field-name${structField.name}")
 
     //from here: https://github.com/apache/spark/blob/master/sql/catalyst/src/test/scala/org/apache/spark/sql/RandomDataGenerator.scala#L159
     override val edgeCases: List[Timestamp] = List(

@@ -2,12 +2,16 @@ package com.github.pflooky.datagen.core.config
 
 import com.github.pflooky.datagen.core.model.Constants.{APPLICATION_CONFIG_PATH, FORMAT, SPARK_MASTER, SUPPORTED_CONNECTION_FORMATS}
 import com.typesafe.config.{Config, ConfigBeanFactory, ConfigFactory, ConfigValueType}
+import org.apache.log4j.Logger
 
+import java.io.File
 import scala.beans.BeanProperty
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.util.Try
 
 trait ConfigParser {
+
+  private val LOGGER = Logger.getLogger(getClass.getName)
 
   lazy val config: Config = getConfig
   lazy val flagsConfig: FlagsConfig = ConfigBeanFactory.create(config.getConfig("flags"), classOf[FlagsConfig])
@@ -25,7 +29,8 @@ trait ConfigParser {
       case (_, prop) if prop != null => prop
       case _ => "application.conf"
     }
-    ConfigFactory.load(applicationConfPath)
+    LOGGER.info(s"Using application config file path, path=$applicationConfPath")
+    ConfigFactory.parseFile(new File(applicationConfPath)).resolve()
   }
 
   def getConnectionConfigsByName: Map[String, Map[String, String]] = {

@@ -65,7 +65,7 @@ trait NullableDataGenerator[T >: Null] extends DataGenerator[T] {
   }
 }
 
-trait ListDataGenerator[T] extends DataGenerator[List[T]] {
+trait ListDataGenerator[T] extends NullableDataGenerator[List[T]] {
 
   lazy val listMaxSize: Int = if (structField.metadata.contains(LIST_MAXIMUM_LENGTH)) structField.metadata.getString(LIST_MAXIMUM_LENGTH).toInt else 5
   lazy val listMinSize: Int = if (structField.metadata.contains(LIST_MINIMUM_LENGTH)) structField.metadata.getString(LIST_MINIMUM_LENGTH).toInt else 0

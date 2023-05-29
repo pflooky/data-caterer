@@ -9,6 +9,11 @@ Generator data for databases, files or HTTP request through a YAML based input a
 ![Spartagen high level design](design/spartagen-design.png "High level design")
 
 ## Generate data
+### Quickest start
+1. `mkdir /tmp/datagen`
+2. `docker run -v /tmp/datagen:/opt/app/spartagen pflookyy/spartagen:0.1`
+3. `head /tmp/datagen/sample/json/account-gen/part-0000*`
+
 ### Quick start
 1. Run [App.scala](app/src/main/scala/com/github/pflooky/datagen/App.scala)
 2. Set environment variables `ENABLE_GENERATE_PLAN_AND_TASKS=false;PLAN_FILE_PATH=/plan/account-create-plan.yaml`
