@@ -2,7 +2,7 @@
 
 ## Overview
 
-Generator data for databases, files or HTTP request through a YAML based input and executed via Spark.
+Generator data for databases, files, JMS or HTTP request through a YAML based input and executed via Spark.
 
 ## Flow
 
@@ -30,14 +30,14 @@ Generator data for databases, files or HTTP request through a YAML based input a
 ## Configuration/Customisation
 ### Configuration
 
-| Config | Default Value | Description                                                                                             |
-|--------|---------------|---------------------------------------------------------------------------------------------------------|
-| BASE_FOLDER_PATH | /tmp          | Defines base folder pathway to be used for plan and task files                                          |
-| PLAN_FILE_PATH | <empty>       | Defines plan file path                                                                                  |
-| TASK_FOLDER_PATH | <empty>       | Defines folder path where all task files can be found                                                   |
-| ENABLE_GENERATE_DATA | true          | Enable/disable data generation                                                                          |
-| ENABLE_GENERATE_PLAN_AND_TASKS | true          | Enable/disable plan and task auto generation based off data source connections                          |
-| ENABLE_RECORD_TRACKING | true          | Enable/disable which data records have been generated for any data source                               |
+| Config                          | Default Value | Description                                                                                             |
+|---------------------------------|---------------|---------------------------------------------------------------------------------------------------------|
+| BASE_FOLDER_PATH                | /tmp          | Defines base folder pathway to be used for plan and task files                                          |
+| PLAN_FILE_PATH                  | <empty>       | Defines plan file path                                                                                  |
+| TASK_FOLDER_PATH                | <empty>       | Defines folder path where all task files can be found                                                   |
+| ENABLE_GENERATE_DATA            | true          | Enable/disable data generation                                                                          |
+| ENABLE_GENERATE_PLAN_AND_TASKS  | true          | Enable/disable plan and task auto generation based off data source connections                          |
+| ENABLE_RECORD_TRACKING          | true          | Enable/disable which data records have been generated for any data source                               |
 | ENABLE_DELETE_GENERATED_RECORDS | false         | Delete all generated records based off record tracking (if ENABLE_RECORD_TRACKING has been set to true) |
 
 ### Datagen plan
@@ -219,6 +219,7 @@ Spartagen is able to support the following data sinks:
 - Data cleanup after run
   - Save data into parquet files. Can read and delete when needed
   - Have option to delete directly
+  - Have to do in particular order due to foreign keys
 - Relationships/constraints between fields
   - e.g. if transaction has type purchase, then it is a debit
   - if country is Australia, then country code should be AU
@@ -227,6 +228,9 @@ Spartagen is able to support the following data sinks:
   - Utilise the metadata for the field
 - Having intermediate fields and not including them into the output
   - Allow for SQL expressions
+- Issues with spark streaming to write real-time data
+  - Using rate format, have to manage the connection to the data source yourself
+  - Connection per batch, stopped working for Solace after 125 messages (5 per second)
 
 ## Resources
 

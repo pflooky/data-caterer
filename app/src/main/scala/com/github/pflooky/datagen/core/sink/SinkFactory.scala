@@ -1,12 +1,14 @@
 package com.github.pflooky.datagen.core.sink
 
 import com.github.pflooky.datagen.core.exception.UnsupportedRealTimeDataSourceFormat
-import com.github.pflooky.datagen.core.model.Constants.{BATCH, FAILED, FINISHED, FORMAT, HTTP, JMS, JSON, REAL_TIME, SAVE_MODE, STARTED}
-import com.github.pflooky.datagen.core.model.{Step, Task, TaskSummary}
+import com.github.pflooky.datagen.core.model.Constants.{BATCH, DEFAULT_ROWS_PER_SECOND, FAILED, FINISHED, FORMAT, HTTP, JMS, PER_COLUMN_INDEX_COL, RATE, REAL_TIME, SAVE_MODE, STARTED}
+import com.github.pflooky.datagen.core.model.Step
 import com.github.pflooky.datagen.core.sink.http.HttpSinkProcessor
 import com.github.pflooky.datagen.core.sink.jms.JmsSinkProcessor
+import com.google.common.util.concurrent.RateLimiter
 import org.apache.log4j.Logger
-import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
+import org.apache.spark.sql.execution.streaming.sources.RateStreamProvider.ROWS_PER_SECOND
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SaveMode, SparkSession}
 
 import scala.util.{Failure, Success, Try}
 
@@ -69,13 +71,53 @@ class SinkFactory(
   }
 
   private def saveRealTimeData(df: DataFrame, format: String, connectionConfig: Map[String, String], step: Step): Unit = {
-    df.rdd.foreachPartition(partition => {
-      val sinkProcessor = format match {
-        case HTTP => new HttpSinkProcessor(connectionConfig, step)
-        case JMS => new JmsSinkProcessor(connectionConfig, step)
-        case x => throw new UnsupportedRealTimeDataSourceFormat(x)
-      }
-      partition.foreach(r => sinkProcessor.pushRowToSink(r))
+    val rowsPerSecond = step.options.getOrElse(ROWS_PER_SECOND, DEFAULT_ROWS_PER_SECOND)
+    saveRealTimeGuava(df, format, connectionConfig, step, rowsPerSecond)
+    //    saveRealTimeSpark(df, format, connectionConfig, step, rowsPerSecond)
+  }
+
+  private def saveRealTimeGuava(df: DataFrame, format: String, connectionConfig: Map[String, String], step: Step, rowsPerSecond: String): Unit = {
+    val rateLimiter = RateLimiter.create(rowsPerSecond.toInt)
+    val sinkProcessor = getRealTimeSinkProcessor(format, connectionConfig, step)
+    sinkProcessor.init()
+    df.collect().foreach(row => {
+      rateLimiter.acquire()
+      sinkProcessor.pushRowToSink(row)
     })
+  }
+
+  @deprecated("Unstable for JMS connections")
+  private def saveRealTimeSpark(df: DataFrame, format: String, connectionConfig: Map[String, String], step: Step, rowsPerSecond: String): Unit = {
+    val dfWithIndex = df.selectExpr("*", s"monotonically_increasing_id() AS $PER_COLUMN_INDEX_COL")
+    val rowCount = dfWithIndex.count().toInt
+    val readStream = sparkSession.readStream
+      .format(RATE).option(ROWS_PER_SECOND, rowsPerSecond)
+      .load().limit(rowCount)
+
+    val writeStream = readStream.writeStream
+      .foreachBatch((batch: Dataset[Row], id: Long) => {
+        LOGGER.info(s"batch num=$id, count=${batch.count()}")
+        batch.join(dfWithIndex, batch("value") === dfWithIndex(PER_COLUMN_INDEX_COL))
+          .drop(PER_COLUMN_INDEX_COL).repartition(1).rdd
+          .foreachPartition(partition => {
+            val part = partition.toList
+            val sinkProcessor = getRealTimeSinkProcessor(format, connectionConfig, step)
+            sinkProcessor.init()
+            part.foreach(sinkProcessor.pushRowToSink)
+            sinkProcessor.close
+          })
+      }).start()
+
+    writeStream.awaitTermination(getTimeout(rowCount, rowsPerSecond.toInt))
+  }
+
+  private def getTimeout(totalRows: Int, rowsPerSecond: Int): Long = totalRows / rowsPerSecond * 1000
+
+  private def getRealTimeSinkProcessor(format: String, connectionConfig: Map[String, String], step: Step): RealTimeSinkProcessor[_] = {
+    format match {
+      case HTTP => new HttpSinkProcessor(connectionConfig, step)
+      case JMS => new JmsSinkProcessor(connectionConfig, step)
+      case x => throw new UnsupportedRealTimeDataSourceFormat(x)
+    }
   }
 }

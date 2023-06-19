@@ -1,5 +1,25 @@
 # Data Source Connections
+
+## Contents
+- [Supported Data Connections](#supported-data-connections)
+  - [File System](#file-system)
+  - [JDBC](#jdbc)
+    - [Postgres](#postgres)
+    - [MySQL](#mysql)
+  - [Cassandra](#cassandra)
+  - [JMS](#jms)
+  - [HTTP](#http)
+
 Details of all the connection configuration supported can be found in the below subsections for each type of connection.
+
+## Supported Data Connections
+
+- S3
+- Postgres
+- MySQL
+- Cassandra
+- Solace
+- HTTP
 
 All connection details follow the same pattern.
 ```
@@ -19,9 +39,9 @@ The above defines that if there is a system property or environment variable nam
 it will default to `localhost`.
 
 
-## File System
+### File System
 
-## JDBC
+### JDBC
 Follows the same configuration used by Spark as found [here](https://spark.apache.org/docs/latest/sql-data-sources-jdbc.html).  
 Sample can be found below
 ```
@@ -38,7 +58,24 @@ jdbc {
 }
 ```
 
-## Cassandra
+#### Postgres
+##### Permissions
+Following permissions are required when generating plan and tasks:
+<details>
+
+```sql
+GRANT SELECT ON information_schema.tables TO <user>;
+GRANT SELECT ON information_schema.columns TO <user>;
+GRANT SELECT ON information_schema.table_constraints TO <user>;
+GRANT SELECT ON information_schema.constraint_column_usage TO <user>;
+GRANT SELECT ON information_schema.key_column_usage TO <user>;
+```
+</details>
+
+#### MySQL
+
+
+### Cassandra
 Follows same configuration as defined by the Spark Cassandra Connector as found [here](https://github.com/datastax/spark-cassandra-connector/blob/master/doc/reference.md)  
 
 ```
@@ -56,7 +93,7 @@ org.apache.spark.sql.cassandra {
 }
 ```
 
-## JMS
+### JMS
 Uses JNDI lookup to send messages to JMS queue. Ensure that the messaging system you are using has your queue/topic registered 
 via JNDI otherwise a connection cannot be created.
 ```
@@ -71,7 +108,8 @@ jms {
     }
 }
 ```
-## HTTP
+
+### HTTP
 Define a URL to connect to when sending HTTP requests.  
 Later, can have the ability to define generated data as part of the URL.
 ```

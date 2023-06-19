@@ -1,11 +1,11 @@
 name: "json_account_jms"
 steps:
-  - name: "account"
+  - name: "jms_account"
     type: "json"
     count:
       total: 1000
     options:
-      destinationName: "/JNDI/Q/test_queue"
+      destinationName: "/JNDI/Q/generated_test_queue"
     schema:
       type: "manual"
       fields:

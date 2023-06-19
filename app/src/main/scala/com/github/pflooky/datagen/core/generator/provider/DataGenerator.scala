@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.provider
 
-import com.github.pflooky.datagen.core.model.Constants.{ENABLED_EDGE_CASES, ENABLED_NULL, IS_UNIQUE, LIST_MAXIMUM_LENGTH, LIST_MINIMUM_LENGTH, MAXIMUM_LENGTH, RANDOM_SEED}
+import com.github.pflooky.datagen.core.model.Constants.{ENABLED_EDGE_CASES, ENABLED_NULL, IS_UNIQUE, LIST_MAXIMUM_LENGTH, LIST_MINIMUM_LENGTH, MAXIMUM_LENGTH, PROBABILITY_OF_EDGE_CASES, PROBABILITY_OF_NULLS, RANDOM_SEED}
 import net.datafaker.Faker
 import org.apache.spark.sql.types.{DataType, StructField}
 
@@ -13,8 +13,6 @@ trait DataGenerator[T] extends Serializable {
   val structField: StructField
   val faker: Faker
 
-  val PROBABILITY_OF_NULL = 0.1
-  val PROBABILITY_OF_EDGE_CASES = 0.5
 
   val edgeCases: List[T] = List()
 
@@ -24,11 +22,13 @@ trait DataGenerator[T] extends Serializable {
   lazy val enabledNull: Boolean = if (structField.metadata.contains(ENABLED_NULL)) structField.metadata.getString(ENABLED_NULL).toBoolean else false
   lazy val enabledEdgeCases: Boolean = if (structField.metadata.contains(ENABLED_EDGE_CASES)) structField.metadata.getString(ENABLED_EDGE_CASES).toBoolean else false
   lazy val isUnique: Boolean = if (structField.metadata.contains(IS_UNIQUE)) structField.metadata.getString(IS_UNIQUE).toBoolean else false
+  lazy val probabilityOfNull: Double = if (structField.metadata.contains(PROBABILITY_OF_NULLS)) structField.metadata.getString(PROBABILITY_OF_NULLS).toDouble else 0.1
+  lazy val probabilityOfEdgeCases: Double = if (structField.metadata.contains(PROBABILITY_OF_EDGE_CASES)) structField.metadata.getString(PROBABILITY_OF_EDGE_CASES).toDouble else 0.5
   lazy val prevGenerated: mutable.Set[T] = mutable.Set[T]()
 
   def generateWrapper(count: Int = 0): T = {
     val randDouble = random.nextDouble()
-    val generatedValue = if (enabledEdgeCases && randDouble <= PROBABILITY_OF_EDGE_CASES) {
+    val generatedValue = if (enabledEdgeCases && randDouble <= probabilityOfEdgeCases) {
       edgeCases(random.nextInt(edgeCases.size))
     } else {
       generate
@@ -53,11 +53,11 @@ trait NullableDataGenerator[T >: Null] extends DataGenerator[T] {
 
   override def generateWrapper(count: Int = 0): T = {
     val randDouble = random.nextDouble()
-    if (enabledNull && structField.nullable && randDouble <= PROBABILITY_OF_NULL) {
+    if (enabledNull && structField.nullable && randDouble <= probabilityOfNull) {
       null
     } else if (enabledEdgeCases && edgeCases.nonEmpty &&
-      ((structField.nullable && randDouble <= PROBABILITY_OF_EDGE_CASES + PROBABILITY_OF_NULL) ||
-        (!structField.nullable && randDouble <= PROBABILITY_OF_EDGE_CASES))) {
+      ((structField.nullable && randDouble <= probabilityOfEdgeCases + probabilityOfNull) ||
+        (!structField.nullable && randDouble <= probabilityOfEdgeCases))) {
       edgeCases(random.nextInt(edgeCases.size))
     } else {
       generate

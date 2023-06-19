@@ -38,17 +38,6 @@ class ForeignKeyUtilTest extends SparkSuite {
     resTxnRows.foreach(r => r.getString(0) == "acc1")
   }
 
-
-  test("Can create random json generator") {
-    val sampleJsonFile = Source.fromURL(getClass.getResource("/sample/json/sample.json"))
-    val sampleJson = sampleJsonFile.getLines().mkString
-    import sparkSession.implicits._
-    val json = sparkSession.createDataset(Seq(sampleJson))
-    val data = sparkSession.read.option("inferTimestamp", "true").option("inferDate", "true").json(json)
-    data.show(false)
-    sampleJsonFile.close()
-  }
-
   test("Can get delete order based on foreign keys defined") {
     val foreignKeys = Map(
       "postgres.accounts.account_id" -> List("postgres.balances.account_id", "postgres.transactions.account_id")
@@ -85,6 +74,6 @@ class ForeignKeyUtilTest extends SparkSuite {
 
 }
 
-case class Account(account_id: String, name: String, open_date: Date, age: Int)
+case class Account(account_id: String = "acc123", name: String = "peter", open_date: Date = Date.valueOf("2023-01-31"), age: Int = 10)
 
 case class Transaction(account_id: String, transaction_id: String, created_date: Date, amount: Double)

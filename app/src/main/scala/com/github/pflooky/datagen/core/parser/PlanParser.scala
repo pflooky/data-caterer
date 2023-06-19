@@ -3,7 +3,7 @@ package com.github.pflooky.datagen.core.parser
 import com.github.pflooky.datagen.core.exception.{PlanFileNotFoundException, TaskParseException}
 import com.github.pflooky.datagen.core.model.Constants.ONE_OF
 import com.github.pflooky.datagen.core.model.{Plan, Schema, Step, Task}
-import com.github.pflooky.datagen.core.util.ObjectMapperUtil
+import com.github.pflooky.datagen.core.util.{FileUtil, ObjectMapperUtil}
 import org.apache.log4j.Logger
 
 import java.io.File
@@ -15,26 +15,15 @@ object PlanParser {
   private val OBJECT_MAPPER = ObjectMapperUtil.yamlObjectMapper
 
   def parsePlan(planFilePath: String): Plan = {
-    val localPlanFile = new File(planFilePath)
-    val parsedPlan = if (!localPlanFile.exists()) {
-      val mainPlanFile = getClass.getResource(planFilePath)
-      OBJECT_MAPPER.readValue(mainPlanFile, classOf[Plan])
-    } else {
-      OBJECT_MAPPER.readValue(localPlanFile, classOf[Plan])
-    }
+    val planFile = FileUtil.getFile(planFilePath)
+    val parsedPlan = OBJECT_MAPPER.readValue(planFile, classOf[Plan])
     LOGGER.info(s"Found plan file and parsed successfully, plan-file-path=$planFilePath, plan-name=${parsedPlan.name}, plan-description=${parsedPlan.description}")
     parsedPlan
   }
 
   def parseTasks(taskFolderPath: String): Array[Task] = {
-    var taskFolder = new File(taskFolderPath)
-    if (!taskFolder.isDirectory) {
-      taskFolder = new File(getClass.getResource(taskFolderPath).getFile)
-      //      return OBJECT_MAPPER.readValue(mainPlanFile, classOf[Plan])
-      //      throw TaskFolderNotDirectoryException(taskFolderPath)
-    }
-    val parsedTasks = getTaskFiles(taskFolder).map(parseTask)
-    parsedTasks
+    val taskFolder = FileUtil.getDirectory(taskFolderPath)
+    getTaskFiles(taskFolder).map(parseTask)
   }
 
   private def getTaskFiles(taskFolder: File): Array[File] = {

@@ -6,19 +6,20 @@ import org.apache.spark.sql.Row
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.funsuite.AnyFunSuite
 
-import javax.jms.{Message, MessageProducer, Session}
+import javax.jms.{Connection, Message, MessageProducer, Session}
 import javax.naming.Context
 
 class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
 
+  private val mockConnection = mock[Connection]
   private val step = Step("step1", "json", Count(), Map(), Schema("manual", None))
 
   test("Given no body field defined, push the first string column as a text message") {
     val mockSession = mock[Session]
     val mockMessageProducer = mock[MessageProducer]
     val jmsSinkProcessor = new JmsSinkProcessor(Map(), step) {
-      override protected def createMessageProducer: (MessageProducer, Session) = {
-        (mockMessageProducer, mockSession)
+      override def createConnection: (MessageProducer, Session, Connection) = {
+        (mockMessageProducer, mockSession, mockConnection)
       }
     }
 
@@ -33,8 +34,8 @@ class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
     val mockSession = mock[Session]
     val mockMessageProducer = mock[MessageProducer]
     val jmsSinkProcessor = new JmsSinkProcessor(Map(), step.copy(options = Map(BODY_FIELD -> "json_body"))) {
-      override protected def createMessageProducer: (MessageProducer, Session) = {
-        (mockMessageProducer, mockSession)
+      override def createConnection: (MessageProducer, Session, Connection) = {
+        (mockMessageProducer, mockSession, mockConnection)
       }
     }
 
@@ -56,8 +57,8 @@ class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
     val mockSession = mock[Session]
     val mockMessageProducer = mock[MessageProducer]
     val jmsSinkProcessor = new JmsSinkProcessor(connectionConfig, step) {
-      override protected def createMessageProducer: (MessageProducer, Session) = {
-        (mockMessageProducer, mockSession)
+      override def createConnection: (MessageProducer, Session, Connection) = {
+        (mockMessageProducer, mockSession, mockConnection)
       }
     }
 

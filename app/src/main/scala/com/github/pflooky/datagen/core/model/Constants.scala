@@ -36,6 +36,7 @@ object Constants {
   lazy val POSTGRES = "postgres"
   lazy val HTTP = "http"
   lazy val JMS = "jms"
+  lazy val RATE = "rate"
   //file formats
   lazy val CSV = "csv"
   lazy val DELTA = "delta"
@@ -62,8 +63,10 @@ object Constants {
 
   //field metadata
   lazy val RANDOM_SEED = "seed"
-  lazy val ENABLED_NULL = "enableNull"
+  lazy val ENABLED_NULL = "enableNulls"
+  lazy val PROBABILITY_OF_NULLS = "probabilityOfNulls"
   lazy val ENABLED_EDGE_CASES = "enableEdgeCases"
+  lazy val PROBABILITY_OF_EDGE_CASES = "probabilityOfEdgeCases"
   lazy val AVERAGE_LENGTH = "avgLen"
   lazy val MINIMUM_LENGTH = "minLen"
   lazy val LIST_MINIMUM_LENGTH = "listMinLen"
@@ -111,4 +114,5 @@ object Constants {
   lazy val APPLICATION_CONFIG_PATH = "APPLICATION_CONFIG_PATH"
   lazy val BATCH = "batch"
   lazy val REAL_TIME = "real-time"
+  lazy val DEFAULT_ROWS_PER_SECOND = "5"
 }

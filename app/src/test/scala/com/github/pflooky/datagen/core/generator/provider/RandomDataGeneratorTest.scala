@@ -65,6 +65,28 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(sampleData.length <= 20)
   }
 
+  test("Can create random int generator with custom min and max") {
+    val metadata = new MetadataBuilder().putString("max", "10").putString("min", "5").build()
+    val intGenerator = new RandomIntDataGenerator(StructField("random_int", IntegerType, false, metadata))
+    val sampleData = intGenerator.generate
+
+    assert(intGenerator.edgeCases.nonEmpty)
+    assert(sampleData >= 5)
+    assert(sampleData <= 10)
+  }
+
+  test("Can create random int generator with metadata where minValue and maxValue take precedence over min and max") {
+    val metadata = new MetadataBuilder()
+      .putString("maxValue", "100").putString("minValue", "90")
+      .putString("max", "10").putString("min", "5").build()
+    val intGenerator = new RandomIntDataGenerator(StructField("random_int", IntegerType, false, metadata))
+    val sampleData = intGenerator.generate
+
+    assert(intGenerator.edgeCases.nonEmpty)
+    assert(sampleData >= 90)
+    assert(sampleData <= 100)
+  }
+
   test("Can create random int generator") {
     val intGenerator = new RandomIntDataGenerator(StructField("random_int", IntegerType, false))
     val sampleData = intGenerator.generate
@@ -83,6 +105,16 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(sampleData <= Long.MaxValue)
   }
 
+  test("Can create random long generator with custom min and max") {
+    val metadata = new MetadataBuilder().putString("max", "10").putString("min", "5").build()
+    val longGenerator = new RandomLongDataGenerator(StructField("random_long", LongType, false, metadata))
+    val sampleData = longGenerator.generate
+
+    assert(longGenerator.edgeCases.nonEmpty)
+    assert(sampleData >= 5)
+    assert(sampleData <= 10)
+  }
+
   test("Can create random decimal generator") {
     val decimalGenerator = new RandomDecimalDataGenerator(StructField("random_decimal", DecimalType(22, 2), false))
     val sampleData = decimalGenerator.generate
@@ -90,6 +122,16 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(decimalGenerator.edgeCases.nonEmpty)
     assert(sampleData >= 0)
     assert(sampleData <= Long.MaxValue)
+  }
+
+  test("Can create random decimal generator with custom min and max") {
+    val metadata = new MetadataBuilder().putString("max", "10").putString("min", "5").build()
+    val decimalGenerator = new RandomDecimalDataGenerator(StructField("random_decimal", DecimalType(22, 2), false, metadata))
+    val sampleData = decimalGenerator.generate
+
+    assert(decimalGenerator.edgeCases.nonEmpty)
+    assert(sampleData >= 5)
+    assert(sampleData <= 10)
   }
 
   test("Can create random short generator") {
@@ -101,6 +143,16 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(sampleData <= Short.MaxValue)
   }
 
+  test("Can create random short generator with custom min and max") {
+    val metadata = new MetadataBuilder().putString("max", "10").putString("min", "5").build()
+    val shortGenerator = new RandomShortDataGenerator(StructField("random_short", ShortType, false, metadata))
+    val sampleData = shortGenerator.generate
+
+    assert(shortGenerator.edgeCases.nonEmpty)
+    assert(sampleData >= 5)
+    assert(sampleData <= 10)
+  }
+
   test("Can create random double generator") {
     val doubleGenerator = new RandomDoubleDataGenerator(StructField("random_double", DoubleType, false))
     val sampleData = doubleGenerator.generate
@@ -110,6 +162,16 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(sampleData <= Double.MaxValue)
   }
 
+  test("Can create random double generator with custom min and max") {
+    val metadata = new MetadataBuilder().putString("max", "10.0").putString("min", "5.0").build()
+    val doubleGenerator = new RandomDoubleDataGenerator(StructField("random_double", DoubleType, false, metadata))
+    val sampleData = doubleGenerator.generate
+
+    assert(doubleGenerator.edgeCases.nonEmpty)
+    assert(sampleData >= 5.0)
+    assert(sampleData <= 10.0)
+  }
+
   test("Can create random float generator") {
     val floatGenerator = new RandomFloatDataGenerator(StructField("random_float", FloatType, false))
     val sampleData = floatGenerator.generate
@@ -117,6 +179,16 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(floatGenerator.edgeCases.nonEmpty)
     assert(sampleData >= 0.0)
     assert(sampleData <= Float.MaxValue)
+  }
+
+  test("Can create random float generator with custom min and max") {
+    val metadata = new MetadataBuilder().putString("max", "10.0").putString("min", "5.0").build()
+    val floatGenerator = new RandomFloatDataGenerator(StructField("random_float", FloatType, false, metadata))
+    val sampleData = floatGenerator.generate
+
+    assert(floatGenerator.edgeCases.nonEmpty)
+    assert(sampleData >= 5.0)
+    assert(sampleData <= 10.0)
   }
 
   test("Can create random date generator") {
@@ -169,5 +241,53 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     val sampleData = listGenerator.generate
 
     assert(sampleData.nonEmpty)
+  }
+
+  test("Can create random string generator with only nulls generated") {
+    val metadata = new MetadataBuilder().putString("enableNulls", "true").putString("probabilityOfNulls", "1.0").build()
+    val stringGenerator = new RandomStringDataGenerator(StructField("random_string", StringType, true, metadata))
+    val sampleData = (1 to 10).map(_ => stringGenerator.generateWrapper())
+
+    assert(stringGenerator.edgeCases.nonEmpty)
+    assert(sampleData.nonEmpty)
+    assert(sampleData.forall(_ == null))
+  }
+
+  test("Can create random string generator with only edge cases generated") {
+    val metadata = new MetadataBuilder().putString("enableEdgeCases", "true").putString("probabilityOfEdgeCases", "1.0").build()
+    val stringGenerator = new RandomStringDataGenerator(StructField("random_string", StringType, false, metadata))
+    val sampleData = (1 to 10).map(_ => stringGenerator.generateWrapper())
+
+    assert(stringGenerator.edgeCases.nonEmpty)
+    assert(sampleData.nonEmpty)
+    assert(sampleData.forall(stringGenerator.edgeCases.contains))
+  }
+
+  test("Can create random int generator with only edge cases generated") {
+    val metadata = new MetadataBuilder().putString("enableEdgeCases", "true").putString("probabilityOfEdgeCases", "1.0").build()
+    val intGenerator = new RandomIntDataGenerator(StructField("random_int", IntegerType, false, metadata))
+    val sampleData = (1 to 10).map(_ => intGenerator.generateWrapper())
+
+    assert(intGenerator.edgeCases.nonEmpty)
+    assert(sampleData.nonEmpty)
+    assert(sampleData.forall(intGenerator.edgeCases.contains))
+  }
+
+  test("Can create random string generator with nulls and edge cases enabled") {
+    val metadata = new MetadataBuilder().putString("enableNulls", "true").putString("enableEdgeCases", "true")
+      .putString("probabilityOfEdgeCases", "1.0").build()
+    val stringGenerator = new RandomStringDataGenerator(StructField("random_string", StringType, true, metadata))
+    val sampleData = (1 to 10).map(_ => stringGenerator.generateWrapper())
+
+    assert(stringGenerator.edgeCases.nonEmpty)
+    assert(sampleData.nonEmpty)
+    assert(sampleData.forall(s => stringGenerator.edgeCases.contains(s) || s == null))
+  }
+
+  test("Will throw exception if unable to create unique value given metadata restrictions") {
+    val metadata = new MetadataBuilder().putString("min", "1").putString("max", "1").putString("isUnique", "true").build()
+    val intGenerator = new RandomIntDataGenerator(StructField("random_int", IntegerType, false, metadata))
+    intGenerator.generateWrapper()
+    assertThrows[RuntimeException](intGenerator.generateWrapper())
   }
 }

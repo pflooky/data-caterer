@@ -1,11 +1,11 @@
 name: "json_account_file"
 steps:
-  - name: "file_account"
+  - name: "account"
     type: "json"
     count:
       total: 1000
     options:
-      path: "app/src/test/resources/sample/json/account-gen"
+      path: "app/src/test/resources/sample/data/generated/json/account-gen"
     schema:
       type: "manual"
       fields:

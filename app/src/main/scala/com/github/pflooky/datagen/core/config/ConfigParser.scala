@@ -29,8 +29,14 @@ trait ConfigParser {
       case (_, prop) if prop != null => prop
       case _ => "application.conf"
     }
-    LOGGER.info(s"Using application config file path, path=$applicationConfPath")
-    ConfigFactory.parseFile(new File(applicationConfPath)).resolve()
+    LOGGER.debug(s"Using application config file path, path=$applicationConfPath")
+    val applicationConfFile = new File(applicationConfPath)
+    if (!applicationConfFile.exists()) {
+      val confFromClassPath = getClass.getClassLoader.getResource(applicationConfPath)
+      ConfigFactory.parseURL(confFromClassPath).resolve()
+    } else {
+      ConfigFactory.parseFile(applicationConfFile).resolve()
+    }
   }
 
   def getConnectionConfigsByName: Map[String, Map[String, String]] = {

@@ -2,7 +2,7 @@ package com.github.pflooky.datagen.core.sink.http
 
 import com.github.pflooky.datagen.core.model.Constants.{BODY_FIELD, HTTP_CONTENT_TYPE, HTTP_HEADER_PREFIX, HTTP_METHOD, PASSWORD, URL, USERNAME}
 import com.github.pflooky.datagen.core.model.Step
-import com.github.pflooky.datagen.core.sink.SinkProcessor
+import com.github.pflooky.datagen.core.sink.{RealTimeSinkProcessor, SinkProcessor}
 import dispatch.Defaults._
 import dispatch._
 import org.apache.log4j.Logger
@@ -14,7 +14,7 @@ import scala.util.{Failure, Success}
 
 class HttpSinkProcessor(override val connectionConfig: Map[String, String],
                         override val step: Step,
-                        http: Http = Http.default) extends SinkProcessor {
+                        http: Http = Http.default) extends RealTimeSinkProcessor[Unit] {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
   private val METHOD = step.options(HTTP_METHOD)
@@ -22,6 +22,10 @@ class HttpSinkProcessor(override val connectionConfig: Map[String, String],
   private val BODY_FIELD_OPT = step.options.get(BODY_FIELD)
   private val CONTENT_TYPE = step.options.getOrElse(HTTP_CONTENT_TYPE, "application/json")
   private val HEADERS = getHeaders
+
+  override def createConnection: Unit = {}
+
+  override def close: Unit = {}
 
   override def pushRowToSink(row: Row): Unit = {
     val request = createHttpRequest(row)

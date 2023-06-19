@@ -1,14 +1,23 @@
 package com.github.pflooky.datagen.core.generator
 
+import com.github.pflooky.datagen.App.getClass
 import com.github.pflooky.datagen.core.model._
-import com.github.pflooky.datagen.core.util.SparkSuite
+import com.github.pflooky.datagen.core.util.{Account, SparkSuite}
+import org.apache.log4j.Logger
+import org.apache.spark.sql.streaming.Trigger
+import org.apache.spark.sql.{Dataset, Encoder, Encoders, Row}
 import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType}
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
 
+import java.util.UUID
+import java.util.concurrent.TimeUnit
+import scala.util.Random
+
 @RunWith(classOf[JUnitRunner])
 class DataGeneratorFactoryTest extends SparkSuite {
 
+  private val LOGGER = Logger.getLogger(getClass.getName)
   private val dataGeneratorFactory = new DataGeneratorFactory(None, None)
   private val schema = Schema("manual", Some(
     List(
@@ -85,6 +94,22 @@ class DataGeneratorFactoryTest extends SparkSuite {
     val sampleId = df.head().getAs[String]("id")
     val sampleRows = df.filter(_.getAs[String]("id") == sampleId)
     assert(sampleRows.count() == 1L)
+  }
+
+  test("Can run spark streaming output at 2 records per second") {
+    implicit val encoder: Encoder[Account] = Encoders.kryo[Account]
+    val df = sparkSession.readStream
+      .format("rate").option("rowsPerSecond", "10").load()
+      .map(_ => Account())
+      .limit(100)
+    val stream = df.writeStream
+      .foreachBatch((batch: Dataset[_], id: Long) => println(s"batch-id=$id, size=${batch.count()}"))
+      .start()
+    stream.awaitTermination(11000)
+  }
+
+  def genAccount: Account = {
+    Account(new Random().nextString(5))
   }
 
 }
