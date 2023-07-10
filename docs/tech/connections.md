@@ -1,6 +1,7 @@
 # Data Source Connections
 
 ## Contents
+
 - [Supported Data Connections](#supported-data-connections)
   - [File System](#file-system)
   - [JDBC](#jdbc)
@@ -42,6 +43,7 @@ it will default to `localhost`.
 ### File System
 
 ### JDBC
+
 Follows the same configuration used by Spark as found [here](https://spark.apache.org/docs/latest/sql-data-sources-jdbc.html).  
 Sample can be found below
 ```
@@ -58,24 +60,46 @@ jdbc {
 }
 ```
 
+Ensure that the user has write permission so it is able to save the table to the target tables.
+<details>
+
+```sql
+GRANT INSERT ON <schema>.<table> TO <user>;
+```
+</details>
+
 #### Postgres
+
 ##### Permissions
+
 Following permissions are required when generating plan and tasks:
 <details>
 
 ```sql
 GRANT SELECT ON information_schema.tables TO <user>;
 GRANT SELECT ON information_schema.columns TO <user>;
+GRANT SELECT ON information_schema.key_column_usage TO <user>;
 GRANT SELECT ON information_schema.table_constraints TO <user>;
 GRANT SELECT ON information_schema.constraint_column_usage TO <user>;
-GRANT SELECT ON information_schema.key_column_usage TO <user>;
 ```
 </details>
 
 #### MySQL
 
+##### Permissions
+
+Following permissions are required when generating plan and tasks:
+<details>
+
+```sql
+GRANT SELECT ON information_schema.columns TO <user>;
+GRANT SELECT ON information_schema.statistics TO <user>;
+GRANT SELECT ON information_schema.key_column_usage TO <user>;
+```
+</details>
 
 ### Cassandra
+
 Follows same configuration as defined by the Spark Cassandra Connector as found [here](https://github.com/datastax/spark-cassandra-connector/blob/master/doc/reference.md)  
 
 ```
@@ -93,7 +117,16 @@ org.apache.spark.sql.cassandra {
 }
 ```
 
+Ensure that the user has write permission so it is able to save the table to the target tables.
+<details>
+
+```sql
+GRANT INSERT ON <schema>.<table> TO <user>;
+```
+</details>
+
 ### JMS
+
 Uses JNDI lookup to send messages to JMS queue. Ensure that the messaging system you are using has your queue/topic registered 
 via JNDI otherwise a connection cannot be created.
 ```
@@ -110,6 +143,7 @@ jms {
 ```
 
 ### HTTP
+
 Define a URL to connect to when sending HTTP requests.  
 Later, can have the ability to define generated data as part of the URL.
 ```

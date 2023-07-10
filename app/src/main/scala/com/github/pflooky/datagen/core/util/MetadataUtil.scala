@@ -107,18 +107,19 @@ object MetadataUtil {
   def determineIfOneOfColumn(sourceData: DataFrame, columnName: String,
                              statisticsMap: Map[String, String], metadataConfig: MetadataConfig): Option[Array[String]] = {
     val columnDataType = sourceData.schema.fields.find(_.name == columnName).map(_.dataType)
-    columnDataType match {
-      case Some(DateType) => None
-      case Some(_) =>
+    val count = statisticsMap(ROW_COUNT).toLong
+    (columnDataType, count) match {
+      case (Some(DateType), _) => None
+      case (_, 0) => None
+      case (Some(_), c) if c >= metadataConfig.oneOfMinCount =>
         val distinctCount = statisticsMap(DISTINCT_COUNT).toLong
-        val count = statisticsMap(ROW_COUNT).toLong
         if (distinctCount / count <= metadataConfig.oneOfDistinctCountVsCountThreshold) {
           LOGGER.debug(s"Identified column as a 'oneOf' column as distinct count / total count is below threshold, threshold=${metadataConfig.oneOfDistinctCountVsCountThreshold}")
-          Some(sourceData.select(columnName).distinct().collect().map(_.getAs[String](columnName)))
+          Some(sourceData.select(columnName).distinct().collect().map(_.mkString))
         } else {
           None
         }
-      case None => None
+      case _ => None
     }
   }
 }

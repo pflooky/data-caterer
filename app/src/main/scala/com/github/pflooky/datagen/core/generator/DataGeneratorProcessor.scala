@@ -31,7 +31,7 @@ class DataGeneratorProcessor extends SparkProvider {
     if (flagsConfig.enableDeleteGeneratedRecords) {
       deleteGeneratedRecords(plan, stepsByName, summaryWithTask)
     } else if (flagsConfig.enableGenerateData) {
-      LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks: ($summaryWithTask)")
+      LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=($summaryWithTask)")
       summaryWithTask.foreach(t => LOGGER.info(s"Enabled task details: ${t._2.toTaskDetailString}"))
       val sinkDf = getAllStepDf(plan, summaryWithTask)
       pushDataToSinks(summaryWithTask, sinkDf)

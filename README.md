@@ -206,9 +206,18 @@ Spartagen is able to support the following data sinks:
 6. Automatically insert data into data source
    1. Read metadata from data source and insert for all sub data sources (e.g. tables)
    2. Get statistics from existing data in data source if exists
-7. Delete generated data
-8. Generate based on all possible combinations of columns
-   1. Calculate the total number of combinations based on metadata
+7. Track and delete generated data
+8. Extract data profiling and metadata from given data sources
+   1. Calculate the total number of combinations
+
+## Improvements
+
+- UI to see dashboard of metadata and data generated
+- Read in schema files (such as protobuf, openapi) and convert to tasks
+  - Ability to convert sample data into task
+  - Read from metadata sources like amundsen, datahub, etc.
+- Pass in data attributes to HTTP URL as parameters
+- Auto generate regex and/or faker expressions
 
 ## Challenges
 
@@ -231,6 +240,11 @@ Spartagen is able to support the following data sinks:
 - Issues with spark streaming to write real-time data
   - Using rate format, have to manage the connection to the data source yourself
   - Connection per batch, stopped working for Solace after 125 messages (5 per second)
+- Generating regex pattern given data samples
+- Database generated columns values
+  - Auto increment
+  - On update current_timestamp
+  - Omit generating columns (only if they are not used as foreign keys)
 
 ## Resources
 

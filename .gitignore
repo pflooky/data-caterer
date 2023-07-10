@@ -4,6 +4,7 @@
 # Ignore Gradle build output directory
 build
 .idea
+.DS_Store
 
 app/out
 app/src/test/resources/sample/parquet

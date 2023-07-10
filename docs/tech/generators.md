@@ -44,6 +44,8 @@ descriptions:
 | expression | <empty> | expression: "#{Name.name}"<br/> expression:"#{Address.city}/#{Demographic.maritalStatus}" | Will generate a string based on the faker expression provided. All possible faker expressions can be found [here](../../app/src/test/resources/datafaker/expressions.txt)<br/> Expression has to be in format `#{<faker expression name>}` |
 | enableNull | false   | enableNull: "true"                                                                        | Enable/disable null values being generated                                                                                                                                                                                                 |
 
+Edge cases: ("", "\n", "\r", "\t", " ", "\\u0000", "\\ufff")
+
 ### Numeric
 For all the numeric data types, there are 4 options to choose from: min, minValue, max and maxValue.
 Generally speaking, you only need to define one of min or minValue, similarly with max or maxValue.  
@@ -58,6 +60,10 @@ The reason why there are 2 options for each is because of when metadata is autom
 | maxValue | 1000    | maxValue: "25" | Ensures that all generated values are less than or equal to `maxValue`                                                                                        |
 | max      | 1000    | max: "25"      | Ensures that all generated values are less than or equal to `maxValue`. If `maxValue` is defined, `maxValue` will define the largest possible generated value |
 
+Edge cases Integer: (2147483647, -2147483648, 0)
+Edge cases Long/Decimal: (9223372036854775807, -9223372036854775808, 0)
+Edge cases Short: (32767, -32768, 0)
+
 #### Double/Float
 
 | Option   | Default | Example          | Description                                                                                                                                                   |
@@ -67,6 +73,9 @@ The reason why there are 2 options for each is because of when metadata is autom
 | maxValue | 1000.0  | maxValue: "25.9" | Ensures that all generated values are less than or equal to `maxValue`                                                                                        |
 | max      | 1000.0  | max: "25.9"      | Ensures that all generated values are less than or equal to `maxValue`. If `maxValue` is defined, `maxValue` will define the largest possible generated value |
 
+Edge cases Double: (+infinity, 1.7976931348623157e+308, 4.9e-324, 0.0, -0.0, -1.7976931348623157e+308, -infinity, NaN)
+Edge cases Float: (+infinity, 3.4028235e+38, 1.4e-45, 0.0, -0.0, -3.4028235e+38, -infinity, NaN)
+
 ### Date
 
 | Option     | Default          | Example            | Description                                                          |
@@ -74,6 +83,9 @@ The reason why there are 2 options for each is because of when metadata is autom
 | min        | now() - 365 days | min: "2023-01-31"  | Ensures that all generated values are greater than or equal to `min` |
 | max        | now()            | max: "2023-12-31"  | Ensures that all generated values are less than or equal to `max`    |
 | enableNull | false            | enableNull: "true" | Enable/disable null values being generated                           |
+
+Edge cases: (0001-01-01, 1582-10-15, 1970-01-01, 9999-12-31)
+(Reference: https://github.com/apache/spark/blob/master/sql/catalyst/src/test/scala/org/apache/spark/sql/RandomDataGenerator.scala#L206)
 
 ### Timestamp
 
@@ -83,6 +95,8 @@ The reason why there are 2 options for each is because of when metadata is autom
 | max        | now()            | max: "2023-12-31 23:10:10" | Ensures that all generated values are less than or equal to `max`    |
 | enableNull | false            | enableNull: "true"         | Enable/disable null values being generated                           |
 
+Edge cases: (0001-01-01 00:00:00, 1582-10-15 23:59:59, 1970-01-01 00:00:00, 9999-12-31 23:59:59)
+
 ### Binary
 
 | Option     | Default | Example             | Description                                                             |
@@ -90,6 +104,8 @@ The reason why there are 2 options for each is because of when metadata is autom
 | minLen     | 1       | minLen: "2"         | Ensures that all generated array of bytes have at least length `minLen` |
 | maxLen     | 20      | maxLen: "15"        | Ensures that all generated array of bytes have at most length `maxLen`  |
 | enableNull | false   | enableNull: "true"  | Enable/disable null values being generated                              |
+
+Edge cases: ("", "\n", "\r", "\t", " ", "\\u0000", "\\ufff", -128, 127)
 
 ### List
 

@@ -104,10 +104,12 @@ class DataGeneratorFactory(optSeed: Option[String], optLocale: Option[String])(i
   }
 
   private def getStructWithGenerators(fields: List[Field]): List[DataGenerator[_]] = {
-    val structFieldsWithDataGenerators = fields.map(field => {
-      val structField: StructField = createStructFieldFromField(field)
-      getDataGenerator(field.generator, structField)
-    })
+    val structFieldsWithDataGenerators = fields
+      .filter(field => !field.generator.flatMap(gen => gen.options.get(OMIT)).getOrElse("false").toString.toBoolean)
+      .map(field => {
+        val structField: StructField = createStructFieldFromField(field)
+        getDataGenerator(field.generator, structField)
+      })
     structFieldsWithDataGenerators
   }
 

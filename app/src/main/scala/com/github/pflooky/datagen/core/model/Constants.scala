@@ -91,6 +91,8 @@ object Constants {
   lazy val NUMERIC_PRECISION = "numericPrecision"
   lazy val NUMERIC_SCALE = "numericScale"
   lazy val DEFAULT_VALUE = "defaultValue"
+  lazy val DATA_SOURCE_GENERATION = "dataSourceGeneration"
+  lazy val OMIT = "omit"
   lazy val CONSTRAINT_TYPE = "constraintType"
 
   //one of generator types

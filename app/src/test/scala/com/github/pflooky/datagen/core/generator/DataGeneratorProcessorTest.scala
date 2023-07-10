@@ -10,7 +10,7 @@ import scala.reflect.io.Directory
 class DataGeneratorProcessorTest extends SparkSuite {
 
   test("Can parse plan and tasks, then execute data generation") {
-    val basePath = "app/src/test/resources/sample/data"
+    val basePath = "src/test/resources/sample/data"
     val dataGeneratorProcessor = new DataGeneratorProcessor()
 
     dataGeneratorProcessor.generateData()

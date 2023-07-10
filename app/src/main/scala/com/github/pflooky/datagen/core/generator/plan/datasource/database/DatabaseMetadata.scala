@@ -1,9 +1,9 @@
 package com.github.pflooky.datagen.core.generator.plan.datasource.database
 
 import com.github.pflooky.datagen.core.generator.plan.datasource.DataSourceMetadata
-import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, DEFAULT_VALUE, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_QUERY, JDBC_TABLE, MAXIMUM_LENGTH, METADATA_FILTER_SCHEMA, METADATA_FILTER_TABLE, NUMERIC_PRECISION, NUMERIC_SCALE, PRIMARY_KEY_POSITION, SOURCE_COLUMN_DATA_TYPE, SOURCE_MAXIMUM_LENGTH}
+import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, DATA_SOURCE_GENERATION, DEFAULT_VALUE, EXPRESSION, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_QUERY, JDBC_TABLE, MAXIMUM_LENGTH, METADATA_FILTER_SCHEMA, METADATA_FILTER_TABLE, NUMERIC_PRECISION, NUMERIC_SCALE, OMIT, PRIMARY_KEY_POSITION, SOURCE_COLUMN_DATA_TYPE, SOURCE_MAXIMUM_LENGTH}
 import com.github.pflooky.datagen.core.model.ForeignKeyRelation
-import org.apache.spark.sql.{DataFrame, Dataset, Encoder, Encoders, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, Encoder, Encoders, Row, SparkSession}
 
 trait DatabaseMetadata extends DataSourceMetadata {
   val metadataTable: Map[String, String]
@@ -49,6 +49,84 @@ trait JdbcMetadata extends DatabaseMetadata {
     val dbTable = options(JDBC_TABLE).split("\\.")
     s"${name}_${dbTable.head}_${dbTable.last}"
   }
+
+  override def getForeignKeys(implicit sparkSession: SparkSession): Dataset[ForeignKeyRelationship] = {
+    implicit val encoder: Encoder[ForeignKeyRelationship] = Encoders.kryo[ForeignKeyRelationship]
+    val filteredForeignKeyData: DataFrame = runQuery(sparkSession, foreignKeyQuery)
+
+    filteredForeignKeyData.map(r =>
+      ForeignKeyRelationship(
+        ForeignKeyRelation(name,
+          toStepName(Map(JDBC_TABLE -> r.getAs[String]("foreign_dbtable"))),
+          r.getAs[String]("foreign_column")
+        ),
+        ForeignKeyRelation(name,
+          toStepName(Map(JDBC_TABLE -> r.getAs[String]("dbtable"))),
+          r.getAs[String]("column")
+        )
+      )
+    )
+  }
+
+  override def getAdditionalColumnMetadata(implicit sparkSession: SparkSession): Dataset[ColumnMetadata] = {
+    implicit val encoder: Encoder[ColumnMetadata] = Encoders.kryo[ColumnMetadata]
+    val filteredTableConstraintData: DataFrame = runQuery(sparkSession, additionalColumnMetadataQuery)
+
+    filteredTableConstraintData.map(r => {
+      val isPrimaryKey = if (r.getAs[String]("is_primary_key").equalsIgnoreCase("yes")) "true" else "false"
+      val isUnique = if (r.getAs[String]("is_unique").equalsIgnoreCase("yes")) "true" else "false"
+      val isNullable = if (r.getAs[String]("is_nullable").equalsIgnoreCase("yes")) "true" else "false"
+
+      val columnMetadata = Map(
+        SOURCE_COLUMN_DATA_TYPE -> r.getAs[String]("source_data_type"),
+        IS_PRIMARY_KEY -> isPrimaryKey,
+        PRIMARY_KEY_POSITION -> r.getAs[String]("primary_key_position"),
+        IS_UNIQUE -> isUnique,
+        IS_NULLABLE -> isNullable,
+        MAXIMUM_LENGTH -> r.getAs[String]("character_maximum_length"),
+        NUMERIC_PRECISION -> r.getAs[String]("numeric_precision"),
+        NUMERIC_SCALE -> r.getAs[String]("numeric_scale"),
+        DEFAULT_VALUE -> r.getAs[String]("column_default")
+      ).filter(m => m._2 != null) ++ dataSourceGenerationMetadata(r)
+
+      val dataSourceReadOptions = Map(JDBC_TABLE -> s"${r.getAs[String]("schema")}.${r.getAs("table")}")
+      ColumnMetadata(r.getAs("column"), dataSourceReadOptions, columnMetadata)
+    })
+  }
+
+  /*
+    Foreign key query requires the following return columns names to be returned:
+    - schema
+    - table
+    - dbtable
+    - column
+    - foreign_dbtable
+    - foreign_column
+     */
+  def foreignKeyQuery: String
+
+  /*
+  Additional column metadata query requires the following return columns names to be returned:
+  - schema
+  - table
+  - column
+  - source_data_type
+  - is_nullable
+  - character_maximum_length
+  - numeric_precision
+  - numeric_scale
+  - column_default
+  - is_unique
+  - is_primary_key
+  - primary_key_position
+   */
+  def additionalColumnMetadataQuery: String
+
+  /*
+  Given metadata from source database, further metadata could be extracted based on the generation of the columns data
+  i.e. auto_increment means we can omit generating the values ourselves, so we add OMIT -> true into the metadata
+   */
+  def dataSourceGenerationMetadata(row: Row): Map[String, String]
 
   def runQuery(sparkSession: SparkSession, query: String): DataFrame = {
     val queryData = sparkSession.read

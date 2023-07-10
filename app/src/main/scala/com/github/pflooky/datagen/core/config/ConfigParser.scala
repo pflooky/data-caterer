@@ -1,11 +1,11 @@
 package com.github.pflooky.datagen.core.config
 
 import com.github.pflooky.datagen.core.model.Constants.{APPLICATION_CONFIG_PATH, FORMAT, SPARK_MASTER, SUPPORTED_CONNECTION_FORMATS}
-import com.typesafe.config.{Config, ConfigBeanFactory, ConfigFactory, ConfigValueType}
+import com.github.pflooky.datagen.core.util.ObjectMapperUtil
+import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
 import org.apache.log4j.Logger
 
 import java.io.File
-import scala.beans.BeanProperty
 import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.util.Try
 
@@ -14,9 +14,9 @@ trait ConfigParser {
   private val LOGGER = Logger.getLogger(getClass.getName)
 
   lazy val config: Config = getConfig
-  lazy val flagsConfig: FlagsConfig = ConfigBeanFactory.create(config.getConfig("flags"), classOf[FlagsConfig])
-  lazy val foldersConfig: FoldersConfig = ConfigBeanFactory.create(config.getConfig("folders"), classOf[FoldersConfig])
-  lazy val metadataConfig: MetadataConfig = ConfigBeanFactory.create(config.getConfig("metadata"), classOf[MetadataConfig])
+  lazy val flagsConfig: FlagsConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("flags").unwrapped(), classOf[FlagsConfig])
+  lazy val foldersConfig: FoldersConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("folders").unwrapped(), classOf[FoldersConfig])
+  lazy val metadataConfig: MetadataConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("metadata").unwrapped(), classOf[MetadataConfig])
   lazy val sparkMaster: String = config.getString(SPARK_MASTER)
   lazy val connectionConfigsByName: Map[String, Map[String, String]] = getConnectionConfigsByName
 
@@ -60,28 +60,29 @@ trait ConfigParser {
 }
 
 case class FlagsConfig(
-                  @BeanProperty var enableCount: Boolean,
-                  @BeanProperty var enableGenerateData: Boolean,
-                  @BeanProperty var enableGeneratePlanAndTasks: Boolean,
-                  @BeanProperty var enableRecordTracking: Boolean,
-                  @BeanProperty var enableDeleteGeneratedRecords: Boolean
-                ) {
+                        enableCount: Boolean,
+                        enableGenerateData: Boolean,
+                        enableGeneratePlanAndTasks: Boolean,
+                        enableRecordTracking: Boolean,
+                        enableDeleteGeneratedRecords: Boolean
+                      ) {
   def this() = this(true, true, true, true, false)
 }
 
 case class FoldersConfig(
-                    @BeanProperty var baseFolderPath: String,
-                    @BeanProperty var planFilePath: String,
-                    @BeanProperty var taskFolderPath: String,
-                    @BeanProperty var recordTrackingFolderPath: String
-                  ) {
+                          baseFolderPath: String,
+                          planFilePath: String,
+                          taskFolderPath: String,
+                          recordTrackingFolderPath: String
+                        ) {
   def this() = this("", "", "", "")
 }
 
 case class MetadataConfig(
-                           @BeanProperty var numRecordsFromDataSource: Int,
-                           @BeanProperty var numRecordsForAnalysis: Int,
-                           @BeanProperty var oneOfDistinctCountVsCountThreshold: Double,
+                           numRecordsFromDataSource: Int,
+                           numRecordsForAnalysis: Int,
+                           oneOfDistinctCountVsCountThreshold: Double,
+                           oneOfMinCount: Int = 1000,
                          ) {
-  def this() = this(1000, 1000, 0.1)
+  def this() = this(1000, 1000, 0.1, 1000)
 }
