@@ -5,7 +5,7 @@ steps:
     count:
       total: 1000
     options:
-      path: "app/src/test/resources/sample/data/generated/json/account-gen"
+      path: "src/test/resources/sample/data/generated/json/account-gen"
     schema:
       type: "manual"
       fields:

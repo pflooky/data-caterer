@@ -6,7 +6,7 @@ RUN mkdir -p /opt/app
 RUN chown -R app:app /opt/app
 COPY --chown=app:app script /opt/app
 ARG APP_VERSION=0.1
-COPY --chown=app:app app/build/libs/datacaterer-basic-${APP_VERSION}.jar /opt/app/job.jar
+COPY --chown=app:app app/build/libs/datacaterer-advanced-${APP_VERSION}.jar /opt/app/job.jar
 RUN chmod 755 -R /opt/app
 
 RUN mkdir -p /opt/app/spartagen/sample/json

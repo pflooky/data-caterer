@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.plan.datasource.database
 
-import com.github.pflooky.datagen.core.model.Constants.{EXPRESSION, OMIT, SOURCE_COLUMN_DATA_TYPE}
+import com.github.pflooky.datagen.core.model.Constants.{EXPRESSION, OMIT}
 import org.apache.spark.sql.Row
 
 case class PostgresMetadata(name: String, connectionConfig: Map[String, String]) extends JdbcMetadata {

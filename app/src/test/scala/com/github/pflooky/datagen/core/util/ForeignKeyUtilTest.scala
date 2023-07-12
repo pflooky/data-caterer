@@ -6,7 +6,6 @@ import org.scalatestplus.junit.JUnitRunner
 
 import java.sql.Date
 import java.time.LocalDate
-import scala.io.Source
 
 @RunWith(classOf[JUnitRunner])
 class ForeignKeyUtilTest extends SparkSuite {

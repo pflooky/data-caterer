@@ -1,3 +1,4 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.scoverage.ScoverageExtension
 
 /*
@@ -26,32 +27,38 @@ repositories {
     mavenCentral()
 }
 
+val basicImpl: Configuration by configurations.creating
+val advancedImpl: Configuration by configurations.creating
+
 dependencies {
-    implementation("org.scala-lang:scala-library:$scalaSpecificVersion")
-    implementation("org.apache.spark:spark-sql_$scalaVersion:$sparkVersion")
+    compileOnly("org.scala-lang:scala-library:$scalaSpecificVersion")
+    compileOnly("org.apache.spark:spark-sql_$scalaVersion:$sparkVersion")
 
     // connectors
     // jdbc
-    implementation("org.postgresql:postgresql:42.5.1")
-    implementation("mysql:mysql-connector-java:8.0.33")
+    basicImpl("org.postgresql:postgresql:42.5.1")
+    advancedImpl("mysql:mysql-connector-java:8.0.33")
     // cassandra
-    implementation("com.datastax.spark:spark-cassandra-connector_$scalaVersion:3.3.0")
+    advancedImpl("com.datastax.spark:spark-cassandra-connector_$scalaVersion:3.3.0")
     // http
-    implementation("org.dispatchhttp:dispatch-core_$scalaVersion:1.2.0")
+    advancedImpl("org.dispatchhttp:dispatch-core_$scalaVersion:1.2.0")
     // jms
-    implementation("javax.jms:javax.jms-api:2.0.1")
-    implementation("com.solacesystems:sol-jms:10.20.0")
+    advancedImpl("javax.jms:javax.jms-api:2.0.1")
+    advancedImpl("com.solacesystems:sol-jms:10.20.0")
 
     // data generation helpers
-    implementation("net.datafaker:datafaker:1.9.0")
-    implementation("org.reflections:reflections:0.10.2")
+    basicImpl("net.datafaker:datafaker:1.9.0")
+    basicImpl("org.reflections:reflections:0.10.2")
 
     // misc
-    implementation("joda-time:joda-time:2.12.5")
-    implementation("com.google.guava:guava:31.0.1-jre")
-    implementation("com.github.pureconfig:pureconfig_$scalaVersion:0.17.2")
-    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.14.2")
-    implementation("com.fasterxml.jackson.module:jackson-module-scala_$scalaVersion:2.14.2")
+    basicImpl("joda-time:joda-time:2.12.5")
+    basicImpl("com.google.guava:guava:31.0.1-jre")
+    basicImpl("com.github.pureconfig:pureconfig_$scalaVersion:0.17.2")
+    basicImpl("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.14.2")
+    basicImpl("com.fasterxml.jackson.module:jackson-module-scala_$scalaVersion:2.14.2")
+
+    implementation(basicImpl)
+    implementation(advancedImpl)
 }
 
 testing {
@@ -66,6 +73,7 @@ testing {
                 implementation("org.scalatest:scalatest_$scalaVersion:3.2.10")
                 implementation("org.scalatestplus:junit-4-13_$scalaVersion:3.2.2.0")
                 implementation("org.scalamock:scalamock_$scalaVersion:5.2.0")
+                implementation("org.apache.spark:spark-sql_$scalaVersion:$sparkVersion")
 
                 // Need scala-xml at test runtime
                 runtimeOnly("org.scala-lang.modules:scala-xml_$scalaVersion:1.2.0")
@@ -91,6 +99,46 @@ tasks.shadowJar {
     isZip64 = true
 }
 
+tasks.register<ShadowJar>("basicJar") {
+    dependsOn(tasks["setBasicApplicationFlags"])
+    from(project.sourceSets.main.get().output)
+    configurations = listOf(basicImpl)
+    archiveBaseName.set("datacaterer")
+    archiveAppendix.set("basic")
+    archiveVersion.set(project.version.toString())
+    isZip64 = true
+    manifest = tasks.shadowJar.get().manifest
+    exclude("META-INF/INDEX.LIST", "META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "module-info.class")
+    dependencies {
+        exclude(dependency(project.dependencies.gradleApi()))
+    }
+}
+
+tasks.register<ShadowJar>("advancedJar") {
+    dependsOn(tasks["setAdvancedApplicationFlags"])
+    from(project.sourceSets.main.get().output)
+    configurations = listOf(basicImpl, advancedImpl)
+    archiveBaseName.set("datacaterer")
+    archiveAppendix.set("advanced")
+    archiveVersion.set(project.version.toString())
+    isZip64 = true
+    exclude("META-INF/INDEX.LIST", "META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "module-info.class")
+    dependencies {
+        exclude(dependency(project.dependencies.gradleApi()))
+    }
+}
+
+tasks.register("setBasicApplicationFlags") {
+    setApplicationFlags(true)
+}
+tasks.register("setAdvancedApplicationFlags") {
+    setApplicationFlags(false)
+}
+
+//tasks.build {
+//    finalizedBy(tasks["basicJar"], tasks["advancedJar"])
+//}
+
 tasks.test {
     finalizedBy(tasks.reportScoverage)
 }
@@ -98,6 +146,39 @@ tasks.test {
 configure<ScoverageExtension> {
     excludedFiles.add(".*CombinationCalculator.*")
     excludedPackages.add("com.github.pflooky.datagen.core.exception.*")
+}
+
+fun setApplicationFlags(isBasicBuild: Boolean) {
+    val advancedFlags = listOf("enableGeneratePlanAndTasks")
+    val applicationConfFile = file("src/main/resources/application.conf")
+    val lines = applicationConfFile.readLines()
+    val hasAdvancedFlags = advancedFlags.any { lines.any { l -> l.contains(it) } }
+
+    val filteredLines = if (hasAdvancedFlags && isBasicBuild) {
+        println("Application config contains advance usage flags whilst trying to build for basic, is-basic-build=$isBasicBuild")
+        lines.filterNot { l -> advancedFlags.any { l.contains(it) } }
+    } else if (!hasAdvancedFlags && !isBasicBuild) {
+        val flagsStartIndex = lines.indexOf("flags {")
+        println("Application config does not contains advance usage flags whilst trying to build for advanced, is-basic-build=$isBasicBuild")
+        val mutableLines = lines.toMutableList()
+        advancedFlags.forEachIndexed { index, s ->
+            mutableLines.add(flagsStartIndex + index * 2 + 1, "    $s = true")
+            mutableLines.add(flagsStartIndex + index * 2 + 2, "    $s = \${?${s.camelToSnakeCase()}}")
+        }
+        mutableLines
+    } else {
+        listOf()
+    }
+
+    if (filteredLines.isNotEmpty()) {
+        println("Writing new application configurations, is-basic-build=$isBasicBuild")
+        applicationConfFile.writeText(filteredLines.joinToString("\n"))
+    }
+}
+
+fun String.camelToSnakeCase(): String {
+    val pattern = "(?<=.)[A-Z]".toRegex()
+    return this.replace(pattern, "_$0").toUpperCase()
 }
 
 //tasks.create("depsize") {

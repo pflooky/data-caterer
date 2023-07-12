@@ -1,23 +1,17 @@
 package com.github.pflooky.datagen.core.generator
 
-import com.github.pflooky.datagen.App.getClass
 import com.github.pflooky.datagen.core.model._
 import com.github.pflooky.datagen.core.util.{Account, SparkSuite}
-import org.apache.log4j.Logger
-import org.apache.spark.sql.streaming.Trigger
-import org.apache.spark.sql.{Dataset, Encoder, Encoders, Row}
 import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType}
+import org.apache.spark.sql.{Dataset, Encoder, Encoders}
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
 
-import java.util.UUID
-import java.util.concurrent.TimeUnit
 import scala.util.Random
 
 @RunWith(classOf[JUnitRunner])
 class DataGeneratorFactoryTest extends SparkSuite {
 
-  private val LOGGER = Logger.getLogger(getClass.getName)
   private val dataGeneratorFactory = new DataGeneratorFactory(None, None)
   private val schema = Schema("manual", Some(
     List(

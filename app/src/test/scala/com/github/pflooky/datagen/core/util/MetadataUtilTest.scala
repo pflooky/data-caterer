@@ -2,8 +2,8 @@ package com.github.pflooky.datagen.core.util
 
 import com.github.pflooky.datagen.core.config.MetadataConfig
 import com.github.pflooky.datagen.core.generator.plan.datasource.database.{ColumnMetadata, PostgresMetadata}
-import org.apache.spark.sql.{Encoder, Encoders}
 import org.apache.spark.sql.types.MetadataBuilder
+import org.apache.spark.sql.{Encoder, Encoders}
 
 import java.sql.Date
 

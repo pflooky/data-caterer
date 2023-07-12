@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.plan.datasource.database
 
 import com.github.pflooky.datagen.core.generator.plan.datasource.DataSourceMetadata
-import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, DATA_SOURCE_GENERATION, DEFAULT_VALUE, EXPRESSION, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_QUERY, JDBC_TABLE, MAXIMUM_LENGTH, METADATA_FILTER_SCHEMA, METADATA_FILTER_TABLE, NUMERIC_PRECISION, NUMERIC_SCALE, OMIT, PRIMARY_KEY_POSITION, SOURCE_COLUMN_DATA_TYPE, SOURCE_MAXIMUM_LENGTH}
+import com.github.pflooky.datagen.core.model.Constants.{DEFAULT_VALUE, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_QUERY, JDBC_TABLE, MAXIMUM_LENGTH, METADATA_FILTER_SCHEMA, METADATA_FILTER_TABLE, NUMERIC_PRECISION, NUMERIC_SCALE, PRIMARY_KEY_POSITION, SOURCE_COLUMN_DATA_TYPE}
 import com.github.pflooky.datagen.core.model.ForeignKeyRelation
 import org.apache.spark.sql.{DataFrame, Dataset, Encoder, Encoders, Row, SparkSession}
 

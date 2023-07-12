@@ -3,7 +3,7 @@ package com.github.pflooky.datagen.core.generator.plan.datasource
 import com.github.pflooky.datagen.core.generator.plan.PlanGenerator.writePlanAndTasksToFiles
 import com.github.pflooky.datagen.core.generator.plan.datasource.database.{CassandraMetadata, DatabaseMetadata, DatabaseMetadataProcessor, MysqlMetadata, PostgresMetadata}
 import com.github.pflooky.datagen.core.generator.plan.datasource.file.{FileMetadata, FileMetadataProcessor}
-import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CSV, DELTA, DRIVER, FORMAT, JDBC, JSON, MYSQL_DRIVER, ORC, PARQUET, PATH, POSTGRES_DRIVER}
+import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CSV, DELTA, DRIVER, FORMAT, JDBC, JSON, MYSQL_DRIVER, ORC, PARQUET, POSTGRES_DRIVER}
 import com.github.pflooky.datagen.core.model.{Plan, Task}
 import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, MetadataUtil, SparkProvider}
 import org.apache.log4j.Logger

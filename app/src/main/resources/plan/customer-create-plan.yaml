@@ -3,7 +3,7 @@ description: "Create customers in JDBC and Cassandra"
 tasks:
   - name: "jdbc_customer_accounts_table_create"
     dataSourceName: "postgres"
-    enabled: true
+    enabled: false
   - name: "parquet_transaction_file"
     dataSourceName: "parquet"
     enabled: true

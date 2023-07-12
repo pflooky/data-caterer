@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-SPARK_MASTER="local[*]"
-DEPLOY_MODE="client"
+SPARK_MASTER="${SPARK_MASTER:-local[*]}"
+DEPLOY_MODE="${DEPLOY_MODE:-client}"
 LOG4J_PATH="-Dlog4j.configurationFile=file:///opt/app/log4j2.properties"
 
 /opt/spark/bin/spark-submit \

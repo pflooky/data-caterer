@@ -62,9 +62,9 @@ trait ConfigParser {
 case class FlagsConfig(
                         enableCount: Boolean,
                         enableGenerateData: Boolean,
-                        enableGeneratePlanAndTasks: Boolean,
                         enableRecordTracking: Boolean,
-                        enableDeleteGeneratedRecords: Boolean
+                        enableDeleteGeneratedRecords: Boolean,
+                        enableGeneratePlanAndTasks: Boolean = false
                       ) {
   def this() = this(true, true, true, true, false)
 }

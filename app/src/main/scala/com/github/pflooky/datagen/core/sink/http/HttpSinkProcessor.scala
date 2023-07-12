@@ -2,7 +2,7 @@ package com.github.pflooky.datagen.core.sink.http
 
 import com.github.pflooky.datagen.core.model.Constants.{BODY_FIELD, HTTP_CONTENT_TYPE, HTTP_HEADER_PREFIX, HTTP_METHOD, PASSWORD, URL, USERNAME}
 import com.github.pflooky.datagen.core.model.Step
-import com.github.pflooky.datagen.core.sink.{RealTimeSinkProcessor, SinkProcessor}
+import com.github.pflooky.datagen.core.sink.RealTimeSinkProcessor
 import dispatch.Defaults._
 import dispatch._
 import org.apache.log4j.Logger

@@ -4,7 +4,6 @@ import org.junit.runner.RunWith
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatestplus.junit.JUnitRunner
 
-import java.io.File
 import java.nio.file.{Files, Paths, StandardOpenOption}
 
 @RunWith(classOf[JUnitRunner])

@@ -3,8 +3,8 @@ package com.github.pflooky.datagen.core.util
 import com.github.pflooky.datagen.core.generator.plan.datasource.database.ForeignKeyRelationship
 import com.github.pflooky.datagen.core.model.SinkOptions
 import org.apache.log4j.Logger
-import org.apache.spark.sql.{DataFrame, Dataset}
 import org.apache.spark.sql.functions.{col, monotonically_increasing_id}
+import org.apache.spark.sql.{DataFrame, Dataset}
 
 object ForeignKeyUtil {
 

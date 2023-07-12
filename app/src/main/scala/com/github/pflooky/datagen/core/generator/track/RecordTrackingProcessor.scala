@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.track
 
-import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CSV, DELTA, HTTP, HTTP_METHOD, IS_PRIMARY_KEY, JDBC, JDBC_TABLE, JMS, JMS_DESTINATION_NAME, JSON, ORC, PARQUET, PATH, PRIMARY_KEY_POSITION}
+import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CSV, DELTA, HTTP, HTTP_METHOD, JDBC, JDBC_TABLE, JMS, JMS_DESTINATION_NAME, JSON, ORC, PARQUET, PATH}
 import com.github.pflooky.datagen.core.model.Step
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}

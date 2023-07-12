@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.parser
 
-import com.github.pflooky.datagen.core.exception.{PlanFileNotFoundException, TaskParseException}
+import com.github.pflooky.datagen.core.exception.TaskParseException
 import com.github.pflooky.datagen.core.model.Constants.ONE_OF
 import com.github.pflooky.datagen.core.model.{Plan, Schema, Step, Task}
 import com.github.pflooky.datagen.core.util.{FileUtil, ObjectMapperUtil}
