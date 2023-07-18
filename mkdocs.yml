@@ -1,7 +1,0 @@
-site_name: Spartagen Documentation
-theme:
-  name: material
-  features:
-    - navigation.instant
-    - navigation.tracking
-    - navigation.top

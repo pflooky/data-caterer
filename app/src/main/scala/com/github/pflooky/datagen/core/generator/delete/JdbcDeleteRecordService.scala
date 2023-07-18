@@ -1,4 +1,4 @@
-package com.github.pflooky.datagen.core.generator.track
+package com.github.pflooky.datagen.core.generator.delete
 
 import com.github.pflooky.datagen.core.exception.{InvalidDataSourceOptions, UnsupportedJdbcDeleteDataType}
 import com.github.pflooky.datagen.core.model.Constants.{JDBC_TABLE, PASSWORD, URL, USERNAME}

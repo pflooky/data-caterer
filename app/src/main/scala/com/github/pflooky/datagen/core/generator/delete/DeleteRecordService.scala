@@ -1,4 +1,4 @@
-package com.github.pflooky.datagen.core.generator.track
+package com.github.pflooky.datagen.core.generator.delete
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
 

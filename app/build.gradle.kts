@@ -19,7 +19,7 @@ plugins {
     application
 
     id("org.scoverage") version "8.0.2"
-    id("com.github.johnrengelman.shadow") version "7.1.2"
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 repositories {
@@ -30,18 +30,27 @@ repositories {
 val basicImpl: Configuration by configurations.creating
 val advancedImpl: Configuration by configurations.creating
 
+configurations {
+    implementation {
+        extendsFrom(basicImpl)
+        extendsFrom(advancedImpl)
+    }
+}
+
 dependencies {
     compileOnly("org.scala-lang:scala-library:$scalaSpecificVersion")
     compileOnly("org.apache.spark:spark-sql_$scalaVersion:$sparkVersion")
 
     // connectors
     // jdbc
-    basicImpl("org.postgresql:postgresql:42.5.1")
+    basicImpl("org.postgresql:postgresql:42.5.4")
     advancedImpl("mysql:mysql-connector-java:8.0.33")
     // cassandra
     advancedImpl("com.datastax.spark:spark-cassandra-connector_$scalaVersion:3.3.0")
     // http
     advancedImpl("org.dispatchhttp:dispatch-core_$scalaVersion:1.2.0")
+    // kafka
+    advancedImpl("org.apache.spark:spark-sql-kafka-0-10_$scalaVersion:$sparkVersion")
     // jms
     advancedImpl("javax.jms:javax.jms-api:2.0.1")
     advancedImpl("com.solacesystems:sol-jms:10.20.0")
@@ -52,13 +61,10 @@ dependencies {
 
     // misc
     basicImpl("joda-time:joda-time:2.12.5")
-    basicImpl("com.google.guava:guava:31.0.1-jre")
+    basicImpl("com.google.guava:guava:31.1-jre")
     basicImpl("com.github.pureconfig:pureconfig_$scalaVersion:0.17.2")
     basicImpl("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.14.2")
     basicImpl("com.fasterxml.jackson.module:jackson-module-scala_$scalaVersion:2.14.2")
-
-    implementation(basicImpl)
-    implementation(advancedImpl)
 }
 
 testing {
@@ -100,7 +106,7 @@ tasks.shadowJar {
 }
 
 tasks.register<ShadowJar>("basicJar") {
-    dependsOn(tasks["setBasicApplicationFlags"])
+    dependsOn(tasks["setBasicApplicationFlags"], tasks.compileScala)
     from(project.sourceSets.main.get().output)
     configurations = listOf(basicImpl)
     archiveBaseName.set("datacaterer")
@@ -115,7 +121,7 @@ tasks.register<ShadowJar>("basicJar") {
 }
 
 tasks.register<ShadowJar>("advancedJar") {
-    dependsOn(tasks["setAdvancedApplicationFlags"])
+    dependsOn(tasks["setAdvancedApplicationFlags"], tasks.compileScala)
     from(project.sourceSets.main.get().output)
     configurations = listOf(basicImpl, advancedImpl)
     archiveBaseName.set("datacaterer")
@@ -129,10 +135,14 @@ tasks.register<ShadowJar>("advancedJar") {
 }
 
 tasks.register("setBasicApplicationFlags") {
-    setApplicationFlags(true)
+    doFirst {
+        setApplicationFlags(true)
+    }
 }
 tasks.register("setAdvancedApplicationFlags") {
-    setApplicationFlags(false)
+    doFirst {
+        setApplicationFlags(false)
+    }
 }
 
 //tasks.build {
@@ -149,36 +159,16 @@ configure<ScoverageExtension> {
 }
 
 fun setApplicationFlags(isBasicBuild: Boolean) {
-    val advancedFlags = listOf("enableGeneratePlanAndTasks")
-    val applicationConfFile = file("src/main/resources/application.conf")
-    val lines = applicationConfFile.readLines()
-    val hasAdvancedFlags = advancedFlags.any { lines.any { l -> l.contains(it) } }
-
-    val filteredLines = if (hasAdvancedFlags && isBasicBuild) {
-        println("Application config contains advance usage flags whilst trying to build for basic, is-basic-build=$isBasicBuild")
-        lines.filterNot { l -> advancedFlags.any { l.contains(it) } }
-    } else if (!hasAdvancedFlags && !isBasicBuild) {
-        val flagsStartIndex = lines.indexOf("flags {")
-        println("Application config does not contains advance usage flags whilst trying to build for advanced, is-basic-build=$isBasicBuild")
-        val mutableLines = lines.toMutableList()
-        advancedFlags.forEachIndexed { index, s ->
-            mutableLines.add(flagsStartIndex + index * 2 + 1, "    $s = true")
-            mutableLines.add(flagsStartIndex + index * 2 + 2, "    $s = \${?${s.camelToSnakeCase()}}")
+    val configParserFile = file("src/main/scala/com/github/pflooky/datagen/core/config/ConfigParser.scala")
+    val mappedConfigParserLines = configParserFile.readLines()
+        .map { line ->
+            if (line.contains("val applicationType") && line.contains("advanced") && isBasicBuild) {
+                line.replace("advanced", "basic")
+            } else if (line.contains("val applicationType") && line.contains("basic") && !isBasicBuild) {
+                line.replace("basic", "advanced")
+            } else line
         }
-        mutableLines
-    } else {
-        listOf()
-    }
-
-    if (filteredLines.isNotEmpty()) {
-        println("Writing new application configurations, is-basic-build=$isBasicBuild")
-        applicationConfFile.writeText(filteredLines.joinToString("\n"))
-    }
-}
-
-fun String.camelToSnakeCase(): String {
-    val pattern = "(?<=.)[A-Z]".toRegex()
-    return this.replace(pattern, "_$0").toUpperCase()
+    configParserFile.writeText(mappedConfigParserLines.joinToString("\n"))
 }
 
 //tasks.create("depsize") {

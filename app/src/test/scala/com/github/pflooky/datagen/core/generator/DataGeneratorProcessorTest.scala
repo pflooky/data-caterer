@@ -1,5 +1,6 @@
 package com.github.pflooky.datagen.core.generator
 
+import com.github.pflooky.datagen.core.model.Constants.ADVANCED_APPLICATION
 import com.github.pflooky.datagen.core.util.SparkSuite
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
@@ -9,7 +10,9 @@ class DataGeneratorProcessorTest extends SparkSuite {
 
   test("Can parse plan and tasks, then execute data generation") {
     val basePath = "src/test/resources/sample/data"
-    val dataGeneratorProcessor = new DataGeneratorProcessor()
+    val dataGeneratorProcessor = new DataGeneratorProcessor() {
+      override lazy val applicationType: String = ADVANCED_APPLICATION
+    }
 
     dataGeneratorProcessor.generateData()
 

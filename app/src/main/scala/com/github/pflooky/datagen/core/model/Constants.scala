@@ -2,6 +2,10 @@ package com.github.pflooky.datagen.core.model
 
 object Constants {
 
+  //app type
+  lazy val BASIC_APPLICATION = "basic"
+  lazy val ADVANCED_APPLICATION = "advanced"
+
   //base config
   lazy val SPARK_MASTER = "spark.master"
 
@@ -111,10 +115,9 @@ object Constants {
   lazy val FAILED = "failed"
 
   //misc
-  lazy val NESTED_FIELD_NAME_DELIMITER = "||"
-  lazy val ARRAY_NESTED_FIELD_NAME_DELIMITER = ">>"
   lazy val APPLICATION_CONFIG_PATH = "APPLICATION_CONFIG_PATH"
   lazy val BATCH = "batch"
   lazy val REAL_TIME = "real-time"
   lazy val DEFAULT_ROWS_PER_SECOND = "5"
+  lazy val DATA_CATERER_SITE_PRICING = "https://data-catering.framer.ai/pricing"
 }

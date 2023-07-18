@@ -1,4 +1,4 @@
-# Spartagen - Data Generator
+# Data Caterer - Data Generator
 
 ## Overview
 
@@ -6,12 +6,12 @@ Generator data for databases, files, JMS or HTTP request through a YAML based in
 
 ## Flow
 
-![Spartagen high level design](design/spartagen-design.png "High level design")
+![Data Caterer high level design](design/high-level-design.png "High level design")
 
 ## Generate data
 ### Quickest start
 1. `mkdir /tmp/datagen`
-2. `docker run -v /tmp/datagen:/opt/app/spartagen pflookyy/spartagen:0.1`
+2. `docker run -v /tmp/datagen:/opt/app/data-caterer pflookyy/data-caterer:0.1`
 3. `head /tmp/datagen/sample/json/account-gen/part-0000*`
 
 ### Quick start
@@ -176,7 +176,7 @@ steps:
 
 #### Supported data sinks
 
-Spartagen is able to support the following data sinks:
+Data Caterer is able to support the following data sinks:
 
 1. Database
    1. JDBC
@@ -188,6 +188,7 @@ Spartagen is able to support the following data sinks:
    2. Parquet
    3. ORC
    4. Delta
+   5. JSON
 4. JMS
    1. Solace
 

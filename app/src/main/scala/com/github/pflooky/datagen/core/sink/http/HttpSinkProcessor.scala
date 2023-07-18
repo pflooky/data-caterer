@@ -12,8 +12,8 @@ import java.nio.charset.Charset
 import java.util.Base64
 import scala.util.{Failure, Success}
 
-class HttpSinkProcessor(override val connectionConfig: Map[String, String],
-                        override val step: Step,
+class HttpSinkProcessor(override var connectionConfig: Map[String, String],
+                        override var step: Step,
                         http: Http = Http.default) extends RealTimeSinkProcessor[Unit] {
 
   private val LOGGER = Logger.getLogger(getClass.getName)

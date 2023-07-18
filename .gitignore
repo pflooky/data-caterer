@@ -5,6 +5,9 @@
 build
 .idea
 .DS_Store
+*.iml
+*.ipr
+*.iws
 
 app/out
 app/src/test/resources/sample/parquet

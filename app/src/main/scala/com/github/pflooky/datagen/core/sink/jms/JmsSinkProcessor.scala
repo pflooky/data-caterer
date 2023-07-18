@@ -3,22 +3,19 @@ package com.github.pflooky.datagen.core.sink.jms
 import com.github.pflooky.datagen.core.model.Constants.{BODY_FIELD, JMS_CONNECTION_FACTORY, JMS_DESTINATION_NAME, JMS_INITIAL_CONTEXT_FACTORY, JMS_VPN_NAME, PASSWORD, URL, USERNAME}
 import com.github.pflooky.datagen.core.model.Step
 import com.github.pflooky.datagen.core.sink.RealTimeSinkProcessor
+import com.solacesystems.jms.SolMessageProducer
 import org.apache.spark.sql.Row
 
+import java.io.Serializable
 import java.util.Properties
 import javax.jms.{Connection, ConnectionFactory, Destination, MessageProducer, Session}
 import javax.naming.{Context, InitialContext}
 
 
-class JmsSinkProcessor(override val connectionConfig: Map[String, String],
-                       override val step: Step) extends RealTimeSinkProcessor[(MessageProducer, Session, Connection)] {
-  override val maxPoolSize: Int = 10
-  var bodyFieldOpt: Option[String] = None
-
-  override def init(): Unit = {
-    super.init()
-    bodyFieldOpt = step.options.get(BODY_FIELD)
-  }
+class JmsSinkProcessor(override var connectionConfig: Map[String, String],
+                       override var step: Step) extends RealTimeSinkProcessor[(MessageProducer, Session, Connection)] {
+  override val maxPoolSize: Int = 1
+  var bodyFieldOpt: Option[String] = step.options.get(BODY_FIELD)
 
   override def pushRowToSink(row: Row): Unit = {
     val body = bodyFieldOpt.map(row.getAs[String]).getOrElse(row.json)
@@ -38,8 +35,10 @@ class JmsSinkProcessor(override val connectionConfig: Map[String, String],
 
   override def close: Unit = {
     while (connectionPool.size() > 0) {
-      val (_, _, connection) = connectionPool.take()
+      val (messageProducer, session, connection) = connectionPool.take()
+      messageProducer.close()
       connection.close()
+      session.close()
     }
   }
 

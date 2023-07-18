@@ -1,6 +1,6 @@
-name: "json_account_jms"
+name: "json_account_kafka"
 steps:
-  - name: "jms_account"
+  - name: "kafka_account"
     type: "json"
     count:
       total: 50

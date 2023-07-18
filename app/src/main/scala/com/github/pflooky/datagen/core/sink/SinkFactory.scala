@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.sink
 
 import com.github.pflooky.datagen.core.exception.UnsupportedRealTimeDataSourceFormat
-import com.github.pflooky.datagen.core.model.Constants.{BATCH, DEFAULT_ROWS_PER_SECOND, FAILED, FINISHED, FORMAT, HTTP, JMS, PER_COLUMN_INDEX_COL, RATE, REAL_TIME, SAVE_MODE, STARTED}
+import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, BATCH, DATA_CATERER_SITE_PRICING, DEFAULT_ROWS_PER_SECOND, FAILED, FINISHED, FORMAT, HTTP, JMS, PER_COLUMN_INDEX_COL, RATE, REAL_TIME, SAVE_MODE, STARTED}
 import com.github.pflooky.datagen.core.model.Step
 import com.github.pflooky.datagen.core.sink.http.HttpSinkProcessor
 import com.github.pflooky.datagen.core.sink.jms.JmsSinkProcessor
@@ -10,10 +10,12 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.execution.streaming.sources.RateStreamProvider.ROWS_PER_SECOND
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SaveMode, SparkSession}
 
+import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 class SinkFactory(
-                   val connectionConfigs: Map[String, Map[String, String]]
+                   val connectionConfigs: Map[String, Map[String, String]],
+                   val applicationType: String = "advanced"
                  )(implicit val sparkSession: SparkSession) {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
@@ -34,11 +36,18 @@ class SinkFactory(
       "-1"
     }
     LOGGER.info(s"Pushing data to sink, data-source-name=$dataSourceName, save-mode=$saveModeName, num-records=$count, status=$STARTED")
+    saveData(df, dataSourceName, step, connectionConfig, saveMode, saveModeName, format, count)
+  }
+
+  private def saveData(df: DataFrame, dataSourceName: String, step: Step, connectionConfig: Map[String, String], saveMode: SaveMode, saveModeName: String, format: String, count: String): Unit = {
     val saveTiming = determineSaveTiming(dataSourceName, format)
-    val trySaveData = Try(if (saveTiming == BATCH) {
+    val trySaveData = Try(if (saveTiming.equalsIgnoreCase(BATCH)) {
       saveBatchData(df, saveMode, connectionConfig, step.options)
-    } else {
+    } else if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION)) {
       saveRealTimeData(df, format, connectionConfig, step)
+    } else if (applicationType.equalsIgnoreCase(BASIC_APPLICATION)) {
+      LOGGER.warn(s"Please upgrade from the free plan to paid plan to enable generating real-time data. More details here: $DATA_CATERER_SITE_PRICING")
+      return
     })
 
     trySaveData match {
@@ -72,8 +81,8 @@ class SinkFactory(
 
   private def saveRealTimeData(df: DataFrame, format: String, connectionConfig: Map[String, String], step: Step): Unit = {
     val rowsPerSecond = step.options.getOrElse(ROWS_PER_SECOND, DEFAULT_ROWS_PER_SECOND)
+    LOGGER.info(s"Rows per second for generating data, rows-per-second=$rowsPerSecond")
     saveRealTimeGuava(df, format, connectionConfig, step, rowsPerSecond)
-    //    saveRealTimeSpark(df, format, connectionConfig, step, rowsPerSecond)
   }
 
   private def saveRealTimeGuava(df: DataFrame, format: String, connectionConfig: Map[String, String], step: Step, rowsPerSecond: String): Unit = {
@@ -98,7 +107,7 @@ class SinkFactory(
       .foreachBatch((batch: Dataset[Row], id: Long) => {
         LOGGER.info(s"batch num=$id, count=${batch.count()}")
         batch.join(dfWithIndex, batch("value") === dfWithIndex(PER_COLUMN_INDEX_COL))
-          .drop(PER_COLUMN_INDEX_COL).repartition(1).rdd
+          .drop(PER_COLUMN_INDEX_COL).repartition(3).rdd
           .foreachPartition(partition => {
             val part = partition.toList
             val sinkProcessor = getRealTimeSinkProcessor(format, connectionConfig, step)

@@ -1,6 +1,8 @@
 package com.github.pflooky.datagen.core.util
 
 import com.github.pflooky.datagen.core.config.ConfigParser
+import com.solacesystems.jms.SolMessageProducer
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 
 trait SparkProvider extends ConfigParser {
@@ -10,7 +12,7 @@ trait SparkProvider extends ConfigParser {
   def getSparkSession: SparkSession = {
     SparkSession.builder()
       .master(sparkMaster)
-      .appName("spartagen-datagen")
+      .appName("data-caterer")
       .config("spark.sql.legacy.allowUntypedScalaUDF", "true")
       .config("spark.sql.adaptive.enabled", "true")
       .config("spark.sql.cbo.enabled", "true")

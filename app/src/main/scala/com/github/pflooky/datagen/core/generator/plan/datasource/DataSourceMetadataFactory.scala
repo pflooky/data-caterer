@@ -3,7 +3,7 @@ package com.github.pflooky.datagen.core.generator.plan.datasource
 import com.github.pflooky.datagen.core.generator.plan.PlanGenerator.writePlanAndTasksToFiles
 import com.github.pflooky.datagen.core.generator.plan.datasource.database.{CassandraMetadata, DatabaseMetadata, DatabaseMetadataProcessor, MysqlMetadata, PostgresMetadata}
 import com.github.pflooky.datagen.core.generator.plan.datasource.file.{FileMetadata, FileMetadataProcessor}
-import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CSV, DELTA, DRIVER, FORMAT, JDBC, JSON, MYSQL_DRIVER, ORC, PARQUET, POSTGRES_DRIVER}
+import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, CASSANDRA, CSV, DATA_CATERER_SITE_PRICING, DELTA, DRIVER, FORMAT, JDBC, JSON, MYSQL_DRIVER, ORC, PARQUET, POSTGRES_DRIVER}
 import com.github.pflooky.datagen.core.model.{Plan, Task}
 import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, MetadataUtil, SparkProvider}
 import org.apache.log4j.Logger
@@ -16,7 +16,7 @@ class DataSourceMetadataFactory extends SparkProvider {
   private val fileMetadataProcessor = new FileMetadataProcessor
 
   def extractAllDataSourceMetadata(): Option[(Plan, List[Task])] = {
-    if (flagsConfig.enableGeneratePlanAndTasks) {
+    if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION) && flagsConfig.enableGeneratePlanAndTasks) {
       LOGGER.info("Attempting to extract all data source metadata as defined in connection configurations in application.conf")
       val connectionMetadata = connectionConfigsByName.map(connectionConfig => {
         val connection = connectionConfig._2(FORMAT) match {
@@ -46,7 +46,11 @@ class DataSourceMetadataFactory extends SparkProvider {
       val generatedTasksFromMetadata = metadataPerConnection.map(m => (m._1.name, Task.fromMetadata(m._1.name, m._1.format, m._3)))
       //given all the foreign key relations in each data source, detect if there are any links between data sources, then pass that into plan
       val allForeignKeys = ForeignKeyUtil.getAllForeignKeyRelationships(metadataPerConnection.map(_._2))
-      Some(writePlanAndTasksToFiles(generatedTasksFromMetadata, allForeignKeys, foldersConfig.baseFolderPath))
+
+      Some(writePlanAndTasksToFiles(generatedTasksFromMetadata, allForeignKeys, foldersConfig.generatedPlanAndTaskFolderPath))
+    } else if (applicationType.equalsIgnoreCase(BASIC_APPLICATION) && flagsConfig.enableGeneratePlanAndTasks) {
+      LOGGER.warn(s"Please upgrade from the free plan to paid plan to enable plan and tasks to be generated. More details here: $DATA_CATERER_SITE_PRICING")
+      None
     } else None
   }
 

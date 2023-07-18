@@ -1,4 +1,4 @@
-package com.github.pflooky.datagen.core.generator.track
+package com.github.pflooky.datagen.core.generator.delete
 
 import com.datastax.spark.connector.toRDDFunctions
 import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA_KEYSPACE, CASSANDRA_TABLE}

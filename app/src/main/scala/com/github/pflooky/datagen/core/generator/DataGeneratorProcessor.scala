@@ -1,8 +1,9 @@
 package com.github.pflooky.datagen.core.generator
 
+import com.github.pflooky.datagen.core.generator.delete.DeleteRecordProcessor
 import com.github.pflooky.datagen.core.generator.track.RecordTrackingProcessor
-import com.github.pflooky.datagen.core.model.Constants.FORMAT
-import com.github.pflooky.datagen.core.model.{ForeignKeyRelation, Plan, Step, Task, TaskSummary}
+import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING, FORMAT}
+import com.github.pflooky.datagen.core.model.{Plan, Step, Task, TaskSummary}
 import com.github.pflooky.datagen.core.parser.PlanParser
 import com.github.pflooky.datagen.core.sink.SinkFactory
 import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, SparkProvider}
@@ -12,7 +13,8 @@ import org.apache.spark.sql.DataFrame
 class DataGeneratorProcessor extends SparkProvider {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
-  private val recordTrackingFactory = new RecordTrackingProcessor(s"${foldersConfig.baseFolderPath}/${foldersConfig.recordTrackingFolderPath}")
+  private lazy val recordTrackingFactory = new RecordTrackingProcessor(foldersConfig.recordTrackingFolderPath)
+  private lazy val deleteRecordProcessor = new DeleteRecordProcessor(connectionConfigsByName, foldersConfig.recordTrackingFolderPath)
 
   def generateData(): Unit = {
     val plan = PlanParser.parsePlan(foldersConfig.planFilePath)
@@ -28,36 +30,20 @@ class DataGeneratorProcessor extends SparkProvider {
     val stepsByName = tasks.flatMap(_.steps).map(s => (s.name, s)).toMap
     val summaryWithTask = plan.tasks.map(t => (t, tasksByName(t.name)))
 
-    if (flagsConfig.enableDeleteGeneratedRecords) {
-      deleteGeneratedRecords(plan, stepsByName, summaryWithTask)
-    } else if (flagsConfig.enableGenerateData) {
+    if (flagsConfig.enableGenerateData && flagsConfig.enableDeleteGeneratedRecords) {
+      LOGGER.warn("Both enableGenerateData and enableDeleteGeneratedData are true. Please only enable one at a time. Will continue with generating data")
+    }
+    if (flagsConfig.enableGenerateData) {
       LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=($summaryWithTask)")
       summaryWithTask.foreach(t => LOGGER.info(s"Enabled task details: ${t._2.toTaskDetailString}"))
       val sinkDf = getAllStepDf(plan, summaryWithTask)
       pushDataToSinks(summaryWithTask, sinkDf)
+    } else if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION) && flagsConfig.enableDeleteGeneratedRecords) {
+      deleteRecordProcessor.deleteGeneratedRecords(plan, stepsByName, summaryWithTask)
+    } else if (applicationType.equalsIgnoreCase(BASIC_APPLICATION) && flagsConfig.enableDeleteGeneratedRecords) {
+      LOGGER.warn(s"Please upgrade from the free plan to paid plan to enable generated records to be deleted. More details here: $DATA_CATERER_SITE_PRICING")
     } else {
-      LOGGER.info("Data generation is disabled")
-    }
-  }
-
-  private def deleteGeneratedRecords(plan: Plan, stepsByName: Map[String, Step], summaryWithTask: List[(TaskSummary, Task)]): Unit = {
-    if (plan.sinkOptions.isDefined && plan.sinkOptions.get.foreignKeys.nonEmpty) {
-      val deleteOrder = ForeignKeyUtil.getDeleteOrder(plan.sinkOptions.get.foreignKeys)
-      deleteOrder.foreach(foreignKeyName => {
-        val foreignKeyRelation = ForeignKeyRelation.fromString(foreignKeyName)
-        val connectionConfig = connectionConfigsByName(foreignKeyRelation.dataSource)
-        val format = connectionConfig(FORMAT)
-        val step = stepsByName(foreignKeyRelation.step)
-        recordTrackingFactory.deleteRecords(foreignKeyRelation.dataSource, format, step.options, connectionConfig)
-      })
-    } else {
-      summaryWithTask.foreach(task => {
-        task._2.steps.foreach(step => {
-          val connectionConfig = connectionConfigsByName(task._1.dataSourceName)
-          val format = connectionConfig(FORMAT)
-          recordTrackingFactory.deleteRecords(task._1.dataSourceName, format, step.options, connectionConfig)
-        })
-      })
+      LOGGER.warn("Data generation is disabled")
     }
   }
 
@@ -76,7 +62,7 @@ class DataGeneratorProcessor extends SparkProvider {
   }
 
   private def pushDataToSinks(executableTasks: List[(TaskSummary, Task)], sinkDf: Map[String, DataFrame]): Unit = {
-    val sinkFactory = new SinkFactory(connectionConfigsByName)
+    val sinkFactory = new SinkFactory(connectionConfigsByName, applicationType)
     val stepByDataSourceName = executableTasks.flatMap(task =>
       task._2.steps.map(s => (getDataSourceName(task._1, s), s))
     ).toMap
@@ -85,9 +71,11 @@ class DataGeneratorProcessor extends SparkProvider {
       val dataSourceName = df._1.split("\\.").head
       val step = stepByDataSourceName(df._1)
       sinkFactory.pushToSink(df._2, dataSourceName, step, flagsConfig.enableCount)
-      if (flagsConfig.enableRecordTracking) {
+      if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION) && flagsConfig.enableRecordTracking) {
         val format = connectionConfigsByName(dataSourceName)(FORMAT)
         recordTrackingFactory.trackRecords(df._2, dataSourceName, format, step)
+      } else if (applicationType.equalsIgnoreCase(BASIC_APPLICATION) && flagsConfig.enableRecordTracking) {
+        LOGGER.warn(s"Please upgrade from the free plan to paid plan to enable record tracking. More details here: $DATA_CATERER_SITE_PRICING")
       }
     })
   }

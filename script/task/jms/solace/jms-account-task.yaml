@@ -3,7 +3,7 @@ steps:
   - name: "jms_account"
     type: "json"
     count:
-      total: 50
+      total: 1000
     options:
       destinationName: "/JNDI/Q/generated_test_queue"
     schema:

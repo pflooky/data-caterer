@@ -1,11 +1,14 @@
-name: "json_account_file"
+name: "json_account_http"
 steps:
   - name: "account"
     type: "json"
     count:
       total: 1000
     options:
-      path: "/opt/app/spartagen/sample/json/account-gen"
+      httpMethod: "PUT"
+      httpContentType: "application/json"
+      httpHeader.first-name: "peter"
+      httpHeader.amount: 100
     schema:
       type: "manual"
       fields:
@@ -20,12 +23,6 @@ steps:
             options:
               minValue: 2021
               maxValue: 2022
-        - name: "is_early_customer"
-          type: "boolean"
-          generator:
-            type: "sql"
-            options:
-              sql: "CASE WHEN year == 2021 THEN true ELSE false END"
         - name: "amount"
           type: "double"
           generator:
@@ -33,29 +30,6 @@ steps:
             options:
               minValue: 10.0
               maxValue: 100.0
-        - name: "is_large_amount"
-          type: "boolean"
-          generator:
-            type: "sql"
-            options:
-              sql: >-
-                CASE WHEN amount > 50 THEN
-                  true
-                ELSE
-                  false
-                END
-        - name: "updated_time"
-          type: "string"
-          generator:
-            type: "sql"
-            options:
-              sql: "details.updated_by.time"
-        - name: "first_txn_date"
-          type: "date"
-          generator:
-            type: "sql"
-            options:
-              sql: "element_at(sort_array(transactions.txn_date), 1)"
         - name: "details"
           schema:
             type: "manual"
@@ -94,9 +68,5 @@ steps:
                   type: "random"
               - name: "amount"
                 type: "double"
-                generator:
-                  type: "random"
-              - name: "tags"
-                type: "array<string>"
                 generator:
                   type: "random"

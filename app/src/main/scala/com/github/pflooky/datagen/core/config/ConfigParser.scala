@@ -13,6 +13,7 @@ trait ConfigParser {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
 
+  lazy val applicationType: String = "advanced"
   lazy val config: Config = getConfig
   lazy val flagsConfig: FlagsConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("flags").unwrapped(), classOf[FlagsConfig])
   lazy val foldersConfig: FoldersConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("folders").unwrapped(), classOf[FoldersConfig])
@@ -70,10 +71,10 @@ case class FlagsConfig(
 }
 
 case class FoldersConfig(
-                          baseFolderPath: String,
                           planFilePath: String,
                           taskFolderPath: String,
-                          recordTrackingFolderPath: String
+                          generatedPlanAndTaskFolderPath: String = "/tmp",
+                          recordTrackingFolderPath: String = "/tmp"
                         ) {
   def this() = this("", "", "", "")
 }
