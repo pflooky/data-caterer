@@ -112,7 +112,7 @@ case class Field(name: String, `type`: Option[String] = None, generator: Option[
 
 object Field {
   implicit def fromStructField(structField: StructField): Field = {
-    val metadataOptions = MetadataUtil.toMap(structField.metadata)
+    val metadataOptions = MetadataUtil.metadataToMap(structField.metadata)
     val generator = if (structField.metadata.contains(ONE_OF)) {
       Generator(ONE_OF, metadataOptions)
     } else {

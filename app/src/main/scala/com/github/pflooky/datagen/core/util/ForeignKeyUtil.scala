@@ -39,6 +39,8 @@ object ForeignKeyUtil {
   }
 
   private def applyForeignKeysToTargetDf(sourceDf: DataFrame, targetDf: DataFrame, sourceColumn: String, targetColumn: String): DataFrame = {
+    sourceDf.cache()
+    targetDf.cache()
     val distinctSourceKeys = sourceDf.select(sourceColumn).distinct()
       .withColumnRenamed(sourceColumn, s"_src_$sourceColumn")
       .withColumn("_join_foreign_key", monotonically_increasing_id())

@@ -22,6 +22,11 @@ object OneOfDataGenerator {
       oneOfValues(random.nextInt(oneOfArrayLength))
     }
 
+    override def generateSqlExpression: String = {
+      val oneOfValuesString = oneOfValues.mkString("||")
+      s"CAST(SPLIT('$oneOfValuesString', '\\\\|\\\\|')[CAST(RAND() * $oneOfArrayLength AS INT)] AS ${structField.dataType.sql})"
+    }
+
     private def getOneOfList: Array[Any] = {
       lazy val arrayType = Try(structField.metadata.getString(ARRAY_TYPE)).getOrElse(ONE_OF_STRING)
       val x = arrayType.toLowerCase match {

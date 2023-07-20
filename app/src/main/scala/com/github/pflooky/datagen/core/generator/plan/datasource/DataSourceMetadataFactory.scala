@@ -38,8 +38,8 @@ class DataSourceMetadataFactory extends SparkProvider {
 
       val metadataPerConnection = connectionMetadata.filter(_.isDefined).map(_.get).map(x => {
         //given foreign keys defined for a data source, ensure these columns are always generated (OMIT -> false)
-        val foreignKeys = x.getForeignKeys
-        val metadata = getMetadataForDataSource(x)
+//        val foreignKeys = x.getForeignKeys
+//        val metadata = getMetadataForDataSource(x)
 //        metadata.filter(y => y.dataSourceMetadata.name)
         (x, x.getForeignKeys, getMetadataForDataSource(x))
       })

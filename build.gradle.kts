@@ -58,5 +58,16 @@ idea.project.settings {
                 "PLAN_FILE_PATH" to "/plan/customer-create-plan.yaml"
             )
         }
+        create("GenerateLargeData", Application::class.java) {
+            mainClass = "com.github.pflooky.datagen.App"
+            moduleName = "data-caterer.app.main"
+            includeProvidedDependencies = true
+            envs = mutableMapOf(
+                "ENABLE_GENERATE_PLAN_AND_TASKS" to "false",
+                "ENABLE_GENERATE_DATA" to "true",
+                "ENABLE_RECORD_TRACKING" to "true",
+                "PLAN_FILE_PATH" to "/plan/large-plan.yaml"
+            )
+        }
     }
 }

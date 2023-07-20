@@ -1,26 +1,29 @@
 package com.github.pflooky.datagen.core.generator
 
-import com.github.pflooky.datagen.core.exception.{InvalidCountGeneratorConfigurationException, InvalidFieldConfigurationException, UnsupportedDataGeneratorType}
+import com.github.pflooky.datagen.core.exception.{InvalidCountGeneratorConfigurationException, InvalidFieldConfigurationException, InvalidStepCountGeneratorConfigurationException, UnsupportedDataGeneratorType}
 import com.github.pflooky.datagen.core.generator.provider.{DataGenerator, OneOfDataGenerator, RandomDataGenerator, RegexDataGenerator}
 import com.github.pflooky.datagen.core.model.Constants._
 import com.github.pflooky.datagen.core.model._
+import com.github.pflooky.datagen.core.util.GeneratorUtil.{getDataGenerator, getRecordCount}
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import net.datafaker.Faker
 import org.apache.log4j.Logger
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, Encoder, Encoders, Row, SparkSession}
 
 import java.io.Serializable
 import java.util.{Locale, Random}
 import scala.util.{Failure, Success, Try}
 
-class DataGeneratorFactory(optSeed: Option[String], optLocale: Option[String])(implicit val sparkSession: SparkSession) {
+case class Holder(i: Int)
 
-  private val LOGGER = Logger.getLogger(getClass.getName)
-  private val FAKER = getDataFaker
+class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession) {
+
   private val OBJECT_MAPPER = ObjectMapperUtil.jsonObjectMapper
+  sparkSession.udf.register("GENERATE_REGEX", udf((s: String) => faker.regexify(s)))
+  sparkSession.udf.register("GENERATE_FAKER_EXPRESSION", udf((s: String) => faker.expression(s)))
 
   def generateDataForStep(step: Step, dataSourceName: String): DataFrame = {
     val structFieldsWithDataGenerators = if (step.schema.fields.isDefined) {
@@ -29,8 +32,26 @@ class DataGeneratorFactory(optSeed: Option[String], optLocale: Option[String])(i
       List()
     }
 
-    generateData(structFieldsWithDataGenerators, step)
+    generateDataViaSql(structFieldsWithDataGenerators, step)
       .alias(s"$dataSourceName.${step.name}")
+  }
+
+  def generateDataViaSql(dataGenerators: List[DataGenerator[_]], step: Step): DataFrame = {
+    val structType = StructType(dataGenerators.map(_.structField))
+    val recordCount = getRecordCount(step.count, faker).toInt
+
+    val genSqlExpression = dataGenerators.filter(dg => !dg.structField.metadata.contains(SQL))
+      .map(dg => s"${dg.generateSqlExpressionWrapper} AS `${dg.structField.name}`")
+    val df = sparkSession.createDataFrame(Seq.fill(recordCount)(1).map(Holder))
+      .selectExpr(genSqlExpression: _*)
+    val sqlGeneratedFields = structType.fields.filter(f => f.metadata.contains(SQL))
+      .map(f => s"${f.metadata.getString(SQL)} AS `${f.name}`")
+    val dfAllFields = df.selectExpr(df.columns ++ sqlGeneratedFields: _*)
+    if (step.count.perColumn.isDefined) {
+      generateRecordsPerColumn(dataGenerators, step, step.count.perColumn.get, dfAllFields)
+    } else {
+      dfAllFields
+    }
   }
 
   def generateData(dataGenerators: List[DataGenerator[_]], step: Step): DataFrame = {
@@ -40,12 +61,12 @@ class DataGeneratorFactory(optSeed: Option[String], optLocale: Option[String])(i
     val generatedData = if (count.generator.isDefined) {
       val metadata = Metadata.fromJson(OBJECT_MAPPER.writeValueAsString(count.generator.get.options))
       val countStructField = StructField(RECORD_COUNT_GENERATOR_COL, IntegerType, false, metadata)
-      val generatedCount = getDataGenerator(count.generator, countStructField).generate.asInstanceOf[Int].toLong
+      val generatedCount = getDataGenerator(count.generator, countStructField, faker).generate.asInstanceOf[Int].toLong
       (1L to generatedCount).map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper())))
     } else if (count.total.isDefined) {
       (1L to count.total.get.asInstanceOf[Number].longValue()).map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper())))
     } else {
-      throw new InvalidCountGeneratorConfigurationException(step)
+      throw new InvalidStepCountGeneratorConfigurationException(step)
     }
 
     val rddGeneratedData = sparkSession.sparkContext.parallelize(generatedData)
@@ -72,14 +93,14 @@ class DataGeneratorFactory(optSeed: Option[String], optLocale: Option[String])(i
     val perColumnRange = if (perColumnCount.generator.isDefined) {
       val metadata = Metadata.fromJson(OBJECT_MAPPER.writeValueAsString(perColumnCount.generator.get.options))
       val countStructField = StructField(RECORD_COUNT_GENERATOR_COL, IntegerType, false, metadata)
-      val generatedCount = getDataGenerator(perColumnCount.generator, countStructField).asInstanceOf[DataGenerator[Int]]
+      val generatedCount = getDataGenerator(perColumnCount.generator, countStructField, faker).asInstanceOf[DataGenerator[Int]]
       val numList = generateDataWithSchema(generatedCount, fieldsToBeGenerated)
       df.withColumn(PER_COLUMN_COUNT, numList())
     } else if (perColumnCount.count.isDefined) {
       val numList = generateDataWithSchema(perColumnCount.count.get, fieldsToBeGenerated)
       df.withColumn(PER_COLUMN_COUNT, numList())
     } else {
-      throw new InvalidCountGeneratorConfigurationException(step)
+      throw new InvalidStepCountGeneratorConfigurationException(step)
     }
 
     val explodeCount = perColumnRange.withColumn(PER_COLUMN_INDEX_COL, explode(col(PER_COLUMN_COUNT)))
@@ -108,7 +129,7 @@ class DataGeneratorFactory(optSeed: Option[String], optLocale: Option[String])(i
       .filter(field => !field.generator.flatMap(gen => gen.options.get(OMIT)).getOrElse("false").toString.toBoolean)
       .map(field => {
         val structField: StructField = createStructFieldFromField(field)
-        getDataGenerator(field.generator, structField)
+        getDataGenerator(field.generator, structField, faker)
       })
     structFieldsWithDataGenerators
   }
@@ -138,33 +159,4 @@ class DataGeneratorFactory(optSeed: Option[String], optLocale: Option[String])(i
     }
   }
 
-  private def getDataGenerator(optGenerator: Option[Generator], structField: StructField): DataGenerator[_] = {
-    if (optGenerator.isDefined) {
-      optGenerator.get.`type` match {
-        //TODO: Slightly abusing random data generator giving back correct data type for sql type generated data
-        case RANDOM | SQL => RandomDataGenerator.getGeneratorForStructField(structField, FAKER)
-        case ONE_OF => OneOfDataGenerator.getGenerator(structField, FAKER)
-        case REGEX => RegexDataGenerator.getGenerator(structField, FAKER)
-        case x => throw new UnsupportedDataGeneratorType(x)
-      }
-    } else {
-      LOGGER.debug(s"No generator defined, will default to random generator, field-name=${structField.name}")
-      RandomDataGenerator.getGeneratorForStructField(structField, FAKER)
-    }
-  }
-
-  private def getDataFaker: Faker with Serializable = {
-    val trySeed = Try(optSeed.map(_.toInt).get)
-    (optSeed, trySeed, optLocale) match {
-      case (None, _, Some(locale)) =>
-        LOGGER.info(s"Locale defined at plan level. All data will be generated with the set locale, locale=$locale")
-        new Faker(Locale.forLanguageTag(locale)) with Serializable
-      case (Some(_), Success(seed), Some(locale)) =>
-        LOGGER.info(s"Seed and locale defined at plan level. All data will be generated with the set seed and locale, seed-value=$seed, locale=$locale")
-        new Faker(Locale.forLanguageTag(locale), new Random(seed)) with Serializable
-      case (Some(_), Failure(exception), _) =>
-        throw new RuntimeException(s"Failed to get seed value from plan sink options", exception)
-      case _ => new Faker() with Serializable
-    }
-  }
 }

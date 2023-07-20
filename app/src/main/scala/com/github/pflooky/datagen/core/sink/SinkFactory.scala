@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.sink
 
 import com.github.pflooky.datagen.core.exception.UnsupportedRealTimeDataSourceFormat
-import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, BATCH, DATA_CATERER_SITE_PRICING, DEFAULT_ROWS_PER_SECOND, FAILED, FINISHED, FORMAT, HTTP, JMS, PER_COLUMN_INDEX_COL, RATE, REAL_TIME, SAVE_MODE, STARTED}
+import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS, BATCH, DATA_CATERER_SITE_PRICING, DEFAULT_ROWS_PER_SECOND, DRIVER, FAILED, FINISHED, FORMAT, HTTP, JDBC, JMS, PARTITIONS, PER_COLUMN_INDEX_COL, POSTGRES_DRIVER, RATE, REAL_TIME, SAVE_MODE, STARTED}
 import com.github.pflooky.datagen.core.model.Step
 import com.github.pflooky.datagen.core.sink.http.HttpSinkProcessor
 import com.github.pflooky.datagen.core.sink.jms.JmsSinkProcessor
@@ -28,7 +28,6 @@ class SinkFactory(
     val saveMode = connectionConfig.get(SAVE_MODE).map(_.toLowerCase.capitalize).map(SaveMode.valueOf).getOrElse(SaveMode.Append)
     val saveModeName = saveMode.name()
     val format = connectionConfig(FORMAT)
-    df.cache()
     val count = if (enableCount) {
       df.count().toString
     } else {
@@ -71,8 +70,17 @@ class SinkFactory(
   }
 
   private def saveBatchData(df: DataFrame, saveMode: SaveMode, connectionConfig: Map[String, String], stepOptions: Map[String, String]): Unit = {
-    df.write
-      .format(connectionConfig(FORMAT))
+    val format = connectionConfig(FORMAT)
+    if (applicationType.equalsIgnoreCase(BASIC_APPLICATION) && (
+      BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS.contains(format) ||
+        (format.equalsIgnoreCase(JDBC) && !connectionConfig(DRIVER).equalsIgnoreCase(POSTGRES_DRIVER)))) {
+      LOGGER.warn(s"Please upgrade from the free plan to paid plan to enable generating data to all types of data source. " +
+        s"Free tier only includes all file formats and Postgres. More details here: $DATA_CATERER_SITE_PRICING")
+    }
+
+    val partitionedDf = if (stepOptions.contains(PARTITIONS)) df.repartition(stepOptions(PARTITIONS).toInt) else df
+    partitionedDf.write
+      .format(format)
       .mode(saveMode)
       .options(connectionConfig)
       .options(stepOptions)

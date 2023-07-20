@@ -21,10 +21,15 @@ class ForeignKeyUtilTest extends SparkSuite {
 
   test("Can link foreign keys between data sets") {
     val sinkOptions = SinkOptions(None, None, Map("postgres.account.account_id" -> List("postgres.transaction.account_id")))
-    val accountsList = List(Account("acc1", "peter", Date.valueOf(LocalDate.now()), 10))
+    val accountsList = List(
+      Account("acc1", "peter", Date.valueOf(LocalDate.now())),
+      Account("acc2", "john", Date.valueOf(LocalDate.now())),
+      Account("acc3", "jack", Date.valueOf(LocalDate.now()))
+    )
     val transactionList = List(
       Transaction("some_acc9", "id123", Date.valueOf(LocalDate.now()), 10.0),
-      Transaction("some_acc9", "id124", Date.valueOf(LocalDate.now()), 23.9)
+      Transaction("some_acc9", "id124", Date.valueOf(LocalDate.now()), 23.9),
+      Transaction("some_acc10", "id125", Date.valueOf(LocalDate.now()), 85.1),
     )
     val dfMap = Map(
       "postgres.account" -> sparkSession.createDataFrame(accountsList),
@@ -32,9 +37,11 @@ class ForeignKeyUtilTest extends SparkSuite {
     )
 
     val result = ForeignKeyUtil.getDataFramesWithForeignKeys(sinkOptions, dfMap)
-
+    result("postgres.transaction").show()
     val resTxnRows = result("postgres.transaction").collect()
-    resTxnRows.foreach(r => r.getString(0) == "acc1")
+    resTxnRows.foreach(r => {
+      r.getString(0) == "acc1" || r.getString(0) == "acc2" || r.getString(0) == "acc3"
+    })
   }
 
   test("Can get delete order based on foreign keys defined") {

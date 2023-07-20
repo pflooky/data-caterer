@@ -22,6 +22,10 @@ object RegexDataGenerator {
     override def generate: String = {
       faker.regexify(regex)
     }
+
+    override def generateSqlExpression: String = {
+      s"GENERATE_REGEX('$regex')"
+    }
   }
 
 }

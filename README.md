@@ -219,6 +219,8 @@ Data Caterer is able to support the following data sinks:
   - Read from metadata sources like amundsen, datahub, etc.
 - Pass in data attributes to HTTP URL as parameters
 - Auto generate regex and/or faker expressions
+- Track each data generation run along with statistics
+- Fine grain control on delete certain run of data
 
 ## Challenges
 

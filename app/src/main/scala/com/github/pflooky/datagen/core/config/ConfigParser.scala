@@ -67,7 +67,7 @@ case class FlagsConfig(
                         enableDeleteGeneratedRecords: Boolean,
                         enableGeneratePlanAndTasks: Boolean = false
                       ) {
-  def this() = this(true, true, true, true, false)
+  def this() = this(true, true, true, true)
 }
 
 case class FoldersConfig(
@@ -76,14 +76,14 @@ case class FoldersConfig(
                           generatedPlanAndTaskFolderPath: String = "/tmp",
                           recordTrackingFolderPath: String = "/tmp"
                         ) {
-  def this() = this("", "", "", "")
+  def this() = this("", "")
 }
 
 case class MetadataConfig(
                            numRecordsFromDataSource: Int,
                            numRecordsForAnalysis: Int,
-                           oneOfDistinctCountVsCountThreshold: Double,
+                           oneOfDistinctCountVsCountThreshold: Double = 0.2,
                            oneOfMinCount: Int = 1000,
                          ) {
-  def this() = this(1000, 1000, 0.1, 1000)
+  def this() = this(1000, 1000)
 }

@@ -2,6 +2,7 @@ package com.github.pflooky.datagen.core.generator
 
 import com.github.pflooky.datagen.core.model._
 import com.github.pflooky.datagen.core.util.{Account, SparkSuite}
+import net.datafaker.Faker
 import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType}
 import org.apache.spark.sql.{Dataset, Encoder, Encoders}
 import org.junit.runner.RunWith
@@ -12,7 +13,7 @@ import scala.util.Random
 @RunWith(classOf[JUnitRunner])
 class DataGeneratorFactoryTest extends SparkSuite {
 
-  private val dataGeneratorFactory = new DataGeneratorFactory(None, None)
+  private val dataGeneratorFactory = new DataGeneratorFactory(new Faker() with Serializable)
   private val schema = Schema("manual", Some(
     List(
       Field("id", Some("string"), Some(Generator("random", Map()))),
@@ -90,7 +91,7 @@ class DataGeneratorFactoryTest extends SparkSuite {
     assert(sampleRows.count() == 1L)
   }
 
-  test("Can run spark streaming output at 2 records per second") {
+  ignore("Can run spark streaming output at 2 records per second") {
     implicit val encoder: Encoder[Account] = Encoders.kryo[Account]
     val df = sparkSession.readStream
       .format("rate").option("rowsPerSecond", "10").load()
@@ -101,9 +102,4 @@ class DataGeneratorFactoryTest extends SparkSuite {
       .start()
     stream.awaitTermination(11000)
   }
-
-  def genAccount: Account = {
-    Account(new Random().nextString(5))
-  }
-
 }

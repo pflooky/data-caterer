@@ -21,6 +21,7 @@ object Constants {
   lazy val USERNAME = "user"
   lazy val PASSWORD = "password"
   lazy val DRIVER = "driver"
+  lazy val PARTITIONS = "partitions"
   lazy val BODY_FIELD = "bodyField"
   lazy val HTTP_METHOD = "httpMethod"
   lazy val HTTP_HEADER_PREFIX = "httpHeader"
@@ -49,6 +50,7 @@ object Constants {
   lazy val PARQUET = "parquet"
   lazy val XML = "xml"
   lazy val SUPPORTED_CONNECTION_FORMATS: List[String] = List(CSV, JSON, ORC, PARQUET, CASSANDRA, JDBC, HTTP, JMS)
+  lazy val BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS = List(CSV, JSON, ORC, PARQUET)
 
   //supported jdbc drivers
   lazy val POSTGRES_DRIVER = "org.postgresql.Driver"

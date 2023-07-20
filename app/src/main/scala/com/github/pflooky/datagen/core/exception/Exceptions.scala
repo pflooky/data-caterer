@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.exception
 
-import com.github.pflooky.datagen.core.model.{Field, Step}
+import com.github.pflooky.datagen.core.model.{Count, Field, Step}
 import org.apache.spark.sql.types.{DataType, StructField}
 
 class PlanFileNotFoundException(filePath: String) extends RuntimeException {
@@ -36,8 +36,12 @@ class InvalidDataGeneratorConfigurationException(structField: StructField, undef
     s"name=${structField.name}, data-type=${structField.dataType}, undefined-metadata-field=$undefinedMetadataField, metadata=${structField.metadata}"
 }
 
-class InvalidCountGeneratorConfigurationException(step: Step) extends RuntimeException {
+class InvalidStepCountGeneratorConfigurationException(step: Step) extends RuntimeException {
   override def getMessage: String = s"'total' or 'generator' needs to be defined in count for step, step-name=${step.name}, schema=${step.schema}, count=${step.count}"
+}
+
+class InvalidCountGeneratorConfigurationException(count: Count) extends RuntimeException {
+  override def getMessage: String = s"'total' or 'generator' needs to be defined in count definition, count=$count"
 }
 
 class InvalidFieldConfigurationException(field: Field) extends RuntimeException {

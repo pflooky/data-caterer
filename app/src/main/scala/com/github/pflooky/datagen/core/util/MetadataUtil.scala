@@ -1,9 +1,10 @@
 package com.github.pflooky.datagen.core.util
 
 import com.github.pflooky.datagen.core.config.MetadataConfig
+import com.github.pflooky.datagen.core.generator.plan.ExpressionPredictor
 import com.github.pflooky.datagen.core.generator.plan.datasource.DataSourceMetadata
 import com.github.pflooky.datagen.core.generator.plan.datasource.database.ColumnMetadata
-import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CSV, DELTA, DISTINCT_COUNT, HISTOGRAM, HTTP, HTTP_METHOD, IS_NULLABLE, JDBC, JDBC_TABLE, JMS, JMS_DESTINATION_NAME, JSON, ONE_OF, ORC, PARQUET, PATH, ROW_COUNT}
+import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CSV, DELTA, DISTINCT_COUNT, EXPRESSION, HISTOGRAM, HTTP, HTTP_METHOD, IS_NULLABLE, JDBC, JDBC_TABLE, JMS, JMS_DESTINATION_NAME, JSON, ONE_OF, ORC, PARQUET, PATH, ROW_COUNT}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.CatalogColumnStat
@@ -20,29 +21,28 @@ object MetadataUtil {
   private val mapStringToAnyClass = Map[String, Any]()
   private val TEMP_CACHED_TABLE_NAME = "temp_table"
 
-  def toMap(metadata: Metadata): Map[String, Any] = {
+  def metadataToMap(metadata: Metadata): Map[String, Any] = {
     OBJECT_MAPPER.readValue(metadata.json, mapStringToAnyClass.getClass)
+  }
+
+  def mapToMetadata(mapMetadata: Map[String, Any]): Metadata = {
+    Metadata.fromJson(OBJECT_MAPPER.writeValueAsString(mapMetadata))
   }
 
   def mapToStructFields(sourceData: DataFrame, dataSourceReadOptions: Map[String, String],
                         columnDataProfilingMetadata: List[DataProfilingMetadata],
                         additionalColumnMetadata: Dataset[ColumnMetadata])(implicit sparkSession: SparkSession): Array[StructField] = {
+    additionalColumnMetadata.cache()
     val fieldsWithMetadata = sourceData.schema.fields.map(field => {
       val baseMetadata = new MetadataBuilder().withMetadata(field.metadata)
-      columnDataProfilingMetadata.find(_.columnName == field.name)
-        .foreach(dpm => {
-          dpm.metadata.foreach(s => baseMetadata.putString(s._1.replace(s"${field.name}.", ""), s._2))
-          dpm.optOneOfColumn.foreach(arr => baseMetadata.putStringArray(ONE_OF, arr))
-        })
+      columnDataProfilingMetadata.find(_.columnName == field.name).foreach(c => baseMetadata.withMetadata(mapToMetadata(c.metadata)))
 
       var nullable = field.nullable
       val optFieldAdditionalMetadata = additionalColumnMetadata.filter(c => c.dataSourceReadOptions.equals(dataSourceReadOptions) && c.column == field.name)
       if (!optFieldAdditionalMetadata.isEmpty) {
         val fieldAdditionalMetadata = optFieldAdditionalMetadata.first()
         fieldAdditionalMetadata.metadata.foreach(m => {
-          if (m._1.equals(IS_NULLABLE)) {
-            nullable = m._2.toBoolean
-          }
+          if (m._1.equals(IS_NULLABLE)) nullable = m._2.toBoolean
           baseMetadata.putString(m._1, String.valueOf(m._2))
         })
       }
@@ -68,9 +68,15 @@ object MetadataUtil {
       val columnName = x._1.name
       val statisticsMap = columnStatToMap(x._2.toCatalogColumnStat(columnName, x._1.dataType)) ++ Map(ROW_COUNT -> rowCount.toString)
       val optOneOfColumn = determineIfOneOfColumn(sourceData, columnName, statisticsMap, metadataConfig)
+      val optFakerExpression = ExpressionPredictor.getFakerExpression(sourceData.schema.fields.find(_.name == columnName).get)
+      val optionalMetadataMap = Map(EXPRESSION -> optFakerExpression, ONE_OF -> optOneOfColumn)
+        .filter(_._2.isDefined)
+        .map(x => (x._1, x._2.get))
+      val statWithOptionalMetadata = statisticsMap ++ optionalMetadataMap
+
       LOGGER.debug(s"Column summary statistics, name=${dataSourceMetadata.name}, format=${dataSourceMetadata.format}, column-name=$columnName, " +
-        s"statistics=${statisticsMap - s"$columnName.$HISTOGRAM"}")
-      DataProfilingMetadata(columnName, statisticsMap, optOneOfColumn)
+        s"statistics=${statWithOptionalMetadata - s"$columnName.$HISTOGRAM"}")
+      DataProfilingMetadata(columnName, statWithOptionalMetadata)
     }).toList
   }
 
@@ -102,6 +108,7 @@ object MetadataUtil {
   private def columnStatToMap(catalogColumnStat: CatalogColumnStat): Map[String, String] = {
     catalogColumnStat.toMap("col")
       .map(kv => (kv._1.replaceFirst("col\\.", ""), kv._2))
+      .filter(_._1 != "version")
   }
 
   def determineIfOneOfColumn(sourceData: DataFrame, columnName: String,
@@ -112,7 +119,7 @@ object MetadataUtil {
       case (Some(DateType), _) => None
       case (_, 0) => None
       case (Some(_), c) if c >= metadataConfig.oneOfMinCount =>
-        val distinctCount = statisticsMap(DISTINCT_COUNT).toLong
+        val distinctCount = statisticsMap(DISTINCT_COUNT).toDouble
         if (distinctCount / count <= metadataConfig.oneOfDistinctCountVsCountThreshold) {
           LOGGER.debug(s"Identified column as a 'oneOf' column as distinct count / total count is below threshold, threshold=${metadataConfig.oneOfDistinctCountVsCountThreshold}")
           Some(sourceData.select(columnName).distinct().collect().map(_.mkString))
@@ -146,4 +153,4 @@ object MetadataUtil {
   }
 }
 
-case class DataProfilingMetadata(columnName: String, metadata: Map[String, String], optOneOfColumn: Option[Array[String]])
+case class DataProfilingMetadata(columnName: String, metadata: Map[String, Any])
