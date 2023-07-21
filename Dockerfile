@@ -1,4 +1,5 @@
-FROM apache/spark:v3.3.2
+ARG SPARK_VERSION=3.4.1
+FROM apache/spark:$SPARK_VERSION
 
 USER root
 RUN groupadd -g 1001 app && useradd -m -u 1001 -g app app

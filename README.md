@@ -221,6 +221,15 @@ Data Caterer is able to support the following data sinks:
 - Auto generate regex and/or faker expressions
 - Track each data generation run along with statistics
 - Fine grain control on delete certain run of data
+- Demo for each type of data source
+  - Demonstrate what modifications are needed for different use cases
+  - Preloaded/preconfigured datasets within docker images
+- ML model to assist in metadata gathering (either via API or self-hosted)
+  - Regex and SQL generation
+  - Foreign key detection across datasets
+  - Documentation for the datasets
+  - Via API could be problem as sensitive data could be shared
+  - Via self-hosted requires large image (10+ Gb)
 
 ## Challenges
 

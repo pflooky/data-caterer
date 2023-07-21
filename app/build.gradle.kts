@@ -63,8 +63,8 @@ dependencies {
     basicImpl("joda-time:joda-time:2.12.5")
     basicImpl("com.google.guava:guava:31.1-jre")
     basicImpl("com.github.pureconfig:pureconfig_$scalaVersion:0.17.2")
-    basicImpl("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.14.2")
-    basicImpl("com.fasterxml.jackson.module:jackson-module-scala_$scalaVersion:2.14.2")
+    basicImpl("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.2")
+    basicImpl("com.fasterxml.jackson.module:jackson-module-scala_$scalaVersion:2.15.2")
 }
 
 testing {
@@ -106,7 +106,6 @@ tasks.shadowJar {
 }
 
 tasks.register<ShadowJar>("basicJar") {
-    dependsOn(tasks["setBasicApplicationFlags"], tasks.compileScala)
     from(project.sourceSets.main.get().output)
     configurations = listOf(basicImpl)
     archiveBaseName.set("datacaterer")
@@ -121,7 +120,6 @@ tasks.register<ShadowJar>("basicJar") {
 }
 
 tasks.register<ShadowJar>("advancedJar") {
-    dependsOn(tasks["setAdvancedApplicationFlags"], tasks.compileScala)
     from(project.sourceSets.main.get().output)
     configurations = listOf(basicImpl, advancedImpl)
     archiveBaseName.set("datacaterer")
@@ -134,15 +132,13 @@ tasks.register<ShadowJar>("advancedJar") {
     }
 }
 
-tasks.register("setBasicApplicationFlags") {
-    doFirst {
-        setApplicationFlags(true)
-    }
+tasks.register("defineApplicationType") {
+    val applicationType = providers.gradleProperty("applicationType").getOrElse("basic")
+    if (applicationType.lowercase() == "advanced") setApplicationFlags(false) else setApplicationFlags(true)
 }
-tasks.register("setAdvancedApplicationFlags") {
-    doFirst {
-        setApplicationFlags(false)
-    }
+
+tasks.compileScala {
+    dependsOn(tasks["defineApplicationType"])
 }
 
 //tasks.build {
