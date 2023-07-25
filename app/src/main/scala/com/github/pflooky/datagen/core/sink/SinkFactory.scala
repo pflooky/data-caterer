@@ -75,7 +75,8 @@ class SinkFactory(
       !BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS.contains(format) ||
         (format.equalsIgnoreCase(JDBC) && !connectionConfig(DRIVER).equalsIgnoreCase(POSTGRES_DRIVER)))) {
       LOGGER.warn(s"Please upgrade from the free plan to paid plan to enable generating data to all types of data source. " +
-        s"Free tier only includes all file formats and Postgres. More details here: $DATA_CATERER_SITE_PRICING")
+        s"Free tier only includes all file formats and Postgres, format=$format. More details here: $DATA_CATERER_SITE_PRICING")
+      return
     }
 
     val partitionedDf = if (stepOptions.contains(PARTITIONS)) df.repartition(stepOptions(PARTITIONS).toInt) else df

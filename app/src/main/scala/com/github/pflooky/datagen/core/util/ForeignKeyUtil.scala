@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.util
 
 import com.github.pflooky.datagen.core.generator.plan.datasource.database.ForeignKeyRelationship
-import com.github.pflooky.datagen.core.model.SinkOptions
+import com.github.pflooky.datagen.core.model.{Plan, SinkOptions}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.functions.{col, monotonically_increasing_id}
 import org.apache.spark.sql.{DataFrame, Dataset}
@@ -17,10 +17,27 @@ object ForeignKeyUtil {
    * @param generatedDataForeachTask map of <dataSourceName>.<stepName> => generated data as dataframe
    * @return map of <dataSourceName>.<stepName> => dataframe
    */
-  def getDataFramesWithForeignKeys(sinkOptions: SinkOptions, generatedDataForeachTask: Map[String, DataFrame]): Map[String, DataFrame] = {
+  def getDataFramesWithForeignKeys(plan: Plan, generatedDataForeachTask: Map[String, DataFrame]): Map[String, DataFrame] = {
+    val enabledSources = plan.tasks.filter(_.enabled).map(_.dataSourceName)
+    val sinkOptions = plan.sinkOptions.get
     val foreignKeyAppliedDfs = sinkOptions.foreignKeys
-      .flatMap(fk => {
-        val foreignKeyDetails = sinkOptions.getForeignKeyRelations(fk._1)
+      .map(fk => sinkOptions.getForeignKeyRelations(fk._1))
+      .filter(fkr => {
+        val isMainForeignKeySourceEnabled = enabledSources.contains(fkr._1.dataSource)
+        val subForeignKeySources = fkr._2.map(_.dataSource)
+        val isSubForeignKeySourceEnabled = subForeignKeySources.forall(enabledSources.contains)
+        val disabledSubSources = subForeignKeySources.filter(s => !enabledSources.contains(s))
+
+        if (!isMainForeignKeySourceEnabled) {
+          LOGGER.warn(s"Foreign key data source is not enabled. Data source needs to be enabled for foreign key relationship " +
+            s"to exist from generated data, data-source-name=${fkr._1.dataSource}")
+        }
+        if (!isSubForeignKeySourceEnabled) {
+          LOGGER.warn(s"Sub data sources within foreign key relationship are not enabled, disabled-task")
+        }
+        isMainForeignKeySourceEnabled && isSubForeignKeySourceEnabled
+      })
+      .flatMap(foreignKeyDetails => {
         val sourceDfName = foreignKeyDetails._1.getDataFrameName
         LOGGER.debug(s"Getting source dataframe, source=$sourceDfName")
         if (!generatedDataForeachTask.contains(sourceDfName)) {

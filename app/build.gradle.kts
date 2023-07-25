@@ -41,6 +41,10 @@ dependencies {
     compileOnly("org.scala-lang:scala-library:$scalaSpecificVersion")
     compileOnly("org.apache.spark:spark-sql_$scalaVersion:$sparkVersion")
 
+    // additional spark
+    basicImpl("org.apache.spark:spark-avro_$scalaVersion:$sparkVersion")
+    basicImpl("org.apache.spark:spark-protobuf_$scalaVersion:$sparkVersion")
+
     // connectors
     // jdbc
     basicImpl("org.postgresql:postgresql:42.5.4")
@@ -49,6 +53,7 @@ dependencies {
     advancedImpl("com.datastax.spark:spark-cassandra-connector_$scalaVersion:3.3.0")
     // http
     advancedImpl("org.dispatchhttp:dispatch-core_$scalaVersion:1.2.0")
+    advancedImpl("io.swagger.parser.v3:swagger-parser-v3:2.1.16")
     // kafka
     advancedImpl("org.apache.spark:spark-sql-kafka-0-10_$scalaVersion:$sparkVersion")
     // jms
@@ -80,6 +85,8 @@ testing {
                 implementation("org.scalatestplus:junit-4-13_$scalaVersion:3.2.2.0")
                 implementation("org.scalamock:scalamock_$scalaVersion:5.2.0")
                 implementation("org.apache.spark:spark-sql_$scalaVersion:$sparkVersion")
+                implementation("org.apache.spark:spark-avro_$scalaVersion:$sparkVersion")
+                implementation("org.apache.spark:spark-protobuf_$scalaVersion:$sparkVersion")
 
                 // Need scala-xml at test runtime
                 runtimeOnly("org.scala-lang.modules:scala-xml_$scalaVersion:1.2.0")

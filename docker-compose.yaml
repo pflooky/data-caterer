@@ -1,32 +1,39 @@
-version: '3.5'
+version: "3.5"
 services:
   postgres:
     image: "postgres:14.5"
     environment:
-      POSTGRES_USER: "postgres"
-      POSTGRES_PASSWORD: "postgres"
-      PGDATA: "/data/postgres"
+      - "POSTGRES_USER=postgres"
+      - "POSTGRES_PASSWORD=postgres"
+      - "PGDATA=/data/postgres"
     volumes:
       - "${HOME}/data/postgres:/data/postgres"
       - "./app/src/test/resources/sample/sql/postgres/customer.sql:/docker-entrypoint-initdb.d/customer.sql"
     ports:
       - "5432:5432"
 
-#  mysql:
-#    image: "mysql:8.0.33"
-#    environment:
-#      MYSQL_ROOT_PASSWORD: "root"
-#    command: "--default-authentication-plugin=mysql_native_password"
-#    volumes:
-#      - "${HOME}/data/mysql:/var/lib/mysql"
-#      - "./app/src/test/resources/sample/sql/mysql/customer.sql:/docker-entrypoint-initdb.d/customer.sql"
-#    ports:
-#      - "3306:3306"
+  mysql:
+    image: "mysql:8.0.33"
+    environment:
+      MYSQL_ROOT_PASSWORD: "root"
+    command: "--default-authentication-plugin=mysql_native_password"
+    volumes:
+      - "${HOME}/data/mysql:/var/lib/mysql"
+      - "./app/src/test/resources/sample/sql/mysql/customer.sql:/docker-entrypoint-initdb.d/customer.sql"
+    ports:
+      - "3306:3306"
 
   solace:
     image: "solace/solace-pubsub-standard:10.4"
+    environment:
+      - "username_admin_globalaccesslevel=admin"
+      - "username_admin_password=admin"
+      - "system_scaling_maxconnectioncount=100"
     volumes:
       - "${HOME}/data/solace:/var/lib/solace"
+    ports:
+      - "8080:8080"
+      - "55554:55555"
     shm_size: "1g"
     ulimits:
       core: -1
@@ -37,30 +44,30 @@ services:
       restart_policy:
         condition: "on-failure"
         max_attempts: 1
-    ports:
-      - "8080:8080"
-      - "55554:55555"
-    environment:
-      - "username_admin_globalaccesslevel=admin"
-      - "username_admin_password=admin"
-      - "system_scaling_maxconnectioncount=100"
 
-#  cassandra:
-#    image: "datastax/dse-server:6.8.33"
-#    environment:
-#      DS_LICENSE: "accept"
-#    volumes:
-#      - "${HOME}/data/cassandra:/var/lib/cassandra"
-#      - "./app/src/test/resources/sample/cql/customer.cql:/docker-entrypoint-initdb.d/customer.cql"
-#    # Allow DSE to lock memory with mlock
-#    cap_add:
-#      - IPC_LOCK
-#    ulimits:
-#      memlock: -1
-#    ports:
-#      - "9042:9042"
+  cassandra:
+    image: "datastax/dse-server:6.8.33"
+    environment:
+      - "DS_LICENSE=accept"
+    volumes:
+      - "${HOME}/data/cassandra:/var/lib/cassandra"
+      - "./app/src/test/resources/sample/cql/customer.cql:/docker-entrypoint-initdb.d/customer.cql"
+    ports:
+      - "9042:9042"
+    # Allow DSE to lock memory with mlock
+    cap_add:
+      - IPC_LOCK
+    ulimits:
+      memlock: -1
 
   httbin:
     image: "kennethreitz/httpbin:latest"
     ports:
       - "80:80"
+
+  kafka:
+    image: "confluentinc/confluent-local:7.4.1"
+    volumes:
+      - "${HOME}/data/kafka:/var/lib/kafka/data"
+    ports:
+      - "9092:9092"

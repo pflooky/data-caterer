@@ -13,7 +13,7 @@ trait ConfigParser {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
 
-  lazy val applicationType: String = "advanced"
+  lazy val applicationType: String = "basic"
   lazy val config: Config = getConfig
   lazy val flagsConfig: FlagsConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("flags").unwrapped(), classOf[FlagsConfig])
   lazy val foldersConfig: FoldersConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("folders").unwrapped(), classOf[FoldersConfig])
@@ -49,7 +49,9 @@ trait ConfigParser {
           baseConfig.getValue(name).valueType() match {
             case ConfigValueType.OBJECT =>
               val connectionConfig = baseConfig.getConfig(name)
-              val configValueMap = connectionConfig.entrySet().asScala.map(e => (e.getKey, e.getValue.render().replaceAll("\"", ""))).toMap
+              val configValueMap = connectionConfig.entrySet().asScala
+                .map(e => (e.getKey, e.getValue.render().replaceAll("\"", "")))
+                .toMap
               Map(name -> (configValueMap ++ Map(FORMAT -> format)))
             case _ => Map[String, Map[String, String]]()
           }

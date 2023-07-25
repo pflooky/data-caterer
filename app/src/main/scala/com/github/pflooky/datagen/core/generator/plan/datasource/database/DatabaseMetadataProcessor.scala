@@ -1,10 +1,16 @@
 package com.github.pflooky.datagen.core.generator.plan.datasource.database
 
+import com.github.pflooky.datagen.core.generator.plan.datasource.{DataSourceMetadata, MetadataProcessor}
 import org.apache.spark.sql.SparkSession
 
-class DatabaseMetadataProcessor(sparkSession: SparkSession) {
+class DatabaseMetadataProcessor(override val dataSourceMetadata: DataSourceMetadata)(implicit sparkSession: SparkSession) extends MetadataProcessor {
 
-  def getAllDatabaseTables(databaseMetadata: DatabaseMetadata): Array[Map[String, String]] = {
+  override def getSubDataSourcesMetadata: Array[Map[String, String]] = {
+    val databaseMetadata: DatabaseMetadata = dataSourceMetadata match {
+      case dm: DatabaseMetadata => dm
+      case _ => throw new RuntimeException("Expecting data source metadata to be of type DatabaseMetadata to extract sub data sources metadata")
+    }
+
     val allDatabaseSchemasWithTableName = sparkSession.read
       .format(databaseMetadata.format)
       .options(databaseMetadata.connectionConfig ++ databaseMetadata.metadataTable)

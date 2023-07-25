@@ -92,7 +92,7 @@ case class Count(@JsonDeserialize(contentAs = classOf[java.lang.Long]) total: Op
 }
 case class PerColumnCount(columnNames: List[String], @JsonDeserialize(contentAs = classOf[java.lang.Long]) count: Option[Long] = Some(10L), generator: Option[Generator] = None)
 
-case class Schema(`type`: String, fields: Option[List[Field]]) {
+case class Schema(`type`: String = "manual", fields: Option[List[Field]] = None) {
   override def toString: String = {
     val baseStr = s"type=${`type`}"
     if (fields.isDefined) {

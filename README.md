@@ -230,6 +230,8 @@ Data Caterer is able to support the following data sinks:
   - Documentation for the datasets
   - Via API could be problem as sensitive data could be shared
   - Via self-hosted requires large image (10+ Gb)
+- Allow for delete from Queue or API
+  - Ability to define a queue or endpoint that can delete the corresponding records
 
 ## Challenges
 

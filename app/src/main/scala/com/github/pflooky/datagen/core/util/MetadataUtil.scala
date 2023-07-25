@@ -147,6 +147,7 @@ object MetadataUtil {
         //TODO do we support delete via HTTP?
         options(HTTP_METHOD)
       case _ =>
+        LOGGER.warn(s"Unsupported data format for record tracking, format=$lowerFormat")
         throw new RuntimeException(s"Unsupported data format for record tracking, format=$lowerFormat")
     }
     s"$recordTrackingFolderPath/$lowerFormat/$dataSourceName/$subPath"

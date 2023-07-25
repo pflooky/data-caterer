@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.util
 
-import com.github.pflooky.datagen.core.model.SinkOptions
+import com.github.pflooky.datagen.core.model.{Plan, SinkOptions}
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
 
@@ -12,15 +12,17 @@ class ForeignKeyUtilTest extends SparkSuite {
 
   test("When no foreign keys defined, return back same dataframes") {
     val sinkOptions = SinkOptions(None, None, Map())
+    val plan = Plan("no foreign keys", "simple plan", List(), Some(sinkOptions))
     val dfMap = Map("name" -> sparkSession.emptyDataFrame)
 
-    val result = ForeignKeyUtil.getDataFramesWithForeignKeys(sinkOptions, dfMap)
+    val result = ForeignKeyUtil.getDataFramesWithForeignKeys(plan, dfMap)
 
     assert(dfMap == result)
   }
 
   test("Can link foreign keys between data sets") {
     val sinkOptions = SinkOptions(None, None, Map("postgres.account.account_id" -> List("postgres.transaction.account_id")))
+    val plan = Plan("foreign keys", "simple plan", List(), Some(sinkOptions))
     val accountsList = List(
       Account("acc1", "peter", Date.valueOf(LocalDate.now())),
       Account("acc2", "john", Date.valueOf(LocalDate.now())),
@@ -36,7 +38,7 @@ class ForeignKeyUtilTest extends SparkSuite {
       "postgres.transaction" -> sparkSession.createDataFrame(transactionList)
     )
 
-    val result = ForeignKeyUtil.getDataFramesWithForeignKeys(sinkOptions, dfMap)
+    val result = ForeignKeyUtil.getDataFramesWithForeignKeys(plan, dfMap)
     result("postgres.transaction").show()
     val resTxnRows = result("postgres.transaction").collect()
     resTxnRows.foreach(r => {

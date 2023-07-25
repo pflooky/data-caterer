@@ -67,8 +67,8 @@ class DataGeneratorProcessor extends SparkProvider {
       task._2.steps.map(s => (getDataSourceName(task._1, s), dataGeneratorFactory.generateDataForStep(s, task._1.dataSourceName)))
     ).toMap
 
-    val sinkDf = if (plan.sinkOptions.isDefined) {
-      ForeignKeyUtil.getDataFramesWithForeignKeys(plan.sinkOptions.get, generatedDataForeachTask)
+    val sinkDf = if (plan.sinkOptions.isDefined && plan.sinkOptions.get.foreignKeys.nonEmpty) {
+      ForeignKeyUtil.getDataFramesWithForeignKeys(plan, generatedDataForeachTask)
     } else {
       generatedDataForeachTask
     }

@@ -3,7 +3,9 @@ package com.github.pflooky.datagen.core.generator.plan.datasource
 import com.github.pflooky.datagen.core.generator.plan.PlanGenerator.writePlanAndTasksToFiles
 import com.github.pflooky.datagen.core.generator.plan.datasource.database.{CassandraMetadata, DatabaseMetadata, DatabaseMetadataProcessor, MysqlMetadata, PostgresMetadata}
 import com.github.pflooky.datagen.core.generator.plan.datasource.file.{FileMetadata, FileMetadataProcessor}
-import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, CASSANDRA, CSV, DATA_CATERER_SITE_PRICING, DELTA, DRIVER, FORMAT, JDBC, JSON, MYSQL_DRIVER, ORC, PARQUET, POSTGRES_DRIVER}
+import com.github.pflooky.datagen.core.generator.plan.datasource.http.{HttpMetadata, HttpMetadataProcessor}
+import com.github.pflooky.datagen.core.generator.plan.datasource.jms.{JmsMetadata, JmsMetadataProcessor}
+import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, CASSANDRA, CSV, DATA_CATERER_SITE_PRICING, DELTA, DRIVER, FORMAT, HTTP, JDBC, JMS, JSON, MYSQL_DRIVER, ORC, PARQUET, POSTGRES_DRIVER}
 import com.github.pflooky.datagen.core.model.{Plan, Task}
 import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, MetadataUtil, SparkProvider}
 import org.apache.log4j.Logger
@@ -12,14 +14,13 @@ import org.apache.spark.sql.types.StructType
 class DataSourceMetadataFactory extends SparkProvider {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
-  private val databaseMetadataProcessor = new DatabaseMetadataProcessor(sparkSession)
-  private val fileMetadataProcessor = new FileMetadataProcessor
 
   def extractAllDataSourceMetadata(): Option[(Plan, List[Task])] = {
     if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION) && flagsConfig.enableGeneratePlanAndTasks) {
       LOGGER.info("Attempting to extract all data source metadata as defined in connection configurations in application.conf")
       val connectionMetadata = connectionConfigsByName.map(connectionConfig => {
-        val connection = connectionConfig._2(FORMAT) match {
+        val format = connectionConfig._2(FORMAT)
+        val connection = format match {
           case CASSANDRA => Some(CassandraMetadata(connectionConfig._1, connectionConfig._2))
           case JDBC =>
             connectionConfig._2(DRIVER) match {
@@ -27,7 +28,9 @@ class DataSourceMetadataFactory extends SparkProvider {
               case MYSQL_DRIVER => Some(MysqlMetadata(connectionConfig._1, connectionConfig._2))
               case _ => None
             }
-          case CSV | JSON | PARQUET | DELTA | ORC => Some(FileMetadata(connectionConfig._1, connectionConfig._2(FORMAT), connectionConfig._2))
+          case CSV | JSON | PARQUET | DELTA | ORC => Some(FileMetadata(connectionConfig._1, format, connectionConfig._2))
+          case HTTP => Some(HttpMetadata(connectionConfig._1, format, connectionConfig._2))
+          case JMS => Some(JmsMetadata(connectionConfig._1, format, connectionConfig._2))
           case _ => None
         }
         if (connection.isEmpty) {
@@ -56,10 +59,13 @@ class DataSourceMetadataFactory extends SparkProvider {
 
   def getMetadataForDataSource(dataSourceMetadata: DataSourceMetadata): List[DataSourceDetail] = {
     LOGGER.info(s"Extracting out metadata from data source, name=${dataSourceMetadata.name}, format=${dataSourceMetadata.format}")
-    val allDataSourceReadOptions = dataSourceMetadata match {
-      case databaseMetadata: DatabaseMetadata => databaseMetadataProcessor.getAllDatabaseTables(databaseMetadata)
-      case _ => fileMetadataProcessor.getAllFiles(dataSourceMetadata)
+    val metadataProcessor = dataSourceMetadata match {
+      case databaseMetadata: DatabaseMetadata => new DatabaseMetadataProcessor(databaseMetadata)
+      case _: FileMetadata => new FileMetadataProcessor(dataSourceMetadata)
+      case _: HttpMetadata => new HttpMetadataProcessor(dataSourceMetadata)
+      case _: JmsMetadata => new JmsMetadataProcessor(dataSourceMetadata)
     }
+    val allDataSourceReadOptions = metadataProcessor.getSubDataSourcesMetadata
 
     val numSubDataSources = allDataSourceReadOptions.length
     if (numSubDataSources == 0) {

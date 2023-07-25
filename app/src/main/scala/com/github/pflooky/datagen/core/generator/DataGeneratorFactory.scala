@@ -137,7 +137,7 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
   private def createStructFieldFromField(field: Field): StructField = {
     if (field.schema.isDefined) {
       val innerStructFields = createStructTypeFromSchema(field.schema.get)
-      if (field.`type`.isDefined && field.`type`.get.toLowerCase == "array") {
+      if (field.`type`.isDefined && field.`type`.get.toLowerCase.startsWith("array")) {
         StructField(field.name, ArrayType(innerStructFields, field.nullable), field.nullable)
       } else {
         StructField(field.name, innerStructFields, field.nullable)

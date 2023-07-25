@@ -30,6 +30,7 @@ object Constants {
   lazy val JMS_INITIAL_CONTEXT_FACTORY = "initialContextFactory"
   lazy val JMS_CONNECTION_FACTORY = "connectionFactory"
   lazy val JMS_VPN_NAME = "vpnName"
+  lazy val SCHEMA_LOCATION = "schemaLocation"
 
   //custom spark options
   lazy val METADATA_FILTER_SCHEMA = "filterSchema"
@@ -41,6 +42,7 @@ object Constants {
   lazy val POSTGRES = "postgres"
   lazy val HTTP = "http"
   lazy val JMS = "jms"
+  lazy val KAFKA = "kafka"
   lazy val RATE = "rate"
   //file formats
   lazy val CSV = "csv"
@@ -49,8 +51,8 @@ object Constants {
   lazy val ORC = "orc"
   lazy val PARQUET = "parquet"
   lazy val XML = "xml"
-  lazy val SUPPORTED_CONNECTION_FORMATS: List[String] = List(CSV, JSON, ORC, PARQUET, CASSANDRA, JDBC, HTTP, JMS)
-  lazy val BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS = List(CSV, JSON, ORC, PARQUET)
+  lazy val SUPPORTED_CONNECTION_FORMATS: List[String] = List(CSV, JSON, ORC, PARQUET, CASSANDRA, JDBC, HTTP, JMS, KAFKA)
+  lazy val BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS: List[String] = List(CSV, JSON, ORC, PARQUET)
 
   //supported jdbc drivers
   lazy val POSTGRES_DRIVER = "org.postgresql.Driver"

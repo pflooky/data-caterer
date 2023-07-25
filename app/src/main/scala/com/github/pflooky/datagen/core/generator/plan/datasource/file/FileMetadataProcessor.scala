@@ -1,10 +1,10 @@
 package com.github.pflooky.datagen.core.generator.plan.datasource.file
 
-import com.github.pflooky.datagen.core.generator.plan.datasource.DataSourceMetadata
+import com.github.pflooky.datagen.core.generator.plan.datasource.{DataSourceMetadata, MetadataProcessor}
 import com.github.pflooky.datagen.core.model.Constants.{DELTA, PARQUET, PATH}
 import org.apache.spark.sql.SparkSession
 
-class FileMetadataProcessor(implicit sparkSession: SparkSession) {
+class FileMetadataProcessor(override val dataSourceMetadata: DataSourceMetadata)(implicit sparkSession: SparkSession) extends MetadataProcessor {
 
   /**
    * Given a folder pathway, get all types of files and their corresponding pathways and other connection related metadata
@@ -12,7 +12,7 @@ class FileMetadataProcessor(implicit sparkSession: SparkSession) {
    *
    * @return Array of connection config for files
    */
-  def getAllFiles(dataSourceMetadata: DataSourceMetadata): Array[Map[String, String]] = {
+  override def getSubDataSourcesMetadata: Array[Map[String, String]] = {
     val baseFolderPath = dataSourceMetadata.connectionConfig(PATH)
     val fileSuffix = dataSourceMetadata.format match {
       case DELTA => PARQUET

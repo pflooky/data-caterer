@@ -59,6 +59,26 @@ object RandomDataGenerator {
         s"GENERATE_FAKER_EXPRESSION('${tryExpression.get}')"
       } else {
         s"ARRAY_JOIN(TRANSFORM(ARRAY_REPEAT(1, CAST(RAND() * ${maxLength - minLength} + $minLength AS INT)), x -> CHAR(ROUND(RAND() * 94 + 32, 0))), '')"
+        //        s"GENERATE_REGEX('[A-Za-z0-9 ]{$minLength,$maxLength}')"
+
+        /**
+         * CHAR(ROUND(RAND() * 94 + 32, 0)))
+         * characters for ascii alphanumeric ->
+         * 32 -> <space>  (1)
+         * 48-57 -> 0-9   (10)
+         * 65-90 -> A-Z   (26)
+         * 97-122 -> a-z  (26)
+         * 63 in total
+         * 1/63 => 0.01587
+         */
+        //        s"""ARRAY_JOIN(
+        //           |TRANSFORM(
+        //           |  ARRAY_REPEAT(1, CAST(RAND() * ${maxLength - minLength} + $minLength AS INT)),
+        //           |  x -> CASE WHEN RAND() < 0.01587
+        //           |        THEN 32
+        //           |        ELSE WHEN RAND() >= 0.01587 && RAND() < 0.17457
+        //           |        THEN ,
+        //           |'')""".stripMargin
       }
     }
   }
@@ -255,7 +275,7 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      s"TO_BINARY(REPEAT(CHAR(ROUND(RAND() * 94 + 32, 0)), CAST(RAND() * ${maxLength - minLength} + $minLength AS INT)))"
+      s"TO_BINARY(ARRAY_JOIN(TRANSFORM(ARRAY_REPEAT(1, CAST(RAND() * ${maxLength - minLength} + $minLength AS INT)), x -> CHAR(ROUND(RAND() * 94 + 32, 0))), ''), 'utf-8')"
     }
   }
 

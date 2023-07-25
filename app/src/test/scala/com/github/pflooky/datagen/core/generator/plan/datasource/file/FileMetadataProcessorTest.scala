@@ -4,12 +4,12 @@ import com.github.pflooky.datagen.core.util.SparkSuite
 
 class FileMetadataProcessorTest extends SparkSuite {
   private val baseFolder = "app/src/test/resources/sample/files"
-  private val fileMetadataProcessor = new FileMetadataProcessor()
 
   test("Can get all distinct folder pathways for csv file type") {
     val fileMetadata = FileMetadata("csv_data", "csv", Map("path" -> baseFolder))
+    val fileMetadataProcessor = new FileMetadataProcessor(fileMetadata)
 
-    val result = fileMetadataProcessor.getAllFiles(fileMetadata)
+    val result = fileMetadataProcessor.getSubDataSourcesMetadata
 
     assert(result.length == 2)
     assert(result.forall(m => m("format") == "csv"))
@@ -18,8 +18,9 @@ class FileMetadataProcessorTest extends SparkSuite {
 
   test("Can get all distinct folder pathways for parquet file type") {
     val fileMetadata = FileMetadata("parquet_data", "parquet", Map("path" -> baseFolder))
+    val fileMetadataProcessor = new FileMetadataProcessor(fileMetadata)
 
-    val result = fileMetadataProcessor.getAllFiles(fileMetadata)
+    val result = fileMetadataProcessor.getSubDataSourcesMetadata
 
     assert(result.length == 3)
     assert(result.forall(m => m("format") == "parquet"))
@@ -31,8 +32,9 @@ class FileMetadataProcessorTest extends SparkSuite {
 
   test("Can get all distinct folder pathways for json file type") {
     val fileMetadata = FileMetadata("json_data", "json", Map("path" -> baseFolder))
+    val fileMetadataProcessor = new FileMetadataProcessor(fileMetadata)
 
-    val result = fileMetadataProcessor.getAllFiles(fileMetadata)
+    val result = fileMetadataProcessor.getSubDataSourcesMetadata
 
     assert(result.length == 2)
     val head = result.head
