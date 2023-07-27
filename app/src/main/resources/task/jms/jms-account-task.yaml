@@ -7,7 +7,6 @@ steps:
     options:
       destinationName: "/JNDI/Q/generated_test_queue"
     schema:
-      type: "manual"
       fields:
         - name: "account_id"
           type: "string"
@@ -29,7 +28,6 @@ steps:
               maxValue: 100.0
         - name: "details"
           schema:
-            type: "manual"
             fields:
               - name: "name"
                 type: "string"
@@ -44,7 +42,6 @@ steps:
                     maxValue: "2021-12-31"
               - name: "updated_by"
                 schema:
-                  type: "manual"
                   fields:
                     - name: "user"
                       type: "string"
@@ -57,7 +54,6 @@ steps:
         - name: "transactions"
           type: "array"
           schema:
-            type: "manual"
             fields:
               - name: "txn_date"
                 type: "date"

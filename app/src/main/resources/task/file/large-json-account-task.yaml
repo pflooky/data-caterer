@@ -3,11 +3,10 @@ steps:
   - name: "file_account"
     type: "json"
     count:
-      total: 10
+      total: 100000
     options:
       path: "app/src/test/resources/sample/large/json/account-gen"
     schema:
-      type: "manual"
       fields:
         - name: "account_id"
           type: "string"
@@ -60,7 +59,6 @@ steps:
               sql: "element_at(sort_array(transactions.txn_date), 1)"
         - name: "details"
           schema:
-            type: "manual"
             fields:
               - name: "name"
                 type: "string"
@@ -75,7 +73,6 @@ steps:
                     maxValue: "2021-12-31"
               - name: "updated_by"
                 schema:
-                  type: "manual"
                   fields:
                     - name: "user"
                       type: "string"
@@ -88,7 +85,6 @@ steps:
         - name: "transactions"
           type: "array"
           schema:
-            type: "manual"
             fields:
               - name: "txn_date"
                 type: "date"

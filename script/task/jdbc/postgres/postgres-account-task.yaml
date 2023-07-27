@@ -3,11 +3,10 @@ steps:
   - name: "accounts"
     type: "postgres"
     count:
-      total: 10
+      total: 50
     options:
       dbtable: "account.accounts"
     schema:
-      type: "manual"
       fields:
         - name: "account_number"
           type: "string"
@@ -31,7 +30,7 @@ steps:
           type: "string"
           generator:
             type: "random"
-        - name: "customer_id"
+        - name: "customer_id_int"
           type: "int"
           generator:
             type: "random"

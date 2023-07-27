@@ -20,34 +20,27 @@ CREATE TABLE IF NOT EXISTS account.accounts
     last_opened_time        TIME,
     payload_bytes           BYTEA
 );
--- spark converts to wrong data type when reading from postgres so fails to write back to postgres
---     open_date_interval INTERVAL,
--- ERROR: column "open_date_interval" is of type interval but expression is of type character varying
---     open_id UUID,
---     balance MONEY,
---     payload_json JSONB
 
 CREATE TABLE IF NOT EXISTS account.balances
 (
-    id          BIGINT,
-    create_time TIMESTAMP,
-    balance     DOUBLE PRECISION,
-    PRIMARY KEY (id, create_time),
-    CONSTRAINT fk_bal_account_number FOREIGN KEY (id) REFERENCES account.accounts (id)
+    account_number VARCHAR(20) UNIQUE NOT NULL,
+    create_time    TIMESTAMP,
+    balance        DOUBLE PRECISION,
+    PRIMARY KEY (account_number, create_time)
 );
 
 CREATE TABLE IF NOT EXISTS account.transactions
 (
-    id             BIGINT,
+    account_number VARCHAR(20) UNIQUE NOT NULL,
     create_time    TIMESTAMP,
     transaction_id VARCHAR(20),
     amount         DOUBLE PRECISION,
-    PRIMARY KEY (id, create_time, transaction_id),
-    CONSTRAINT fk_txn_account_number FOREIGN KEY (id) REFERENCES account.accounts (id)
+    PRIMARY KEY (account_number, create_time, transaction_id),
+    CONSTRAINT fk_txn_account_number FOREIGN KEY (account_number) REFERENCES account.balances (account_number)
 );
 
 CREATE TABLE IF NOT EXISTS account.mapping
 (
-    key TEXT,
+    key   TEXT,
     value TEXT
 );

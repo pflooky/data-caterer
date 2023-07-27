@@ -1,9 +1,9 @@
-name: "jdbc_customer_accounts_table_create"
+name: "mysql_account"
 steps:
   - name: "accounts"
-    type: "postgres"
+    type: "mysql"
     count:
-      total: 10
+      total: 50
     options:
       dbtable: "account.accounts"
     schema:
@@ -30,9 +30,9 @@ steps:
           type: "string"
           generator:
             type: "random"
-        - name: "customer_id"
+        - name: "customer_id_int"
           type: "int"
           generator:
             type: "random"
             options:
-              unique: true  #TODO: make unique values when generating
+              unique: true

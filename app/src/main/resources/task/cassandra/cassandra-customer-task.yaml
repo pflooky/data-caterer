@@ -8,7 +8,6 @@ steps:
       keyspace: "account"
       table: "accounts"
     schema:
-      type: "manual"
       fields:
         - name: "account_id"
           type: "string"

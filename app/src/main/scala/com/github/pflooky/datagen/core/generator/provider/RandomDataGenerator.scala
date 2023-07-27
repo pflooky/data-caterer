@@ -58,7 +58,22 @@ object RandomDataGenerator {
       if (tryExpression.isSuccess) {
         s"GENERATE_FAKER_EXPRESSION('${tryExpression.get}')"
       } else {
-        s"ARRAY_JOIN(TRANSFORM(ARRAY_REPEAT(1, CAST(RAND() * ${maxLength - minLength} + $minLength AS INT)), x -> CHAR(ROUND(RAND() * 94 + 32, 0))), '')"
+        s"SUBSTRING(REGEXP_REPLACE(BASE64(MD5(CONCAT(RAND(), CURRENT_TIMESTAMP()))), '\\\\+|/|=', ' '), $minLength, $maxLength)"
+//        s"GENERATE_RANDOM_STRING($minLength, $maxLength)"
+        // use scala api to generate the sql expressions, fails with [UNRESOLVED_ROUTINE] Cannot resolve function `lambdafunction`
+//        val randomStringSql = array_join(
+//          transform(
+//            array_repeat(lit(1), rand() * (maxLength - minLength) + minLength cast IntegerType),
+//            _ => {
+//              val randValue = round(rand() * 63, 0)
+//              when(randValue.leq(1), " ")
+//                .otherwise(when(randValue.leq(11), randValue cast StringType)
+//                  .otherwise(when(randValue.leq(37), expr(s"char($randValue + 54)"))
+//                    .otherwise(expr(s"char($randValue + 60)")))
+//                )
+//            }
+//          ), "")
+        //        s"ARRAY_JOIN(TRANSFORM(ARRAY_REPEAT(1, CAST(RAND() * ${maxLength - minLength} + $minLength AS INT)), x -> CHAR(ROUND(RAND() * 94 + 32, 0))), '')"
         //        s"GENERATE_REGEX('[A-Za-z0-9 ]{$minLength,$maxLength}')"
 
         /**

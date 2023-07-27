@@ -3,9 +3,9 @@ steps:
   - name: "transactions"
     type: "parquet"
     options:
-      path: "app/src/test/resources/sample/parquet/transactions"
+      path: "/opt/app/data-caterer/sample/parquet/transaction-gen"
     count:
-      total: 1000
+      total: 50
       perColumn:
         columnNames:
           - "account_id"
@@ -15,7 +15,6 @@ steps:
             maxValue: 10
             minValue: 1
     schema:
-      type: "manual"
       fields:
         - name: "account_id"
           type: "string"

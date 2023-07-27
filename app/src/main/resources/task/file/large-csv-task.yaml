@@ -16,7 +16,6 @@ steps:
             maxValue: 2
             minValue: 1
     schema:
-      type: "manual"
       fields:
         - name: "account_id"
           type: "string"

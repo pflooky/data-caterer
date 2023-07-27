@@ -98,8 +98,6 @@ steps:
     options:
       dbtable: "account.accounts"
     schema:
-      #How to discover the schema: only supports manual for now
-      type: "manual"
       fields:
         - name: "account_number"
           #Data type of column: string, int, double, date
@@ -232,6 +230,13 @@ Data Caterer is able to support the following data sinks:
   - Via self-hosted requires large image (10+ Gb)
 - Allow for delete from Queue or API
   - Ability to define a queue or endpoint that can delete the corresponding records
+- Postgres data type related errors
+  - spark converts to wrong data type when reading from postgres so fails to write back to postgres
+      open_date_interval INTERVAL,
+      ERROR: column "open_date_interval" is of type interval but expression is of type character varying
+      open_id UUID,
+      balance MONEY,
+      payload_json JSONB
 
 ## Challenges
 

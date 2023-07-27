@@ -3,14 +3,13 @@ steps:
   - name: "account"
     type: "json"
     count:
-      total: 1000
+      total: 50
     options:
       httpMethod: "PUT"
       httpContentType: "application/json"
       httpHeader.first-name: "peter"
       httpHeader.amount: 100
     schema:
-      type: "manual"
       fields:
         - name: "account_id"
           type: "string"
@@ -32,7 +31,6 @@ steps:
               maxValue: 100.0
         - name: "details"
           schema:
-            type: "manual"
             fields:
               - name: "name"
                 type: "string"
@@ -47,7 +45,6 @@ steps:
                     maxValue: "2021-12-31"
               - name: "updated_by"
                 schema:
-                  type: "manual"
                   fields:
                     - name: "user"
                       type: "string"
@@ -60,7 +57,6 @@ steps:
         - name: "transactions"
           type: "array"
           schema:
-            type: "manual"
             fields:
               - name: "txn_date"
                 type: "date"

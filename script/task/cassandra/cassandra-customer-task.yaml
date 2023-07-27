@@ -1,14 +1,13 @@
-name: "cassandra_customer_status_table_create"
+name: "cassandra_accounts"
 steps:
   - name: "accounts"
     type: "cassandra"
     count:
-      total: 10
+      total: 50
     options:
       keyspace: "account"
       table: "accounts"
     schema:
-      type: "manual"
       fields:
         - name: "account_id"
           type: "string"

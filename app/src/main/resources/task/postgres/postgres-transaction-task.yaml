@@ -10,7 +10,6 @@ steps:
     options:
       dbtable: "account.transactions"
     schema:
-      type: "manual"
       fields:
         - name: "account_number"
           type: "string"

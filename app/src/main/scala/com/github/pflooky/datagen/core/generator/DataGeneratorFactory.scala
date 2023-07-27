@@ -1,29 +1,32 @@
 package com.github.pflooky.datagen.core.generator
 
-import com.github.pflooky.datagen.core.exception.{InvalidCountGeneratorConfigurationException, InvalidFieldConfigurationException, InvalidStepCountGeneratorConfigurationException, UnsupportedDataGeneratorType}
-import com.github.pflooky.datagen.core.generator.provider.{DataGenerator, OneOfDataGenerator, RandomDataGenerator, RegexDataGenerator}
+import com.github.pflooky.datagen.core.exception.{InvalidFieldConfigurationException, InvalidStepCountGeneratorConfigurationException}
+import com.github.pflooky.datagen.core.generator.provider.DataGenerator
 import com.github.pflooky.datagen.core.model.Constants._
 import com.github.pflooky.datagen.core.model._
 import com.github.pflooky.datagen.core.util.GeneratorUtil.{getDataGenerator, getRecordCount}
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import net.datafaker.Faker
-import org.apache.log4j.Logger
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, Encoder, Encoders, Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
-import java.io.Serializable
-import java.util.{Locale, Random}
-import scala.util.{Failure, Success, Try}
+import scala.util.Random
+
 
 case class Holder(i: Int)
 
 class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession) {
 
   private val OBJECT_MAPPER = ObjectMapperUtil.jsonObjectMapper
+  private val RANDOM = new Random()
   sparkSession.udf.register("GENERATE_REGEX", udf((s: String) => faker.regexify(s)))
   sparkSession.udf.register("GENERATE_FAKER_EXPRESSION", udf((s: String) => faker.expression(s)))
+  sparkSession.udf.register("GENERATE_RANDOM_STRING", udf((minLength: Int, maxLength: Int) => {
+    val length = RANDOM.nextInt(maxLength + 1) + minLength
+    RANDOM.alphanumeric.take(length).mkString("")
+  }))
 
   def generateDataForStep(step: Step, dataSourceName: String): DataFrame = {
     val structFieldsWithDataGenerators = if (step.schema.fields.isDefined) {
