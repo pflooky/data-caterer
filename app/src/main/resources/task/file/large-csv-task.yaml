@@ -4,17 +4,15 @@ steps:
     type: "csv"
     options:
       path: "app/src/test/resources/sample/large/csv/transactions"
+      partitions: 10
+      partitionBy: "year"
     count:
-      total: 10
+      total: 100000
       perColumn:
+        count: 2
         columnNames:
           - "account_id"
           - "name"
-        generator:
-          type: "random"
-          options:
-            maxValue: 2
-            minValue: 1
     schema:
       fields:
         - name: "account_id"

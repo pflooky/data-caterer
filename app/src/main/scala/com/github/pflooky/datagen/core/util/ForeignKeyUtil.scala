@@ -13,7 +13,7 @@ object ForeignKeyUtil {
   /**
    * Apply same values from source data frame columns to target foreign key columns
    *
-   * @param sinkOptions              where foreign key definitions are defined
+   * @param plan                     where foreign key definitions are defined
    * @param generatedDataForeachTask map of <dataSourceName>.<stepName> => generated data as dataframe
    * @return map of <dataSourceName>.<stepName> => dataframe
    */
@@ -123,6 +123,7 @@ object ForeignKeyUtil {
         List()
       }
     }
+
     foreignKeys.flatMap(x => getForeignKeyOrder(x._1)).toList
 
     //    foreignKeys.foreach(fk => {

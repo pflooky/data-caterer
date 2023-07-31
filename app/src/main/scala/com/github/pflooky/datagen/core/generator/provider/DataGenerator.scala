@@ -2,6 +2,7 @@ package com.github.pflooky.datagen.core.generator.provider
 
 import com.github.pflooky.datagen.core.model.Constants.{ENABLED_EDGE_CASES, ENABLED_NULL, IS_UNIQUE, LIST_MAXIMUM_LENGTH, LIST_MINIMUM_LENGTH, PROBABILITY_OF_EDGE_CASES, PROBABILITY_OF_NULLS, RANDOM_SEED, SQL}
 import net.datafaker.Faker
+import org.apache.spark.sql.functions.{expr, rand, when}
 import org.apache.spark.sql.types.StructField
 
 import scala.collection.mutable
@@ -19,10 +20,8 @@ trait DataGenerator[T] extends Serializable {
   def generate: T
   def generateSqlExpression: String
 
-  def generateSqlExpressionWrapper: String = {
-      generateSqlExpression
-  }
-
+  lazy val optRandomSeed: Option[Long] = if (structField.metadata.contains(RANDOM_SEED)) Some(structField.metadata.getString(RANDOM_SEED).toLong) else None
+  lazy val sqlRandom: String = optRandomSeed.map(seed => s"RAND($seed)").getOrElse("RAND()")
   lazy val random: Random = if (structField.metadata.contains(RANDOM_SEED)) new Random(structField.metadata.getString(RANDOM_SEED).toLong) else new Random()
   lazy val enabledNull: Boolean = if (structField.metadata.contains(ENABLED_NULL)) structField.metadata.getString(ENABLED_NULL).toBoolean else false
   lazy val enabledEdgeCases: Boolean = if (structField.metadata.contains(ENABLED_EDGE_CASES)) structField.metadata.getString(ENABLED_EDGE_CASES).toBoolean else false
@@ -30,6 +29,27 @@ trait DataGenerator[T] extends Serializable {
   lazy val probabilityOfNull: Double = if (structField.metadata.contains(PROBABILITY_OF_NULLS)) structField.metadata.getString(PROBABILITY_OF_NULLS).toDouble else 0.1
   lazy val probabilityOfEdgeCases: Double = if (structField.metadata.contains(PROBABILITY_OF_EDGE_CASES)) structField.metadata.getString(PROBABILITY_OF_EDGE_CASES).toDouble else 0.5
   lazy val prevGenerated: mutable.Set[T] = mutable.Set[T]()
+
+  def generateSqlExpressionWrapper: String = {
+    val baseSqlExpression = generateSqlExpression
+    val caseRandom = optRandomSeed.map(s => rand(s)).getOrElse(rand())
+    (enabledEdgeCases, enabledNull) match {
+      case (true, true) =>
+        when(caseRandom.leq(probabilityOfEdgeCases), edgeCases(random.nextInt(edgeCases.size)))
+          .otherwise(when(caseRandom.leq(probabilityOfEdgeCases + probabilityOfNull), null))
+          .otherwise(expr(baseSqlExpression))
+          .expr.sql
+      case (true, false) =>
+        when(caseRandom.leq(probabilityOfEdgeCases), edgeCases(random.nextInt(edgeCases.size)))
+          .otherwise(expr(baseSqlExpression))
+          .expr.sql
+      case (false, true) =>
+        when(caseRandom.leq(probabilityOfNull), null)
+          .otherwise(expr(baseSqlExpression))
+          .expr.sql
+      case _ => baseSqlExpression
+    }
+  }
 
   def generateWrapper(count: Int = 0): T = {
     val randDouble = random.nextDouble()

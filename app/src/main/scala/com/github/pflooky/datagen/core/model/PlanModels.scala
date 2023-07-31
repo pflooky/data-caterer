@@ -3,7 +3,7 @@ package com.github.pflooky.datagen.core.model
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.github.pflooky.datagen.core.exception.ForeignKeyFormatException
 import com.github.pflooky.datagen.core.generator.plan.datasource.DataSourceDetail
-import com.github.pflooky.datagen.core.model.Constants.{GENERATED, IS_PRIMARY_KEY, ONE_OF, PRIMARY_KEY_POSITION, RANDOM}
+import com.github.pflooky.datagen.core.model.Constants.{GENERATED, IS_PRIMARY_KEY, IS_UNIQUE, ONE_OF, PRIMARY_KEY_POSITION, RANDOM}
 import com.github.pflooky.datagen.core.util.MetadataUtil
 import org.apache.spark.sql.types.{StructField, StructType}
 
@@ -70,6 +70,16 @@ case class Step(name: String, `type`: String, count: Count, options: Map[String,
         .sortBy(_._2)
         .map(_._1)
     } else List()
+  }
+
+  def hasUniqueFields: Boolean = {
+    schema.fields.exists(fields => {
+      fields.exists(field => {
+        field.generator
+          .flatMap(gen => gen.options.get(IS_UNIQUE).map(_.toString.toBoolean))
+          .getOrElse(false)
+      })
+    })
   }
 }
 

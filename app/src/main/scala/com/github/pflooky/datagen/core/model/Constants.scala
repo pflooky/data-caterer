@@ -22,6 +22,7 @@ object Constants {
   lazy val PASSWORD = "password"
   lazy val DRIVER = "driver"
   lazy val PARTITIONS = "partitions"
+  lazy val PARTITION_BY = "partitionBy"
   lazy val BODY_FIELD = "bodyField"
   lazy val HTTP_METHOD = "httpMethod"
   lazy val HTTP_HEADER_PREFIX = "httpHeader"

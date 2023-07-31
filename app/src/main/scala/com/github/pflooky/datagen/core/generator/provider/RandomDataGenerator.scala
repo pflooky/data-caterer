@@ -38,8 +38,8 @@ object RandomDataGenerator {
   }
 
   class RandomStringDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends NullableDataGenerator[String] {
-    private lazy val minLength = Try(structField.metadata.getString(MINIMUM_LENGTH).toInt).getOrElse(1)
-    private lazy val maxLength = Try(structField.metadata.getString(MAXIMUM_LENGTH).toInt).getOrElse(10)
+    private lazy val minLength = tryGetValue(structField.metadata, MINIMUM_LENGTH, 1)
+    private lazy val maxLength = tryGetValue(structField.metadata, MAXIMUM_LENGTH, 10)
     assert(minLength <= maxLength, s"minLength has to be less than or equal to maxLength, field-name${structField.name}")
     private lazy val tryExpression = Try(structField.metadata.getString(EXPRESSION))
 
@@ -58,7 +58,7 @@ object RandomDataGenerator {
       if (tryExpression.isSuccess) {
         s"GENERATE_FAKER_EXPRESSION('${tryExpression.get}')"
       } else {
-        s"SUBSTRING(REGEXP_REPLACE(BASE64(MD5(CONCAT(RAND(), CURRENT_TIMESTAMP()))), '\\\\+|/|=', ' '), $minLength, $maxLength)"
+        s"SUBSTRING(REGEXP_REPLACE(BASE64(MD5(CONCAT($sqlRandom, CURRENT_TIMESTAMP()))), '\\\\+|/|=', ' '), $minLength, $maxLength)"
 //        s"GENERATE_RANDOM_STRING($minLength, $maxLength)"
         // use scala api to generate the sql expressions, fails with [UNRESOLVED_ROUTINE] Cannot resolve function `lambdafunction`
 //        val randomStringSql = array_join(
@@ -110,7 +110,7 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      s"CAST(ROUND(RAND() * ${maxValue - minValue} + $minValue, 0) AS INT)"
+      s"CAST(ROUND($sqlRandom * ${maxValue - minValue} + $minValue, 0) AS INT)"
     }
   }
 
@@ -126,7 +126,7 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      s"CAST(ROUND(RAND() * ${maxValue - minValue} + $minValue, 0) AS SHORT)"
+      s"CAST(ROUND($sqlRandom * ${maxValue - minValue} + $minValue, 0) AS SHORT)"
     }
   }
 
@@ -142,7 +142,7 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      s"CAST(ROUND(RAND() * ${maxValue - minValue} + $minValue, 0) AS LONG)"
+      s"CAST(ROUND($sqlRandom * ${maxValue - minValue} + $minValue, 0) AS LONG)"
     }
   }
 
@@ -160,7 +160,7 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      s"CAST(RAND() * ${maxValue - minValue} + $minValue AS DECIMAL($precision, $scale))"
+      s"CAST($sqlRandom * ${maxValue - minValue} + $minValue AS DECIMAL($precision, $scale))"
     }
   }
 
@@ -177,7 +177,7 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      s"CAST(RAND() * ${maxValue - minValue} + $minValue AS DOUBLE)"
+      s"CAST($sqlRandom * ${maxValue - minValue} + $minValue AS DOUBLE)"
     }
   }
 
@@ -194,7 +194,7 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      s"CAST(RAND() * ${maxValue - minValue} + $minValue AS FLOAT)"
+      s"CAST($sqlRandom * ${maxValue - minValue} + $minValue AS FLOAT)"
     }
   }
 
@@ -227,7 +227,7 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      s"DATE_ADD('${minValue.toString}', CAST(RAND() * $maxDays AS INT))"
+      s"DATE_ADD('${minValue.toString}', CAST($sqlRandom * $maxDays AS INT))"
     }
   }
 
@@ -262,7 +262,7 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      s"TIMESTAMP_MILLIS(CAST(RAND() * ${maxValue - minValue} + $minValue AS LONG))"
+      s"TIMESTAMP_MILLIS(CAST($sqlRandom * ${maxValue - minValue} + $minValue AS LONG))"
     }
   }
 
@@ -272,13 +272,13 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      s"BOOLEAN(ROUND(RAND()))"
+      s"BOOLEAN(ROUND($sqlRandom))"
     }
   }
 
   class RandomBinaryDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends NullableDataGenerator[Array[Byte]] {
-    private lazy val minLength = Try(structField.metadata.getString(MINIMUM_LENGTH).toInt).getOrElse(1)
-    private lazy val maxLength = Try(structField.metadata.getString(MAXIMUM_LENGTH).toInt).getOrElse(20)
+    private lazy val minLength = tryGetValue(structField.metadata, MINIMUM_LENGTH, 1)
+    private lazy val maxLength = tryGetValue(structField.metadata, MAXIMUM_LENGTH, 20)
     assert(minLength <= maxLength, s"minLength has to be less than or equal to maxLength, field-name${structField.name}")
 
     override val edgeCases: List[Array[Byte]] = List(Array(), "\n".getBytes, "\r".getBytes, "\t".getBytes,
@@ -290,7 +290,7 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      s"TO_BINARY(ARRAY_JOIN(TRANSFORM(ARRAY_REPEAT(1, CAST(RAND() * ${maxLength - minLength} + $minLength AS INT)), x -> CHAR(ROUND(RAND() * 94 + 32, 0))), ''), 'utf-8')"
+      s"TO_BINARY(ARRAY_JOIN(TRANSFORM(ARRAY_REPEAT(1, CAST($sqlRandom * ${maxLength - minLength} + $minLength AS INT)), x -> CHAR(ROUND($sqlRandom * 94 + 32, 0))), ''), 'utf-8')"
     }
   }
 
@@ -302,13 +302,13 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      s"TO_BINARY(CHAR(ROUND(RAND() * 94 + 32, 0)))"
+      s"TO_BINARY(CHAR(ROUND($sqlRandom * 94 + 32, 0)))"
     }
   }
 
   class RandomListDataGenerator[T](val structField: StructField, val dataType: DataType, val faker: Faker = new Faker()) extends ListDataGenerator[T] {
-    override lazy val listMaxSize: Int = Try(structField.metadata.getString(LIST_MAXIMUM_LENGTH).toInt).getOrElse(5)
-    override lazy val listMinSize: Int = Try(structField.metadata.getString(LIST_MINIMUM_LENGTH).toInt).getOrElse(0)
+    override lazy val listMinSize: Int = tryGetValue(structField.metadata, LIST_MINIMUM_LENGTH, 0)
+    override lazy val listMaxSize: Int = tryGetValue(structField.metadata, LIST_MAXIMUM_LENGTH, 5)
 
     override def elementGenerator: DataGenerator[T] = {
       dataType match {
@@ -327,7 +327,7 @@ object RandomDataGenerator {
         case _ =>
           getGeneratorForStructField(structField.copy(dataType = dataType)).generateSqlExpression
       }
-      s"TRANSFORM(ARRAY_REPEAT(1, CAST(RAND() * ${listMaxSize - listMinSize} + $listMinSize AS INT)), x -> $nestedSqlExpressions)"
+      s"TRANSFORM(ARRAY_REPEAT(1, CAST($sqlRandom * ${listMaxSize - listMinSize} + $listMinSize AS INT)), x -> $nestedSqlExpressions)"
     }
   }
 

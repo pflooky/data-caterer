@@ -14,7 +14,7 @@ steps:
             type: "regex"
             options:
               regex: "ACC1[0-9]{5,10}"
-              unique: true
+              isUnique: true
         - name: "account_status"
           type: "string"
           generator:
@@ -36,7 +36,7 @@ steps:
           generator:
             type: "random"
             options:
-              unique: true
+              isUnique: true
   - name: "transactions"
     type: "postgres"
     count:
@@ -52,7 +52,7 @@ steps:
           type: "string"
           generator:
             type: "random"
-            unique: true
+            isUnique: true
         - name: "amount"
           type: "double"
           generator:

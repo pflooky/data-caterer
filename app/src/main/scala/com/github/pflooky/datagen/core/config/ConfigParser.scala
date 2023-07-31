@@ -13,7 +13,7 @@ trait ConfigParser {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
 
-  lazy val applicationType: String = "advanced"
+  lazy val applicationType: String = "basic"
   lazy val config: Config = getConfig
   lazy val flagsConfig: FlagsConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("flags").unwrapped(), classOf[FlagsConfig])
   lazy val foldersConfig: FoldersConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("folders").unwrapped(), classOf[FoldersConfig])

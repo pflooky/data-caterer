@@ -29,6 +29,7 @@ class DataGeneratorFactoryTest extends SparkSuite {
     val step = Step("transaction", "parquet", Count(total = Some(10)), Map("path" -> "sample/output/parquet/transactions"), schema)
 
     val df = dataGeneratorFactory.generateDataForStep(step, "parquet")
+    df.cache()
 
     assert(df.count() == 10L)
     assert(df.columns sameElements Array("id", "amount", "debit_credit", "name", "code"))
@@ -54,6 +55,7 @@ class DataGeneratorFactoryTest extends SparkSuite {
       Map("path" -> "sample/output/parquet/transactions"), simpleSchema)
 
     val df = dataGeneratorFactory.generateDataForStep(step, "parquet")
+    df.cache()
 
     assert(df.count() == 20L)
     val sampleId = df.head().getAs[String]("id")
@@ -67,6 +69,7 @@ class DataGeneratorFactoryTest extends SparkSuite {
       Map("path" -> "sample/output/parquet/transactions"), simpleSchema)
 
     val df = dataGeneratorFactory.generateDataForStep(step, "parquet")
+    df.cache()
 
     assert(df.count() >= 10L)
     assert(df.count() <= 20L)
@@ -83,6 +86,7 @@ class DataGeneratorFactoryTest extends SparkSuite {
       Map("path" -> "sample/output/parquet/transactions"), simpleSchema)
 
     val df = dataGeneratorFactory.generateDataForStep(step, "parquet")
+    df.cache()
 
     assert(df.count() >= 10L)
     assert(df.count() <= 20L)

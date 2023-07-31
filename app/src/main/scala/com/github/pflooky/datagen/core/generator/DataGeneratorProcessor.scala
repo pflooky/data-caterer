@@ -3,12 +3,12 @@ package com.github.pflooky.datagen.core.generator
 import com.github.pflooky.datagen.core.exception.InvalidCountGeneratorConfigurationException
 import com.github.pflooky.datagen.core.generator.delete.DeleteRecordProcessor
 import com.github.pflooky.datagen.core.generator.track.RecordTrackingProcessor
-import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING, FORMAT, RECORD_COUNT_GENERATOR_COL}
+import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING, FORMAT, IS_UNIQUE, RECORD_COUNT_GENERATOR_COL}
 import com.github.pflooky.datagen.core.model.{Generator, Plan, Step, Task, TaskSummary}
 import com.github.pflooky.datagen.core.parser.PlanParser
 import com.github.pflooky.datagen.core.sink.SinkFactory
 import com.github.pflooky.datagen.core.util.GeneratorUtil.{getDataGenerator, getRecordCount}
-import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, ObjectMapperUtil, SparkProvider}
+import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, ObjectMapperUtil, SparkProvider, UniqueField, UniqueFieldUtil}
 import net.datafaker.Faker
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
@@ -47,8 +47,12 @@ class DataGeneratorProcessor extends SparkProvider {
       case (true, _, _) =>
         LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=($summaryWithTask)")
         summaryWithTask.foreach(t => LOGGER.info(s"Enabled task details: ${t._2.toTaskDetailString}"))
-        //TODO batch up 2000 records total across all steps and progressively push to sinks
-        //would need to keep track of the number of records produced per sink and stop when requested count is reached
+        //TODO batch up 5000 (configurable number) records total across all steps and progressively push to sinks
+        /**
+         * can do the following for batching the data:
+         * 1. calculate the total counts across all steps
+         * 2. create accumulators to keep track of count for each step
+         */
         val sinkDf = getAllStepDf(plan, summaryWithTask)
         pushDataToSinks(summaryWithTask, sinkDf)
       case (_, true, ADVANCED_APPLICATION) =>
@@ -63,8 +67,18 @@ class DataGeneratorProcessor extends SparkProvider {
   private def getAllStepDf(plan: Plan, executableTasks: List[(TaskSummary, Task)]): Map[String, DataFrame] = {
     val faker = getDataFaker(plan)
     val dataGeneratorFactory = new DataGeneratorFactory(faker)
+    val uniqueFieldUtil = new UniqueFieldUtil(executableTasks)
+
     val generatedDataForeachTask = executableTasks.flatMap(task =>
-      task._2.steps.map(s => (getDataSourceName(task._1, s), dataGeneratorFactory.generateDataForStep(s, task._1.dataSourceName)))
+      task._2.steps.map(s => {
+        val dataSourceName = getDataSourceName(task._1, s)
+        val genDf = dataGeneratorFactory.generateDataForStep(s, task._1.dataSourceName)
+        val df = if (s.hasUniqueFields) {
+          uniqueFieldUtil.getUniqueFieldsValues(dataSourceName, genDf)
+        } else genDf
+        df.cache()
+        (dataSourceName, df)
+      })
     ).toMap
 
     val sinkDf = if (plan.sinkOptions.isDefined && plan.sinkOptions.get.foreignKeys.nonEmpty) {

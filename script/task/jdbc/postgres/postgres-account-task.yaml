@@ -35,4 +35,4 @@ steps:
           generator:
             type: "random"
             options:
-              unique: true
+              isUnique: true

@@ -35,4 +35,4 @@ steps:
           generator:
             type: "random"
             options:
-              unique: true  #TODO: make unique values when generating
+              isUnique: true  #TODO: make unique values when generating

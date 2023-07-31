@@ -1,16 +1,15 @@
 package com.github.pflooky.datagen.core.sink
 
 import com.github.pflooky.datagen.core.exception.UnsupportedRealTimeDataSourceFormat
-import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS, BATCH, DATA_CATERER_SITE_PRICING, DEFAULT_ROWS_PER_SECOND, DRIVER, FAILED, FINISHED, FORMAT, HTTP, JDBC, JMS, PARTITIONS, PER_COLUMN_INDEX_COL, POSTGRES_DRIVER, RATE, REAL_TIME, SAVE_MODE, STARTED}
+import com.github.pflooky.datagen.core.model.Constants._
 import com.github.pflooky.datagen.core.model.Step
 import com.github.pflooky.datagen.core.sink.http.HttpSinkProcessor
 import com.github.pflooky.datagen.core.sink.jms.JmsSinkProcessor
 import com.google.common.util.concurrent.RateLimiter
 import org.apache.log4j.Logger
 import org.apache.spark.sql.execution.streaming.sources.RateStreamProvider.ROWS_PER_SECOND
-import org.apache.spark.sql.{DataFrame, Dataset, Row, SaveMode, SparkSession}
+import org.apache.spark.sql.{DataFrame, DataFrameWriter, Dataset, Row, SaveMode, SparkSession}
 
-import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 class SinkFactory(
@@ -79,13 +78,21 @@ class SinkFactory(
       return
     }
 
-    val partitionedDf = if (stepOptions.contains(PARTITIONS)) df.repartition(stepOptions(PARTITIONS).toInt) else df
-    partitionedDf.write
+    val partitionedDf = partitionDf(df, stepOptions)
+    partitionedDf
       .format(format)
       .mode(saveMode)
       .options(connectionConfig)
       .options(stepOptions)
       .save()
+  }
+
+  private def partitionDf(df: DataFrame, stepOptions: Map[String, String]): DataFrameWriter[Row] = {
+    val partitionDf = stepOptions.get(PARTITIONS)
+      .map(partitionNum => df.repartition(partitionNum.toInt)).getOrElse(df)
+    stepOptions.get(PARTITION_BY)
+      .map(partitionCols => partitionDf.write.partitionBy(partitionCols.split(",").map(_.trim): _*))
+      .getOrElse(partitionDf.write)
   }
 
   private def saveRealTimeData(df: DataFrame, format: String, connectionConfig: Map[String, String], step: Step): Unit = {
