@@ -177,6 +177,13 @@ fun setApplicationFlags(isBasicBuild: Boolean) {
             } else line
         }
     configParserFile.writeText(mappedConfigParserLines.joinToString("\n"))
+
+    val dataSourceRegisterFile = file("src/main/resources/META-INF/services/org.apache.spark.sql.sources.DataSourceRegister")
+    if (isBasicBuild) {
+        dataSourceRegisterFile.writeText("")
+    } else {
+        dataSourceRegisterFile.writeText("org.apache.spark.sql.kafka010.KafkaSourceProvider")
+    }
 }
 
 //tasks.create("depsize") {
