@@ -44,6 +44,7 @@ dependencies {
     // additional spark
     basicImpl("org.apache.spark:spark-avro_$scalaVersion:$sparkVersion")
     basicImpl("org.apache.spark:spark-protobuf_$scalaVersion:$sparkVersion")
+    basicImpl("org.apache.spark:spark-hadoop-cloud_$scalaVersion:$sparkVersion")
 
     // connectors
     // jdbc
@@ -59,8 +60,6 @@ dependencies {
     // jms
     advancedImpl("javax.jms:javax.jms-api:2.0.1")
     advancedImpl("com.solacesystems:sol-jms:10.20.0")
-    // cloud object stores
-    advancedImpl("org.apache.spark:spark-hadoop-cloud_$scalaVersion:$sparkVersion")
 
     // data generation helpers
     basicImpl("net.datafaker:datafaker:1.9.0")
