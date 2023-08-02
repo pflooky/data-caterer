@@ -1,18 +1,18 @@
 package com.github.pflooky.datagen.core.generator.plan
 
 import com.github.pflooky.datagen.core.model.{Count, Field, Generator, Schema, Step, Task}
+import com.github.pflooky.datagen.core.util.SparkSuite
 import org.junit.runner.RunWith
-import org.scalatest.funsuite.AnyFunSuite
 import org.scalatestplus.junit.JUnitRunner
 
 import java.io.File
 import scala.reflect.io.Directory
 
 @RunWith(classOf[JUnitRunner])
-class PlanGeneratorTest extends AnyFunSuite {
+class PlanGeneratorTest extends SparkSuite {
 
   test("Write plan and tasks to file system") {
-    val folderPath = "app/src/test/resources/sample/plan-gen"
+    val folderPath = "src/test/resources/sample/plan-gen"
     val task = Task("basic_account", List(
       Step("account_json", "json", Count(), Map(),
         Schema("generated", Some(List(
@@ -26,10 +26,10 @@ class PlanGeneratorTest extends AnyFunSuite {
 
     PlanGenerator.writePlanAndTasksToFiles(List(("account_json", task)), foreignKeys, folderPath)
 
-    val planFolder = new File(folderPath + "/generated/plan")
+    val planFolder = new File(folderPath + "/plan")
     assert(planFolder.exists())
     assert(planFolder.list().length == 1)
-    val taskFolder = new File(folderPath + "/generated/task/")
+    val taskFolder = new File(folderPath + "/task/")
     assert(taskFolder.exists())
     assert(taskFolder.list().length == 1)
     assert(taskFolder.list().head == "basic_account_task.yaml")

@@ -2,8 +2,7 @@ name: "csv_transaction_file"
 steps:
   - name: "transactions"
     type: "csv"
-    options:
-      path: "app/src/test/resources/sample/csv/transactions"
+    options: {}
     count:
       total: 1000
       perColumn:

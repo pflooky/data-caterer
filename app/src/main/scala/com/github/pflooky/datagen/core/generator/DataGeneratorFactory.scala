@@ -48,8 +48,10 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
     val df = sparkSession.createDataFrame(Seq.fill(recordCount)(1).map(Holder))
       .selectExpr(genSqlExpression: _*)
     val sqlGeneratedFields = structType.fields.filter(f => f.metadata.contains(SQL))
-      .map(f => s"${f.metadata.getString(SQL)} AS `${f.name}`")
-    val dfAllFields = df.selectExpr(df.columns ++ sqlGeneratedFields: _*)
+    val sqlFieldExpr = sqlGeneratedFields.map(f => s"${f.metadata.getString(SQL)} AS `${f.name}`")
+    val noSqlGeneratedFields = df.columns.filter(c => !sqlGeneratedFields.exists(_.name.equalsIgnoreCase(c)))
+
+    val dfAllFields = df.selectExpr(noSqlGeneratedFields ++ sqlFieldExpr: _*)
     if (step.count.perColumn.isDefined) {
       generateRecordsPerColumn(dataGenerators, step, step.count.perColumn.get, dfAllFields)
     } else {

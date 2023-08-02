@@ -21,7 +21,7 @@ class SinkFactory(
 
   def pushToSink(df: DataFrame, dataSourceName: String, step: Step, enableCount: Boolean): Unit = {
     if (!connectionConfigs.contains(dataSourceName)) {
-      throw new RuntimeException(s"Cannot find sink connection details in application.conf for data source: $dataSourceName")
+      throw new RuntimeException(s"Cannot find sink connection details in application.conf for data source, data-source-name=$dataSourceName, step-name=${step.name}")
     }
     val connectionConfig = connectionConfigs(dataSourceName)
     val saveMode = connectionConfig.get(SAVE_MODE).map(_.toLowerCase.capitalize).map(SaveMode.valueOf).getOrElse(SaveMode.Append)
@@ -33,12 +33,12 @@ class SinkFactory(
       LOGGER.warn("Count is disabled. It will help with performance. Defaulting to -1")
       "-1"
     }
-    LOGGER.info(s"Pushing data to sink, data-source-name=$dataSourceName, save-mode=$saveModeName, num-records=$count, status=$STARTED")
+    LOGGER.info(s"Pushing data to sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, num-records=$count, status=$STARTED")
     saveData(df, dataSourceName, step, connectionConfig, saveMode, saveModeName, format, count)
   }
 
   private def saveData(df: DataFrame, dataSourceName: String, step: Step, connectionConfig: Map[String, String], saveMode: SaveMode, saveModeName: String, format: String, count: String): Unit = {
-    val saveTiming = determineSaveTiming(dataSourceName, format)
+    val saveTiming = determineSaveTiming(dataSourceName, format, step.name)
     val trySaveData = Try(if (saveTiming.equalsIgnoreCase(BATCH)) {
       saveBatchData(df, saveMode, connectionConfig, step.options)
     } else if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION)) {
@@ -50,20 +50,20 @@ class SinkFactory(
 
     trySaveData match {
       case Failure(exception) =>
-        throw new RuntimeException(s"Failed to save data for sink, data-source-name=$dataSourceName, save-mode=$saveModeName, num-records=$count, status=$FAILED", exception)
+        throw new RuntimeException(s"Failed to save data for sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, num-records=$count, status=$FAILED", exception)
       case Success(_) =>
-        LOGGER.info(s"Successfully saved data to sink, data-source-name=$dataSourceName, save-mode=$saveModeName, num-records=$count, status=$FINISHED")
+        LOGGER.info(s"Successfully saved data to sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, num-records=$count, status=$FINISHED")
     }
   }
 
-  private def determineSaveTiming(dataSourceName: String, format: String): String = {
+  private def determineSaveTiming(dataSourceName: String, format: String, stepName: String): String = {
     format match {
       case HTTP | JMS =>
         LOGGER.info(s"Given the step type is either HTTP or JMS, data will be generated in real-time mode. " +
-          s"It will be based on requests per second defined at plan level, data-source-name=$dataSourceName, format=$format")
+          s"It will be based on requests per second defined at plan level, data-source-name=$dataSourceName, step-name=$stepName, format=$format")
         REAL_TIME
       case _ =>
-        LOGGER.info(s"Will generate data in batch mode for step, data-source-name=$dataSourceName, format=$format")
+        LOGGER.info(s"Will generate data in batch mode for step, data-source-name=$dataSourceName, step-name=$stepName, format=$format")
         BATCH
     }
   }
@@ -82,8 +82,7 @@ class SinkFactory(
     partitionedDf
       .format(format)
       .mode(saveMode)
-      .options(connectionConfig)
-      .options(stepOptions)
+      .options(connectionConfig ++ stepOptions)
       .save()
   }
 

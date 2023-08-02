@@ -53,7 +53,7 @@ object Constants {
   lazy val PARQUET = "parquet"
   lazy val XML = "xml"
   lazy val SUPPORTED_CONNECTION_FORMATS: List[String] = List(CSV, JSON, ORC, PARQUET, CASSANDRA, JDBC, HTTP, JMS, KAFKA)
-  lazy val BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS: List[String] = List(CSV, JSON, ORC, PARQUET)
+  lazy val BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS: List[String] = List(CSV, JSON, ORC, PARQUET, JDBC)
 
   //supported jdbc drivers
   lazy val POSTGRES_DRIVER = "org.postgresql.Driver"

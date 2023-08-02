@@ -6,20 +6,22 @@ import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
 import org.apache.log4j.Logger
 
 import java.io.File
-import scala.collection.JavaConverters.collectionAsScalaIterableConverter
+import scala.collection.JavaConverters.{collectionAsScalaIterableConverter, mapAsScalaMapConverter}
 import scala.util.Try
 
 trait ConfigParser {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
 
-  lazy val applicationType: String = "basic"
+  lazy val applicationType: String = "advanced"
   lazy val config: Config = getConfig
   lazy val flagsConfig: FlagsConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("flags").unwrapped(), classOf[FlagsConfig])
   lazy val foldersConfig: FoldersConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("folders").unwrapped(), classOf[FoldersConfig])
   lazy val metadataConfig: MetadataConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("metadata").unwrapped(), classOf[MetadataConfig])
   lazy val sparkMaster: String = config.getString(SPARK_MASTER)
+  lazy val baseSparkConfig: Map[String, String] = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("spark.config").unwrapped(), classOf[Map[String, String]])
   lazy val connectionConfigsByName: Map[String, Map[String, String]] = getConnectionConfigsByName
+  lazy val sparkConnectionConfig: Map[String, String] = getSparkConnectionConfig
 
   def getConfig: Config = {
     val appConfEnv = System.getenv(APPLICATION_CONFIG_PATH)
@@ -58,6 +60,10 @@ trait ConfigParser {
         }).toMap
       }).getOrElse(Map())
     }).reduce((x, y) => x ++ y)
+  }
+
+  def getSparkConnectionConfig: Map[String, String] = {
+    connectionConfigsByName.flatMap(connectionConf => connectionConf._2.filter(_._1.startsWith("spark")))
   }
 
 }

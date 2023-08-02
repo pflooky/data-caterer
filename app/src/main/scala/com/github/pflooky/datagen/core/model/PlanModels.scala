@@ -12,7 +12,7 @@ import scala.language.implicitConversions
 case class Plan(name: String, description: String, tasks: List[TaskSummary], sinkOptions: Option[SinkOptions] = None)
 
 case class SinkOptions(seed: Option[String], locale: Option[String], foreignKeys: Map[String, List[String]] = Map()) {
-  def getForeignKeyRelations(key: String): (ForeignKeyRelation, List[ForeignKeyRelation]) = {
+  def gatherForeignKeyRelations(key: String): (ForeignKeyRelation, List[ForeignKeyRelation]) = {
     val source = ForeignKeyRelation.fromString(key)
     val targets = foreignKeys(key)
     val targetForeignKeys = targets.map(ForeignKeyRelation.fromString)
@@ -22,7 +22,7 @@ case class SinkOptions(seed: Option[String], locale: Option[String], foreignKeys
 case class ForeignKeyRelation(dataSource: String, step: String, column: String) {
   override def toString: String = s"$dataSource.$step.$column"
 
-  def getDataFrameName = s"$dataSource.$step"
+  def dataFrameName = s"$dataSource.$step"
 }
 
 object ForeignKeyRelation {
@@ -57,7 +57,7 @@ case class Step(name: String, `type`: String, count: Count, options: Map[String,
     s"name=$name, type=${`type`}, options=$options, step-num-records=(${count.numRecordsString}), schema-summary=(${schema.toString})"
   }
 
-  def getPrimaryKeys: List[String] = {
+  def gatherPrimaryKeys: List[String] = {
     if (schema.fields.isDefined) {
       val fields = schema.fields.get
       fields.filter(field => {

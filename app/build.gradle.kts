@@ -59,6 +59,8 @@ dependencies {
     // jms
     advancedImpl("javax.jms:javax.jms-api:2.0.1")
     advancedImpl("com.solacesystems:sol-jms:10.20.0")
+    // cloud object stores
+    advancedImpl("org.apache.spark:spark-hadoop-cloud_$scalaVersion:$sparkVersion")
 
     // data generation helpers
     basicImpl("net.datafaker:datafaker:1.9.0")
@@ -110,6 +112,7 @@ sourceSets {
 
 tasks.shadowJar {
     isZip64 = true
+    relocate("com.google.common", "shadow.com.google.common")
 }
 
 tasks.register<ShadowJar>("basicJar") {
@@ -124,6 +127,7 @@ tasks.register<ShadowJar>("basicJar") {
     dependencies {
         exclude(dependency(project.dependencies.gradleApi()))
     }
+    relocate("com.google.guava", "shadow.com.google.guava")
 }
 
 tasks.register<ShadowJar>("advancedJar") {
@@ -137,6 +141,7 @@ tasks.register<ShadowJar>("advancedJar") {
     dependencies {
         exclude(dependency(project.dependencies.gradleApi()))
     }
+    relocate("com.google.common", "shadow.com.google.common")
 }
 
 tasks.register("defineApplicationType") {

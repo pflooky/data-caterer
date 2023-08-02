@@ -1,10 +1,11 @@
 package com.github.pflooky.datagen.core.util
 
 import com.github.pflooky.datagen.core.generator.plan.datasource.database.ForeignKeyRelationship
-import com.github.pflooky.datagen.core.model.{Plan, SinkOptions}
+import com.github.pflooky.datagen.core.model.Plan
 import org.apache.log4j.Logger
-import org.apache.spark.sql.functions.{col, monotonically_increasing_id}
-import org.apache.spark.sql.{DataFrame, Dataset}
+import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.types.{LongType, StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Dataset, Row}
 
 object ForeignKeyUtil {
 
@@ -21,7 +22,7 @@ object ForeignKeyUtil {
     val enabledSources = plan.tasks.filter(_.enabled).map(_.dataSourceName)
     val sinkOptions = plan.sinkOptions.get
     val foreignKeyAppliedDfs = sinkOptions.foreignKeys
-      .map(fk => sinkOptions.getForeignKeyRelations(fk._1))
+      .map(fk => sinkOptions.gatherForeignKeyRelations(fk._1))
       .filter(fkr => {
         val isMainForeignKeySourceEnabled = enabledSources.contains(fkr._1.dataSource)
         val subForeignKeySources = fkr._2.map(_.dataSource)
@@ -38,7 +39,7 @@ object ForeignKeyUtil {
         isMainForeignKeySourceEnabled && isSubForeignKeySourceEnabled
       })
       .flatMap(foreignKeyDetails => {
-        val sourceDfName = foreignKeyDetails._1.getDataFrameName
+        val sourceDfName = foreignKeyDetails._1.dataFrameName
         LOGGER.debug(s"Getting source dataframe, source=$sourceDfName")
         if (!generatedDataForeachTask.contains(sourceDfName)) {
           throw new RuntimeException(s"Cannot create target foreign key as one of the data sources not created. Please ensure there exists a data source with name (<plan dataSourceName>.<task step name>): $sourceDfName")
@@ -46,7 +47,7 @@ object ForeignKeyUtil {
         val sourceDf = generatedDataForeachTask(sourceDfName)
 
         foreignKeyDetails._2.map(target => {
-          val targetDfName = target.getDataFrameName
+          val targetDfName = target.dataFrameName
           LOGGER.debug(s"Getting target dataframe, source=$targetDfName")
           val targetDf = generatedDataForeachTask(targetDfName)
           (targetDfName, applyForeignKeysToTargetDf(sourceDf, targetDf, foreignKeyDetails._1.column, target.column))
@@ -58,11 +59,11 @@ object ForeignKeyUtil {
   private def applyForeignKeysToTargetDf(sourceDf: DataFrame, targetDf: DataFrame, sourceColumn: String, targetColumn: String): DataFrame = {
     sourceDf.cache()
     targetDf.cache()
-    val distinctSourceKeys = sourceDf.select(sourceColumn).distinct()
-      .withColumnRenamed(sourceColumn, s"_src_$sourceColumn")
-      .withColumn("_join_foreign_key", monotonically_increasing_id())
-    val distinctTargetKeys = targetDf.select(targetColumn).distinct()
-      .withColumn("_join_foreign_key", monotonically_increasing_id())
+    val distinctSourceKeys = zipWithIndex(
+      sourceDf.select(sourceColumn).distinct()
+        .withColumnRenamed(sourceColumn, s"_src_$sourceColumn")
+    )
+    val distinctTargetKeys = zipWithIndex(targetDf.select(targetColumn).distinct())
     LOGGER.debug(s"Attempting to join source DF keys with target DF, source=$sourceColumn, target=$targetColumn")
     val joinDf = distinctSourceKeys.join(distinctTargetKeys, Seq("_join_foreign_key"))
       .drop("_join_foreign_key")
@@ -70,6 +71,7 @@ object ForeignKeyUtil {
       .withColumn(targetColumn, col(s"_src_$sourceColumn"))
       .drop(s"_src_$sourceColumn")
     LOGGER.debug(s"Applied source DF keys with target DF, source=$sourceColumn, target=$targetColumn")
+    res.cache()
     res
   }
 
@@ -125,14 +127,16 @@ object ForeignKeyUtil {
     }
 
     foreignKeys.flatMap(x => getForeignKeyOrder(x._1)).toList
+  }
 
-    //    foreignKeys.foreach(fk => {
-    //      val parent = fk._1
-    //      fk._2.map(child => {
-    //        val nestedChildFks = foreignKeys.getOrElse(child, List())
-    //
-    //      })
-    //    })
-    //    List()
+  private def zipWithIndex(df: DataFrame): DataFrame = {
+    df.sqlContext.createDataFrame(
+      df.rdd.zipWithIndex.map(ln =>
+        Row.fromSeq(ln._1.toSeq ++ Seq(ln._2))
+      ),
+      StructType(
+        df.schema.fields ++ Array(StructField("_join_foreign_key", LongType, false))
+      )
+    )
   }
 }

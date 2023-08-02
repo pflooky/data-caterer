@@ -1,11 +1,22 @@
 package com.github.pflooky.datagen.core.util
 
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.spark.sql.SparkSession
+
 import java.io.File
+import java.nio.charset.StandardCharsets
+import scala.util.matching.Regex
 import scala.util.{Success, Try}
 
 object FileUtil {
 
-  def getFile(filePath: String): File = {
+  val CLOUD_STORAGE_REGEX: Regex = "^(s3(a|n?)://|wasb(s?)://|gs://).*".r
+
+  def isCloudStoragePath(path: String): Boolean = {
+    CLOUD_STORAGE_REGEX.pattern.matcher(path).matches()
+  }
+
+  def getFile(filePath: String)(implicit sparkSession: SparkSession): File = {
     val (directFile, classFile, classLoaderFile) = getDirectAndClassFiles(filePath)
     (directFile.exists(), classFile.map(_.exists), classLoaderFile.map(_.exists)) match {
       case (true, _, _) => directFile
@@ -23,6 +34,18 @@ object FileUtil {
       case (_, _, Success(true)) => classLoaderFile.get
       case _ => throw new RuntimeException(s"Failed for find directory, path=$folderPath")
     }
+  }
+
+  def writeStringToFile(fileSystem: FileSystem, filePath: String, fileContent: String): Unit = {
+    val fsOutput = fileSystem.create(new Path(filePath))
+    fsOutput.writeBytes(fileContent)
+    fsOutput.flush()
+    fsOutput.close()
+  }
+
+  def getFileContentFromFileSystem(fileSystem: FileSystem, filePath: String): String = {
+    val fileContentBytes = fileSystem.open(new Path(filePath)).readAllBytes()
+    new String(fileContentBytes, StandardCharsets.UTF_8)
   }
 
   private def getDirectAndClassFiles(filePath: String): (File, Try[File], Try[File]) = {

@@ -15,7 +15,7 @@ class RecordTrackingProcessor(recordTrackingFolderPath: String) {
     if (format.equalsIgnoreCase("jms") || format.equalsIgnoreCase("http")) {
       LOGGER.warn(s"Record tracking for current format of data is not supported as data format does not natively support deleting, data-source-name=$dataSourceName, format=$format")
     } else {
-      val primaryKeys = step.getPrimaryKeys
+      val primaryKeys = step.gatherPrimaryKeys
       val columnsToTrack = if (primaryKeys.isEmpty) df.columns.toList else primaryKeys
       val subDataSourcePath = getSubDataSourcePath(dataSourceName, format, step.options, recordTrackingFolderPath)
       df.selectExpr(columnsToTrack: _*)

@@ -25,7 +25,7 @@ class RecordTrackingProcessorTest extends SparkSuite {
         ))))
     )))
     val step = Step("create accounts", "jdbc", Count(), Map(), schema)
-    val primaryKeys = step.getPrimaryKeys
+    val primaryKeys = step.gatherPrimaryKeys
     assert(primaryKeys == List("account_id", "name"))
   }
 }

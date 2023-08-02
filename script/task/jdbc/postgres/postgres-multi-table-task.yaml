@@ -52,7 +52,8 @@ steps:
           type: "string"
           generator:
             type: "random"
-            isUnique: true
+            options:
+              isUnique: true
         - name: "amount"
           type: "double"
           generator:

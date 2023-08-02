@@ -76,7 +76,6 @@ class DataGeneratorProcessor extends SparkProvider {
         val df = if (s.hasUniqueFields) {
           uniqueFieldUtil.getUniqueFieldsValues(dataSourceName, genDf)
         } else genDf
-        df.cache()
         (dataSourceName, df)
       })
     ).toMap
