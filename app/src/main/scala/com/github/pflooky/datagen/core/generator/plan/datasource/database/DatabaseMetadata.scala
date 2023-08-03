@@ -45,6 +45,12 @@ trait JdbcMetadata extends DatabaseMetadata {
     Map(JDBC_TABLE -> s"$schema.$table")
   }
 
+  override def createFilterQuery: Option[String] = {
+    val baseFilterQuery = super.createFilterQuery
+    val baseTableFilter = "table_type = 'BASE TABLE'"
+    baseFilterQuery.map(f => s"$f AND $baseTableFilter").orElse(Some(baseTableFilter))
+  }
+
   override def toStepName(options: Map[String, String]): String = {
     val dbTable = options(JDBC_TABLE).split("\\.")
     s"${name}_${dbTable.head}_${dbTable.last}"

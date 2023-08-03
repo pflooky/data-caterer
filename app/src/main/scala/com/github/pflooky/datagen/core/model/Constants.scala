@@ -65,10 +65,12 @@ object Constants {
   lazy val REGEX = "regex"
   lazy val SQL = "sql"
 
-  //per column generator
+  //special column names
   lazy val PER_COLUMN_COUNT = "_per_col_count"
+  lazy val JOIN_FOREIGN_KEY_COL = "_join_foreign_key"
   lazy val PER_COLUMN_INDEX_COL = "_per_col_index"
   lazy val RECORD_COUNT_GENERATOR_COL = "record_count_generator"
+  lazy val INDEX_INC_COL = "__index_inc"
 
   //field metadata
   lazy val RANDOM_SEED = "seed"

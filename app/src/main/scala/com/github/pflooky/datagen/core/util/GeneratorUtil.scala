@@ -6,7 +6,8 @@ import com.github.pflooky.datagen.core.model.Constants.{ONE_OF, RANDOM, RECORD_C
 import com.github.pflooky.datagen.core.model.{Count, Generator, Step}
 import net.datafaker.Faker
 import org.apache.log4j.Logger
-import org.apache.spark.sql.types.{LongType, Metadata, StructField}
+import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.sql.types.{LongType, Metadata, StructField, StructType}
 
 object GeneratorUtil {
 
@@ -25,6 +26,17 @@ object GeneratorUtil {
       LOGGER.debug(s"No generator defined, will default to random generator, field-name=${structField.name}")
       RandomDataGenerator.getGeneratorForStructField(structField, faker)
     }
+  }
+
+  def zipWithIndex(df: DataFrame, colName: String): DataFrame = {
+    df.sqlContext.createDataFrame(
+      df.rdd.zipWithIndex.map(ln =>
+        Row.fromSeq(ln._1.toSeq ++ Seq(ln._2))
+      ),
+      StructType(
+        df.schema.fields ++ Array(StructField(colName, LongType, false))
+      )
+    )
   }
 
   def getRecordCount(count: Count, faker: Faker): Long = {

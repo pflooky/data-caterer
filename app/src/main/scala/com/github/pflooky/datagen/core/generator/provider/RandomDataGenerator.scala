@@ -40,7 +40,7 @@ object RandomDataGenerator {
   class RandomStringDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends NullableDataGenerator[String] {
     private lazy val minLength = tryGetValue(structField.metadata, MINIMUM_LENGTH, 1)
     private lazy val maxLength = tryGetValue(structField.metadata, MAXIMUM_LENGTH, 10)
-    assert(minLength <= maxLength, s"minLength has to be less than or equal to maxLength, field-name${structField.name}")
+    assert(minLength <= maxLength, s"minLength has to be less than or equal to maxLength, field-name=${structField.name}")
     private lazy val tryExpression = Try(structField.metadata.getString(EXPRESSION))
 
     override val edgeCases: List[String] = List("", "\n", "\r", "\t", " ", "\\u0000", "\\ufff")
@@ -56,44 +56,14 @@ object RandomDataGenerator {
 
     override def generateSqlExpression: String = {
       if (tryExpression.isSuccess) {
-        s"GENERATE_FAKER_EXPRESSION('${tryExpression.get}')"
+        s"SUBSTRING(GENERATE_FAKER_EXPRESSION('${tryExpression.get}'), $minLength, $maxLength)"
       } else {
-        s"SUBSTRING(REGEXP_REPLACE(BASE64(MD5(CONCAT($sqlRandom, CURRENT_TIMESTAMP()))), '\\\\+|/|=', ' '), $minLength, $maxLength)"
-//        s"GENERATE_RANDOM_STRING($minLength, $maxLength)"
-        // use scala api to generate the sql expressions, fails with [UNRESOLVED_ROUTINE] Cannot resolve function `lambdafunction`
-//        val randomStringSql = array_join(
-//          transform(
-//            array_repeat(lit(1), rand() * (maxLength - minLength) + minLength cast IntegerType),
-//            _ => {
-//              val randValue = round(rand() * 63, 0)
-//              when(randValue.leq(1), " ")
-//                .otherwise(when(randValue.leq(11), randValue cast StringType)
-//                  .otherwise(when(randValue.leq(37), expr(s"char($randValue + 54)"))
-//                    .otherwise(expr(s"char($randValue + 60)")))
-//                )
-//            }
-//          ), "")
-        //        s"ARRAY_JOIN(TRANSFORM(ARRAY_REPEAT(1, CAST(RAND() * ${maxLength - minLength} + $minLength AS INT)), x -> CHAR(ROUND(RAND() * 94 + 32, 0))), '')"
-        //        s"GENERATE_REGEX('[A-Za-z0-9 ]{$minLength,$maxLength}')"
-
-        /**
-         * CHAR(ROUND(RAND() * 94 + 32, 0)))
-         * characters for ascii alphanumeric ->
-         * 32 -> <space>  (1)
-         * 48-57 -> 0-9   (10)
-         * 65-90 -> A-Z   (26)
-         * 97-122 -> a-z  (26)
-         * 63 in total
-         * 1/63 => 0.01587
-         */
-        //        s"""ARRAY_JOIN(
-        //           |TRANSFORM(
-        //           |  ARRAY_REPEAT(1, CAST(RAND() * ${maxLength - minLength} + $minLength AS INT)),
-        //           |  x -> CASE WHEN RAND() < 0.01587
-        //           |        THEN 32
-        //           |        ELSE WHEN RAND() >= 0.01587 && RAND() < 0.17457
-        //           |        THEN ,
-        //           |'')""".stripMargin
+        val sourceDataType = tryGetValue(structField.metadata, SOURCE_COLUMN_DATA_TYPE, "string")
+        val baseSql = s"SUBSTRING(REGEXP_REPLACE(BASE64(MD5(CONCAT($sqlRandom, CURRENT_TIMESTAMP()))), '\\\\+|/|=', ' '), $minLength, $maxLength)"
+        baseSql
+//        if (!sourceDataType.equalsIgnoreCase("string") && !sourceDataType.equalsIgnoreCase("character varying")) {
+//          s"CONCAT($baseSql, '::$sourceDataType')"
+//        } else baseSql
       }
     }
   }
@@ -101,7 +71,7 @@ object RandomDataGenerator {
   class RandomIntDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Int] {
     private lazy val minValue = tryGetValue(structField.metadata, MINIMUM, 0)
     private lazy val maxValue = tryGetValue(structField.metadata, MAXIMUM, 1000)
-    assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
+    assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name=${structField.name}")
 
     override val edgeCases: List[Int] = List(Int.MaxValue, Int.MinValue, 0)
 
@@ -110,14 +80,19 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      s"CAST(ROUND($sqlRandom * ${maxValue - minValue} + $minValue, 0) AS INT)"
+      val defaultValue = tryGetValue(structField.metadata, DEFAULT_VALUE, "")
+      if (defaultValue.startsWith("nextval(")) {
+        s"CAST($maxValue + $INDEX_INC_COL AS INT)"
+      } else {
+        s"CAST(ROUND($sqlRandom * ${maxValue - minValue} + $minValue, 0) AS INT)"
+      }
     }
   }
 
   class RandomShortDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Short] {
     private lazy val minValue = tryGetValue(structField.metadata, MINIMUM, 0)
     private lazy val maxValue = tryGetValue(structField.metadata, MAXIMUM, 1000)
-    assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
+    assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name=${structField.name}")
 
     override val edgeCases: List[Short] = List(Short.MaxValue, Short.MinValue, 0)
 
@@ -126,14 +101,20 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      s"CAST(ROUND($sqlRandom * ${maxValue - minValue} + $minValue, 0) AS SHORT)"
+      val distinctCount = tryGetValue(structField.metadata, DISTINCT_COUNT, 0)
+      val count = tryGetValue(structField.metadata, ROW_COUNT, 0)
+      if (distinctCount == count) {
+        s"CAST($maxValue + $INDEX_INC_COL AS SHORT)"
+      } else {
+        s"CAST(ROUND($sqlRandom * ${maxValue - minValue} + $minValue, 0) AS SHORT)"
+      }
     }
   }
 
   class RandomLongDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Long] {
     private lazy val minValue = tryGetValue(structField.metadata, MINIMUM, 0L)
     private lazy val maxValue = tryGetValue(structField.metadata, MAXIMUM, 1000L)
-    assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
+    assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name=${structField.name}")
 
     override val edgeCases: List[Long] = List(Long.MaxValue, Long.MinValue, 0)
 
@@ -151,7 +132,7 @@ object RandomDataGenerator {
     private lazy val maxValue = tryGetValue(structField.metadata, MAXIMUM, BigDecimal.valueOf(1000))
     private lazy val precision = tryGetValue(structField.metadata, NUMERIC_PRECISION, 38)
     private lazy val scale = tryGetValue(structField.metadata, NUMERIC_SCALE, 18)
-    assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
+    assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name=${structField.name}")
 
     override val edgeCases: List[BigDecimal] = List(Long.MaxValue, Long.MinValue, 0)
 
@@ -167,7 +148,7 @@ object RandomDataGenerator {
   class RandomDoubleDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Double] {
     private lazy val minValue = tryGetValue(structField.metadata, MINIMUM, 0.0)
     private lazy val maxValue = tryGetValue(structField.metadata, MAXIMUM, 1000.0)
-    assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
+    assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name=${structField.name}")
 
     override val edgeCases: List[Double] = List(Double.PositiveInfinity, Double.MaxValue, Double.MinPositiveValue,
       0.0, -0.0, Double.MinValue, Double.NegativeInfinity, Double.NaN)
@@ -184,7 +165,7 @@ object RandomDataGenerator {
   class RandomFloatDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Float] {
     private lazy val minValue = tryGetValue(structField.metadata, MINIMUM, 0.0.toFloat)
     private lazy val maxValue = tryGetValue(structField.metadata, MAXIMUM, 1000.0.toFloat)
-    assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name${structField.name}")
+    assert(minValue <= maxValue, s"minValue has to be less than or equal to maxValue, field-name=${structField.name}")
 
     override val edgeCases: List[Float] = List(Float.PositiveInfinity, Float.MaxValue, Float.MinPositiveValue,
       0.0f, -0.0f, Float.MinValue, Float.NegativeInfinity, Float.NaN)
@@ -201,7 +182,7 @@ object RandomDataGenerator {
   class RandomDateDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends NullableDataGenerator[Date] {
     private lazy val minValue = getMinValue
     private lazy val maxValue = getMaxValue
-    assert(minValue.isBefore(maxValue), s"min has to be less than or equal to max, field-name${structField.name}")
+    assert(minValue.isBefore(maxValue) || minValue.isEqual(maxValue), s"min has to be less than or equal to max, field-name=${structField.name}")
     private lazy val maxDays = java.time.temporal.ChronoUnit.DAYS.between(minValue, maxValue).toInt
 
     //from here: https://github.com/apache/spark/blob/master/sql/catalyst/src/test/scala/org/apache/spark/sql/RandomDataGenerator.scala#L206
@@ -234,7 +215,7 @@ object RandomDataGenerator {
   class RandomTimestampDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends NullableDataGenerator[Timestamp] {
     private lazy val minValue = getMinValue
     private lazy val maxValue = getMaxValue
-    assert(minValue <= maxValue, s"min has to be less than or equal to max, field-name${structField.name}")
+    assert(minValue <= maxValue, s"min has to be less than or equal to max, field-name=${structField.name}")
 
     //from here: https://github.com/apache/spark/blob/master/sql/catalyst/src/test/scala/org/apache/spark/sql/RandomDataGenerator.scala#L159
     override val edgeCases: List[Timestamp] = List(
@@ -279,7 +260,7 @@ object RandomDataGenerator {
   class RandomBinaryDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends NullableDataGenerator[Array[Byte]] {
     private lazy val minLength = tryGetValue(structField.metadata, MINIMUM_LENGTH, 1)
     private lazy val maxLength = tryGetValue(structField.metadata, MAXIMUM_LENGTH, 20)
-    assert(minLength <= maxLength, s"minLength has to be less than or equal to maxLength, field-name${structField.name}")
+    assert(minLength <= maxLength, s"minLength has to be less than or equal to maxLength, field-name=${structField.name}")
 
     override val edgeCases: List[Array[Byte]] = List(Array(), "\n".getBytes, "\r".getBytes, "\t".getBytes,
       " ".getBytes, "\\u0000".getBytes, "\\ufff".getBytes, Array(Byte.MinValue), Array(Byte.MaxValue))
@@ -373,6 +354,8 @@ object RandomDataGenerator {
   }
 
   object Converter {
+    implicit val stringLoader: Converter[String] = (v: String) => v
+
     implicit val intLoader: Converter[Int] = (v: String) => v.toInt
 
     implicit val longLoader: Converter[Long] = (v: String) => v.toLong

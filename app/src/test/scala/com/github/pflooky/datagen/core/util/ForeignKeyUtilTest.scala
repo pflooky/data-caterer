@@ -17,7 +17,17 @@ class ForeignKeyUtilTest extends SparkSuite {
 
     val result = ForeignKeyUtil.getDataFramesWithForeignKeys(plan, dfMap)
 
-    assert(dfMap == result)
+    assert(dfMap.toList == result)
+  }
+
+  test("Can get insert order") {
+    val foreignKeys = Map(
+      "orders" -> List("customers"),
+      "order_items" -> List("orders", "products"),
+      "reviews" -> List("products", "customers")
+    )
+    val result = ForeignKeyUtil.getInsertOrder(foreignKeys)
+    assert(result.head == "reviews")
   }
 
   test("Can link foreign keys between data sets") {
@@ -39,8 +49,8 @@ class ForeignKeyUtilTest extends SparkSuite {
     )
 
     val result = ForeignKeyUtil.getDataFramesWithForeignKeys(plan, dfMap)
-    result("postgres.transaction").show()
-    val resTxnRows = result("postgres.transaction").collect()
+    val txn = result.filter(f => f._1.equalsIgnoreCase("postgres.transaction")).head._2
+    val resTxnRows = txn.collect()
     resTxnRows.foreach(r => {
       r.getString(0) == "acc1" || r.getString(0) == "acc2" || r.getString(0) == "acc3"
     })

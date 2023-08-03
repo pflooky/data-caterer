@@ -4,7 +4,7 @@ import com.github.pflooky.datagen.core.exception.{InvalidFieldConfigurationExcep
 import com.github.pflooky.datagen.core.generator.provider.DataGenerator
 import com.github.pflooky.datagen.core.model.Constants._
 import com.github.pflooky.datagen.core.model._
-import com.github.pflooky.datagen.core.util.GeneratorUtil.{getDataGenerator, getRecordCount}
+import com.github.pflooky.datagen.core.util.GeneratorUtil.{getDataGenerator, getRecordCount, zipWithIndex}
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import net.datafaker.Faker
 import org.apache.spark.sql.expressions.UserDefinedFunction
@@ -15,7 +15,7 @@ import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import scala.util.Random
 
 
-case class Holder(i: Int)
+case class Holder(__index_inc: Int)
 
 class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession) {
 
@@ -45,11 +45,13 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
 
     val genSqlExpression = dataGenerators.filter(dg => !dg.structField.metadata.contains(SQL))
       .map(dg => s"${dg.generateSqlExpressionWrapper} AS `${dg.structField.name}`")
-    val df = sparkSession.createDataFrame(Seq.fill(recordCount)(1).map(Holder))
+    val df = sparkSession.createDataFrame(Seq.range(0, recordCount).map(Holder))
       .selectExpr(genSqlExpression: _*)
+
     val sqlGeneratedFields = structType.fields.filter(f => f.metadata.contains(SQL))
     val sqlFieldExpr = sqlGeneratedFields.map(f => s"${f.metadata.getString(SQL)} AS `${f.name}`")
     val noSqlGeneratedFields = df.columns.filter(c => !sqlGeneratedFields.exists(_.name.equalsIgnoreCase(c)))
+      .map(s => s"`$s`")
 
     val dfAllFields = df.selectExpr(noSqlGeneratedFields ++ sqlFieldExpr: _*)
     if (step.count.perColumn.isDefined) {
@@ -85,7 +87,7 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
     }
     val sqlGeneratedFields = structType.fields.filter(f => f.metadata.contains(SQL))
     sqlGeneratedFields.foreach(field => {
-      val allFields = structType.fields.filter(_ != field).map(_.name) ++ Array(s"${field.metadata.getString(SQL)} AS ${field.name}")
+      val allFields = structType.fields.filter(_ != field).map(_.name) ++ Array(s"${field.metadata.getString(SQL)} AS `${field.name}`")
       dfPerCol = dfPerCol.selectExpr(allFields: _*)
     })
     dfPerCol
@@ -131,7 +133,15 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
 
   private def getStructWithGenerators(fields: List[Field]): List[DataGenerator[_]] = {
     val structFieldsWithDataGenerators = fields
-      .filter(field => !field.generator.flatMap(gen => gen.options.get(OMIT)).getOrElse("false").toString.toBoolean)
+      .filter(field => {
+        val generatorOptions = field.generator.map(_.options).getOrElse(Map())
+        val isOmit = !generatorOptions.getOrElse(OMIT, "false").toString.toBoolean
+        //TODO look at how user defined types can be handled, mpaa_rating in dvdrental postgres
+//        val isNotUdt = !generatorOptions.getOrElse(SOURCE_COLUMN_DATA_TYPE, "string").toString.equalsIgnoreCase("USER-DEFINED")
+        //TODO data source can auto-generate column values like serial
+//        val isNotGeneratedAtDataSource = !generatorOptions.getOrElse(DEFAULT_VALUE, "").toString.startsWith("nextval")
+        isOmit
+      })
       .map(field => {
         val structField: StructField = createStructFieldFromField(field)
         getDataGenerator(field.generator, structField, faker)

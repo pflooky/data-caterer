@@ -1,19 +1,16 @@
 package com.github.pflooky.datagen.core.generator
 
-import com.github.pflooky.datagen.core.exception.InvalidCountGeneratorConfigurationException
 import com.github.pflooky.datagen.core.generator.delete.DeleteRecordProcessor
 import com.github.pflooky.datagen.core.generator.track.RecordTrackingProcessor
-import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING, FORMAT, IS_UNIQUE, RECORD_COUNT_GENERATOR_COL}
-import com.github.pflooky.datagen.core.model.{Generator, Plan, Step, Task, TaskSummary}
+import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING, FORMAT}
+import com.github.pflooky.datagen.core.model.{Plan, Step, Task, TaskSummary}
 import com.github.pflooky.datagen.core.parser.PlanParser
 import com.github.pflooky.datagen.core.sink.SinkFactory
-import com.github.pflooky.datagen.core.util.GeneratorUtil.{getDataGenerator, getRecordCount}
-import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, ObjectMapperUtil, SparkProvider, UniqueField, UniqueFieldUtil}
+import com.github.pflooky.datagen.core.util.GeneratorUtil.getRecordCount
+import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, SparkProvider, UniqueFieldUtil}
 import net.datafaker.Faker
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.functions.udf
-import org.apache.spark.sql.types.{LongType, Metadata, StructField}
 
 import java.io.Serializable
 import java.util.{Locale, Random}
@@ -45,8 +42,12 @@ class DataGeneratorProcessor extends SparkProvider {
 
     (flagsConfig.enableGenerateData, flagsConfig.enableDeleteGeneratedRecords, applicationType) match {
       case (true, _, _) =>
-        LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=($summaryWithTask)")
-        summaryWithTask.foreach(t => LOGGER.info(s"Enabled task details: ${t._2.toTaskDetailString}"))
+        if (LOGGER.isDebugEnabled) {
+          LOGGER.debug(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=($summaryWithTask)")
+          summaryWithTask.foreach(t => LOGGER.debug(s"Enabled task details: ${t._2.toTaskDetailString}"))
+        }
+        val stepNames = summaryWithTask.map(t => s"task=${t._2.name}, steps=${t._2.steps.map(_.name).mkString(",")}").mkString("||")
+        LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=$stepNames")
         //TODO batch up 5000 (configurable number) records total across all steps and progressively push to sinks
         /**
          * can do the following for batching the data:
@@ -64,7 +65,7 @@ class DataGeneratorProcessor extends SparkProvider {
     }
   }
 
-  private def getAllStepDf(plan: Plan, executableTasks: List[(TaskSummary, Task)]): Map[String, DataFrame] = {
+  private def getAllStepDf(plan: Plan, executableTasks: List[(TaskSummary, Task)]): List[(String, DataFrame)] = {
     val faker = getDataFaker(plan)
     val dataGeneratorFactory = new DataGeneratorFactory(faker)
     val uniqueFieldUtil = new UniqueFieldUtil(executableTasks)
@@ -83,12 +84,12 @@ class DataGeneratorProcessor extends SparkProvider {
     val sinkDf = if (plan.sinkOptions.isDefined && plan.sinkOptions.get.foreignKeys.nonEmpty) {
       ForeignKeyUtil.getDataFramesWithForeignKeys(plan, generatedDataForeachTask)
     } else {
-      generatedDataForeachTask
+      generatedDataForeachTask.toList
     }
     sinkDf
   }
 
-  private def pushDataToSinks(executableTasks: List[(TaskSummary, Task)], sinkDf: Map[String, DataFrame]): Unit = {
+  private def pushDataToSinks(executableTasks: List[(TaskSummary, Task)], sinkDf: List[(String, DataFrame)]): Unit = {
     val sinkFactory = new SinkFactory(connectionConfigsByName, applicationType)
     val stepByDataSourceName = executableTasks.flatMap(task =>
       task._2.steps.map(s => (getDataSourceName(task._1, s), s))

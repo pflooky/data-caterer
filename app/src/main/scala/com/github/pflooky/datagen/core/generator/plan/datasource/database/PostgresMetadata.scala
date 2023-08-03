@@ -54,11 +54,11 @@ case class PostgresMetadata(name: String, connectionConfig: Map[String, String])
       |WHERE tc.constraint_type = 'FOREIGN KEY'""".stripMargin
 
   override def dataSourceGenerationMetadata(row: Row): Map[String, String] = {
-    val sourceDataType = row.getAs[String]("source_data_type")
-    if (sourceDataType.toLowerCase == "serial") {
-      Map(EXPRESSION -> "monotonically_increasing_id()", OMIT -> "true")
-    } else {
+//    val sourceDataType = row.getAs[String]("source_data_type")
+//    if (sourceDataType.toLowerCase == "serial") {
+//      Map(EXPRESSION -> "monotonically_increasing_id()", OMIT -> "true")
+//    } else {
       Map()
-    }
+//    }
   }
 }
