@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.util
 
-import com.github.pflooky.datagen.core.generator.plan.datasource.database.ForeignKeyRelationship
+import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ForeignKeyRelationship
 import com.github.pflooky.datagen.core.model.{ForeignKeyRelation, Plan}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.functions.col

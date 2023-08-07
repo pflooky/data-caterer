@@ -1,9 +1,9 @@
 package com.github.pflooky.datagen.core.util
 
 import com.github.pflooky.datagen.core.config.MetadataConfig
-import com.github.pflooky.datagen.core.generator.plan.ExpressionPredictor
-import com.github.pflooky.datagen.core.generator.plan.datasource.DataSourceMetadata
-import com.github.pflooky.datagen.core.generator.plan.datasource.database.ColumnMetadata
+import com.github.pflooky.datagen.core.generator.metadata.ExpressionPredictor
+import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
+import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ColumnMetadata
 import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CSV, DELTA, DISTINCT_COUNT, EXPRESSION, HISTOGRAM, HTTP, HTTP_METHOD, IS_NULLABLE, JDBC, JDBC_TABLE, JMS, JMS_DESTINATION_NAME, JSON, ONE_OF, ORC, PARQUET, PATH, ROW_COUNT}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.catalyst.TableIdentifier

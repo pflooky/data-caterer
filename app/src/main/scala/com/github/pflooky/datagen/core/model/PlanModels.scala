@@ -1,17 +1,17 @@
 package com.github.pflooky.datagen.core.model
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.github.pflooky.datagen.core.exception.ForeignKeyFormatException
-import com.github.pflooky.datagen.core.generator.plan.datasource.DataSourceDetail
+import com.github.pflooky.datagen.core.exception.{ForeignKeyFormatException, InvalidFieldConfigurationException}
+import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceDetail
 import com.github.pflooky.datagen.core.model.Constants.{GENERATED, IS_PRIMARY_KEY, IS_UNIQUE, ONE_OF, PRIMARY_KEY_POSITION, RANDOM}
-import com.github.pflooky.datagen.core.util.MetadataUtil
-import org.apache.spark.sql.types.{StructField, StructType}
+import com.github.pflooky.datagen.core.util.{MetadataUtil, ObjectMapperUtil}
+import org.apache.spark.sql.types.{ArrayType, DataType, Metadata, StructField, StructType}
 
 import scala.language.implicitConversions
 
 case class Plan(name: String, description: String, tasks: List[TaskSummary], sinkOptions: Option[SinkOptions] = None)
 
-case class SinkOptions(seed: Option[String], locale: Option[String], foreignKeys: Map[String, List[String]] = Map()) {
+case class SinkOptions(seed: Option[String] = None, locale: Option[String] = None, foreignKeys: Map[String, List[String]] = Map()) {
   def gatherForeignKeyRelations(key: String): (ForeignKeyRelation, List[ForeignKeyRelation]) = {
     val source = ForeignKeyRelation.fromString(key)
     val targets = foreignKeys(key)
@@ -35,7 +35,7 @@ object ForeignKeyRelation {
 
 case class TaskSummary(name: String, dataSourceName: String, enabled: Boolean = true)
 
-case class Task(name: String, steps: List[Step]) {
+case class Task(name: String, steps: List[Step] = List()) {
   def toTaskDetailString: String = {
     val enabledSteps = steps.filter(_.enabled)
     val stepSummary = enabledSteps.map(_.toStepDetailString).mkString(",")
@@ -52,7 +52,7 @@ object Task {
   }
 }
 
-case class Step(name: String, `type`: String, count: Count, options: Map[String, String] = Map(), schema: Schema, enabled: Boolean = true) {
+case class Step(name: String, `type`: String, count: Count = Count(), options: Map[String, String] = Map(), schema: Schema = Schema(), enabled: Boolean = true) {
   def toStepDetailString: String = {
     s"name=$name, type=${`type`}, options=$options, step-num-records=(${count.numRecordsString}), schema-summary=(${schema.toString})"
   }
@@ -100,7 +100,7 @@ case class Count(@JsonDeserialize(contentAs = classOf[java.lang.Long]) total: Op
     }
   }
 }
-case class PerColumnCount(columnNames: List[String], @JsonDeserialize(contentAs = classOf[java.lang.Long]) count: Option[Long] = Some(10L), generator: Option[Generator] = None)
+case class PerColumnCount(columnNames: List[String] = List(), @JsonDeserialize(contentAs = classOf[java.lang.Long]) count: Option[Long] = Some(10L), generator: Option[Generator] = None)
 
 case class Schema(`type`: String = "manual", fields: Option[List[Field]] = None) {
   override def toString: String = {
@@ -108,6 +108,15 @@ case class Schema(`type`: String = "manual", fields: Option[List[Field]] = None)
     if (fields.isDefined) {
       baseStr + s", num-fields=${fields.get.size}"
     } else baseStr
+  }
+
+  def toStructType: StructType = {
+    if (fields.isDefined) {
+      val structFields = fields.get.map(_.toStructField)
+      StructType(structFields)
+    } else {
+      StructType(Seq())
+    }
   }
 }
 
@@ -118,7 +127,24 @@ object Schema {
   }
 }
 
-case class Field(name: String, `type`: Option[String] = None, generator: Option[Generator] = None, nullable: Boolean = false, defaultValue: Option[Any] = None, schema: Option[Schema] = None)
+case class Field(name: String, `type`: Option[String] = None, generator: Option[Generator] = Some(Generator()),
+                 nullable: Boolean = false, defaultValue: Option[Any] = None, schema: Option[Schema] = None) {
+  def toStructField: StructField = {
+    if (schema.isDefined) {
+      val innerStructFields = schema.get.toStructType
+      if (`type`.isDefined && `type`.get.toLowerCase.startsWith("array")) {
+        StructField(name, ArrayType(innerStructFields, nullable), nullable)
+      } else {
+        StructField(name, innerStructFields, nullable)
+      }
+    } else if (generator.isDefined && `type`.isDefined) {
+      val metadata = Metadata.fromJson(ObjectMapperUtil.jsonObjectMapper.writeValueAsString(generator.get.options))
+      StructField(name, DataType.fromDDL(`type`.get), nullable, metadata)
+    } else {
+      throw new InvalidFieldConfigurationException(this)
+    }
+  }
+}
 
 object Field {
   implicit def fromStructField(structField: StructField): Field = {
@@ -132,7 +158,7 @@ object Field {
   }
 }
 
-case class Generator(`type`: String, options: Map[String, Any] = Map()) {
+case class Generator(`type`: String = "random", options: Map[String, Any] = Map()) {
   override def toString: String = {
     s"type=${`type`}, options=$options"
   }

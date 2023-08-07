@@ -4,7 +4,7 @@
 package com.github.pflooky.datagen
 
 import com.github.pflooky.datagen.core.generator.DataGeneratorProcessor
-import com.github.pflooky.datagen.core.generator.plan.datasource.DataSourceMetadataFactory
+import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadataFactory
 import org.apache.log4j.Logger
 
 import java.time.{Duration, LocalDateTime}

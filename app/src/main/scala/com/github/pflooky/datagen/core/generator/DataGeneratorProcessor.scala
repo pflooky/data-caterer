@@ -36,12 +36,11 @@ class DataGeneratorProcessor extends SparkProvider {
     val stepsByName = tasks.flatMap(_.steps).map(s => (s.name, s)).toMap
     val summaryWithTask = plan.tasks.map(t => (t, tasksByName(t.name)))
 
-    if (flagsConfig.enableGenerateData && flagsConfig.enableDeleteGeneratedRecords) {
-      LOGGER.warn("Both enableGenerateData and enableDeleteGeneratedData are true. Please only enable one at a time. Will continue with generating data")
-    }
-
     (flagsConfig.enableGenerateData, flagsConfig.enableDeleteGeneratedRecords, applicationType) match {
-      case (true, _, _) =>
+      case (true, enableDelete, _) =>
+        if (enableDelete) {
+          LOGGER.warn("Both enableGenerateData and enableDeleteGeneratedData are true. Please only enable one at a time. Will continue with generating data")
+        }
         if (LOGGER.isDebugEnabled) {
           LOGGER.debug(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=($summaryWithTask)")
           summaryWithTask.foreach(t => LOGGER.debug(s"Enabled task details: ${t._2.toTaskDetailString}"))

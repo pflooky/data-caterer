@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.provider
 
 import com.github.pflooky.datagen.core.exception.InvalidDataGeneratorConfigurationException
-import com.github.pflooky.datagen.core.model.Constants.REGEX
+import com.github.pflooky.datagen.core.model.Constants.{GENERATE_REGEX_UDF, REGEX}
 import net.datafaker.Faker
 import org.apache.spark.sql.types.StructField
 
@@ -24,7 +24,7 @@ object RegexDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      s"GENERATE_REGEX('$regex')"
+      s"$GENERATE_REGEX_UDF('$regex')"
     }
   }
 

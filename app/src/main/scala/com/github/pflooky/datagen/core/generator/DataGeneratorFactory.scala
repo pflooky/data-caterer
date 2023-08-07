@@ -1,10 +1,10 @@
 package com.github.pflooky.datagen.core.generator
 
-import com.github.pflooky.datagen.core.exception.{InvalidFieldConfigurationException, InvalidStepCountGeneratorConfigurationException}
+import com.github.pflooky.datagen.core.exception.InvalidStepCountGeneratorConfigurationException
 import com.github.pflooky.datagen.core.generator.provider.DataGenerator
 import com.github.pflooky.datagen.core.model.Constants._
 import com.github.pflooky.datagen.core.model._
-import com.github.pflooky.datagen.core.util.GeneratorUtil.{getDataGenerator, getRecordCount, zipWithIndex}
+import com.github.pflooky.datagen.core.util.GeneratorUtil.{getDataGenerator, getRecordCount}
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import net.datafaker.Faker
 import org.apache.spark.sql.expressions.UserDefinedFunction
@@ -21,9 +21,9 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
 
   private val OBJECT_MAPPER = ObjectMapperUtil.jsonObjectMapper
   private val RANDOM = new Random()
-  sparkSession.udf.register("GENERATE_REGEX", udf((s: String) => faker.regexify(s)))
-  sparkSession.udf.register("GENERATE_FAKER_EXPRESSION", udf((s: String) => faker.expression(s)))
-  sparkSession.udf.register("GENERATE_RANDOM_STRING", udf((minLength: Int, maxLength: Int) => {
+  sparkSession.udf.register(GENERATE_REGEX_UDF, udf((s: String) => faker.regexify(s)))
+  sparkSession.udf.register(GENERATE_FAKER_EXPRESSION_UDF, udf((s: String) => faker.expression(s)))
+  sparkSession.udf.register(GENERATE_RANDOM_ALPHANUMERIC_STRING_UDF, udf((minLength: Int, maxLength: Int) => {
     val length = RANDOM.nextInt(maxLength + 1) + minLength
     RANDOM.alphanumeric.take(length).mkString("")
   }))
@@ -136,42 +136,13 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
       .filter(field => {
         val generatorOptions = field.generator.map(_.options).getOrElse(Map())
         val isOmit = !generatorOptions.getOrElse(OMIT, "false").toString.toBoolean
-        //TODO look at how user defined types can be handled, mpaa_rating in dvdrental postgres
-//        val isNotUdt = !generatorOptions.getOrElse(SOURCE_COLUMN_DATA_TYPE, "string").toString.equalsIgnoreCase("USER-DEFINED")
-        //TODO data source can auto-generate column values like serial
-//        val isNotGeneratedAtDataSource = !generatorOptions.getOrElse(DEFAULT_VALUE, "").toString.startsWith("nextval")
         isOmit
       })
       .map(field => {
-        val structField: StructField = createStructFieldFromField(field)
+        val structField = field.toStructField
         getDataGenerator(field.generator, structField, faker)
       })
     structFieldsWithDataGenerators
-  }
-
-  private def createStructFieldFromField(field: Field): StructField = {
-    if (field.schema.isDefined) {
-      val innerStructFields = createStructTypeFromSchema(field.schema.get)
-      if (field.`type`.isDefined && field.`type`.get.toLowerCase.startsWith("array")) {
-        StructField(field.name, ArrayType(innerStructFields, field.nullable), field.nullable)
-      } else {
-        StructField(field.name, innerStructFields, field.nullable)
-      }
-    } else if (field.generator.isDefined && field.`type`.isDefined) {
-      val metadata = Metadata.fromJson(OBJECT_MAPPER.writeValueAsString(field.generator.get.options))
-      StructField(field.name, DataType.fromDDL(field.`type`.get), field.nullable, metadata)
-    } else {
-      throw new InvalidFieldConfigurationException(field)
-    }
-  }
-
-  private def createStructTypeFromSchema(schema: Schema): StructType = {
-    if (schema.fields.isDefined) {
-      val structFields = schema.fields.get.map(createStructFieldFromField)
-      StructType(structFields)
-    } else {
-      StructType(Seq())
-    }
   }
 
 }

@@ -116,6 +116,11 @@ object Constants {
   lazy val MANUAL = "manual"
   lazy val GENERATED = "generated"
 
+  //spark udf
+  lazy val GENERATE_REGEX_UDF = "GENERATE_REGEX"
+  lazy val GENERATE_FAKER_EXPRESSION_UDF = "GENERATE_FAKER_EXPRESSION"
+  lazy val GENERATE_RANDOM_ALPHANUMERIC_STRING_UDF = "GENERATE_RANDOM_ALPHANUMERIC_STRING"
+
   //status
   lazy val STARTED = "started"
   lazy val FINISHED = "finished"

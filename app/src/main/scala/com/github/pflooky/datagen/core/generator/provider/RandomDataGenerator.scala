@@ -56,7 +56,7 @@ object RandomDataGenerator {
 
     override def generateSqlExpression: String = {
       if (tryExpression.isSuccess) {
-        s"SUBSTRING(GENERATE_FAKER_EXPRESSION('${tryExpression.get}'), $minLength, $maxLength)"
+        s"SUBSTRING($GENERATE_FAKER_EXPRESSION_UDF('${tryExpression.get}'), $minLength, $maxLength)"
       } else {
         val sourceDataType = tryGetValue(structField.metadata, SOURCE_COLUMN_DATA_TYPE, "string")
         val baseSql = s"SUBSTRING(REGEXP_REPLACE(BASE64(MD5(CONCAT($sqlRandom, CURRENT_TIMESTAMP()))), '\\\\+|/|=', ' '), $minLength, $maxLength)"
