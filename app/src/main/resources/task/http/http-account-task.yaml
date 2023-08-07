@@ -1,68 +1,72 @@
 name: "json_account_http"
 steps:
   - name: "account"
-    type: "json"
     count:
-      total: 1000
-    options:
-      httpMethod: "PUT"
-      httpContentType: "application/json"
-      httpHeader.first-name: "peter"
-      httpHeader.amount: 100
+      total: 50
     schema:
       fields:
-        - name: "account_id"
-          type: "string"
+        - name: "url"
           generator:
-            type: "random"
-        - name: "year"
-          type: "int"
-          generator:
-            type: "random"
+            type: "sql"
             options:
-              minValue: 2021
-              maxValue: 2022
-        - name: "amount"
-          type: "double"
+              sql: "CONCAT('http://localhost:80/anything/', content.account_id)"
+        - name: "method"
+          static: "PUT"
+        - name: "content_type"
+          static: "application/json"
+        - name: "headers"
+          type: "array<struct<key: string, value: string>>"
           generator:
-            type: "random"
+            type: "sql"
             options:
-              minValue: 10.0
-              maxValue: 100.0
-        - name: "details"
+              sql: >-
+                array(
+                  named_struct('key', 'account-id', 'value', content.account_id),
+                  named_struct('key', 'updated', 'value', content.details.updated_by.time)
+                )
+        - name: "value"
+          generator:
+            type: "sql"
+            options:
+              sql: "to_json(content)"
+        - name: "content"
           schema:
             fields:
-              - name: "name"
-                type: "string"
+              - name: "account_id"
+              - name: "year"
+                type: "int"
                 generator:
-                  type: "random"
-              - name: "txn_date"
-                type: "date"
-                generator:
-                  type: "random"
                   options:
-                    minValue: "2021-01-01"
-                    maxValue: "2021-12-31"
-              - name: "updated_by"
-                schema:
-                  fields:
-                    - name: "user"
-                      type: "string"
-                      generator:
-                        type: "random"
-                    - name: "time"
-                      type: "timestamp"
-                      generator:
-                        type: "random"
-        - name: "transactions"
-          type: "array"
-          schema:
-            fields:
-              - name: "txn_date"
-                type: "date"
-                generator:
-                  type: "random"
+                    minValue: 2021
+                    maxValue: 2022
               - name: "amount"
                 type: "double"
                 generator:
-                  type: "random"
+                  options:
+                    minValue: 10.0
+                    maxValue: 100.0
+              - name: "details"
+                schema:
+                  fields:
+                    - name: "name"
+                    - name: "txn_date"
+                      type: "date"
+                      generator:
+                        type: "random"
+                        options:
+                          minValue: "2021-01-01"
+                          maxValue: "2021-12-31"
+                    - name: "updated_by"
+                      schema:
+                        fields:
+                          - name: "user"
+                          - name: "time"
+                            type: "timestamp"
+              - name: "transactions"
+                type: "array"
+                schema:
+                  fields:
+                    - name: "txn_date"
+                      type: "date"
+                    - name: "amount"
+                      type: "double"

@@ -24,9 +24,6 @@ object Constants {
   lazy val PARTITIONS = "partitions"
   lazy val PARTITION_BY = "partitionBy"
   lazy val BODY_FIELD = "bodyField"
-  lazy val HTTP_METHOD = "httpMethod"
-  lazy val HTTP_HEADER_PREFIX = "httpHeader"
-  lazy val HTTP_CONTENT_TYPE = "httpContentType"
   lazy val JMS_DESTINATION_NAME = "destinationName"
   lazy val JMS_INITIAL_CONTEXT_FACTORY = "initialContextFactory"
   lazy val JMS_CONNECTION_FACTORY = "connectionFactory"
@@ -71,6 +68,12 @@ object Constants {
   lazy val PER_COLUMN_INDEX_COL = "_per_col_index"
   lazy val RECORD_COUNT_GENERATOR_COL = "record_count_generator"
   lazy val INDEX_INC_COL = "__index_inc"
+  lazy val REAL_TIME_BODY_COL = "value"
+  lazy val REAL_TIME_PARTITION_COL = "partition"
+  lazy val REAL_TIME_HEADERS_COL = "headers"
+  lazy val REAL_TIME_METHOD_COL = "method"
+  lazy val REAL_TIME_CONTENT_TYPE_COL = "content_type"
+  lazy val REAL_TIME_URL_COL = "url"
 
   //field metadata
   lazy val RANDOM_SEED = "seed"
@@ -105,6 +108,7 @@ object Constants {
   lazy val DATA_SOURCE_GENERATION = "dataSourceGeneration"
   lazy val OMIT = "omit"
   lazy val CONSTRAINT_TYPE = "constraintType"
+  lazy val STATIC = "static"
 
   //one of generator types
   lazy val ONE_OF_STRING = "string"

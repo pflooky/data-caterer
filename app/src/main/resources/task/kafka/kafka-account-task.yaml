@@ -37,7 +37,6 @@ steps:
 #            options:
 #              sql: "1"
         - name: "content"
-          type: "string"
           schema:
             fields:
               - name: "account_id"

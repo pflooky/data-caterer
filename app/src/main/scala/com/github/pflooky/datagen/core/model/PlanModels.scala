@@ -3,9 +3,9 @@ package com.github.pflooky.datagen.core.model
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.github.pflooky.datagen.core.exception.{ForeignKeyFormatException, InvalidFieldConfigurationException}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceDetail
-import com.github.pflooky.datagen.core.model.Constants.{GENERATED, IS_PRIMARY_KEY, IS_UNIQUE, ONE_OF, PRIMARY_KEY_POSITION, RANDOM}
+import com.github.pflooky.datagen.core.model.Constants.{GENERATED, IS_PRIMARY_KEY, IS_UNIQUE, ONE_OF, PRIMARY_KEY_POSITION, RANDOM, STATIC}
 import com.github.pflooky.datagen.core.util.{MetadataUtil, ObjectMapperUtil}
-import org.apache.spark.sql.types.{ArrayType, DataType, Metadata, StructField, StructType}
+import org.apache.spark.sql.types.{ArrayType, DataType, Metadata, MetadataBuilder, StructField, StructType}
 
 import scala.language.implicitConversions
 
@@ -127,10 +127,13 @@ object Schema {
   }
 }
 
-case class Field(name: String, `type`: Option[String] = None, generator: Option[Generator] = Some(Generator()),
-                 nullable: Boolean = false, defaultValue: Option[Any] = None, schema: Option[Schema] = None) {
+case class Field(name: String, `type`: Option[String] = Some("string"), generator: Option[Generator] = Some(Generator()),
+                 nullable: Boolean = true, static: Option[String] = None, schema: Option[Schema] = None) {
   def toStructField: StructField = {
-    if (schema.isDefined) {
+    if (static.isDefined) {
+      val metadata = new MetadataBuilder().putString(STATIC, static.get).build()
+      StructField(name, DataType.fromDDL(`type`.get), nullable, metadata)
+    } else if (schema.isDefined) {
       val innerStructFields = schema.get.toStructType
       if (`type`.isDefined && `type`.get.toLowerCase.startsWith("array")) {
         StructField(name, ArrayType(innerStructFields, nullable), nullable)

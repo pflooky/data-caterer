@@ -1,28 +1,35 @@
 package com.github.pflooky.datagen.core.sink.jms
 
-import com.github.pflooky.datagen.core.model.Constants.{BODY_FIELD, JMS_CONNECTION_FACTORY, JMS_DESTINATION_NAME, JMS_INITIAL_CONTEXT_FACTORY, JMS_VPN_NAME, PASSWORD, URL, USERNAME}
+import com.github.pflooky.datagen.core.model.Constants.{JMS_CONNECTION_FACTORY, JMS_DESTINATION_NAME, JMS_INITIAL_CONTEXT_FACTORY, JMS_VPN_NAME, PASSWORD, REAL_TIME_BODY_COL, REAL_TIME_HEADERS_COL, REAL_TIME_PARTITION_COL, URL, USERNAME}
 import com.github.pflooky.datagen.core.model.Step
 import com.github.pflooky.datagen.core.sink.RealTimeSinkProcessor
-import com.solacesystems.jms.SolMessageProducer
+import com.github.pflooky.datagen.core.util.RowUtil.getRowValue
+import org.apache.hadoop.shaded.com.nimbusds.jose.util.StandardCharset
 import org.apache.spark.sql.Row
 
-import java.io.Serializable
 import java.util.Properties
-import javax.jms.{Connection, ConnectionFactory, Destination, MessageProducer, Session}
+import javax.jms.{Connection, ConnectionFactory, Destination, MessageProducer, Session, TextMessage}
 import javax.naming.{Context, InitialContext}
 
 
 class JmsSinkProcessor(override var connectionConfig: Map[String, String],
                        override var step: Step) extends RealTimeSinkProcessor[(MessageProducer, Session, Connection)] {
   override val maxPoolSize: Int = 1
-  var bodyFieldOpt: Option[String] = step.options.get(BODY_FIELD)
 
   override def pushRowToSink(row: Row): Unit = {
-    val body = bodyFieldOpt.map(row.getAs[String]).getOrElse(row.json)
+    val body = row.getAs[String](REAL_TIME_BODY_COL)
     val (messageProducer, session, connection) = getConnectionFromPool
     val message = session.createTextMessage(body)
+    setAdditionalMessageProperties(row, message)
     messageProducer.send(message)
     returnConnectionToPool((messageProducer, session, connection))
+  }
+
+  private def setAdditionalMessageProperties(row: Row, message: TextMessage): Unit = {
+    val jmsPriority = getRowValue(row, REAL_TIME_PARTITION_COL, 4)
+    message.setJMSPriority(jmsPriority)
+    val properties = getRowValue[Array[(String, Array[Byte])]](row, REAL_TIME_HEADERS_COL, Array())
+    properties.foreach(property => message.setStringProperty(property._1, new String(property._2, StandardCharset.UTF_8)))
   }
 
   override def createConnection: (MessageProducer, Session, Connection) = {

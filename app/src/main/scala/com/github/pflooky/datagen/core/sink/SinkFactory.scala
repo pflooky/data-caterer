@@ -108,6 +108,7 @@ class SinkFactory(
       rateLimiter.acquire()
       sinkProcessor.pushRowToSink(row)
     })
+    sinkProcessor.close
   }
 
   @deprecated("Unstable for JMS connections")

@@ -5,61 +5,69 @@ steps:
     count:
       total: 50
     options:
-      destinationName: "/JNDI/Q/generated_test_queue"
+      destinationName: "/JNDI/Q/test_queue"
     schema:
       fields:
-        - name: "account_id"
-          type: "string"
+        - name: "value"
           generator:
-            type: "random"
-        - name: "year"
-          type: "int"
-          generator:
-            type: "random"
+            type: "sql"
             options:
-              minValue: 2021
-              maxValue: 2022
-        - name: "amount"
-          type: "double"
-          generator:
-            type: "random"
-            options:
-              minValue: 10.0
-              maxValue: 100.0
-        - name: "details"
+              sql: "to_json(content)"
+        - name: "content"
           schema:
             fields:
-              - name: "name"
+              - name: "account_id"
                 type: "string"
                 generator:
                   type: "random"
-              - name: "txn_date"
-                type: "date"
+              - name: "year"
+                type: "int"
                 generator:
                   type: "random"
                   options:
-                    minValue: "2021-01-01"
-                    maxValue: "2021-12-31"
-              - name: "updated_by"
-                schema:
-                  fields:
-                    - name: "user"
-                      type: "string"
-                      generator:
-                        type: "random"
-                    - name: "time"
-                      type: "timestamp"
-                      generator:
-                        type: "random"
-        - name: "transactions"
-          type: "array"
-          schema:
-            fields:
-              - name: "txn_date"
-                type: "date"
-                generator:
-                  type: "random"
+                    minValue: 2021
+                    maxValue: 2022
               - name: "amount"
                 type: "double"
                 generator:
                   type: "random"
+                  options:
+                    minValue: 10.0
+                    maxValue: 100.0
+              - name: "details"
+                schema:
+                  fields:
+                    - name: "name"
+                      type: "string"
+                      generator:
+                        type: "random"
+                    - name: "txn_date"
+                      type: "date"
+                      generator:
+                        type: "random"
+                        options:
+                          minValue: "2021-01-01"
+                          maxValue: "2021-12-31"
+                    - name: "updated_by"
+                      schema:
+                        fields:
+                          - name: "user"
+                            type: "string"
+                            generator:
+                              type: "random"
+                          - name: "time"
+                            type: "timestamp"
+                            generator:
+                              type: "random"
+              - name: "transactions"
+                type: "array"
+                schema:
+                  fields:
+                    - name: "txn_date"
+                      type: "date"
+                      generator:
+                        type: "random"
+                    - name: "amount"
+                      type: "double"
+                      generator:
+                        type: "random"

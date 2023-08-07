@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.provider
 
-import com.github.pflooky.datagen.core.model.Constants.{ENABLED_EDGE_CASES, ENABLED_NULL, IS_UNIQUE, LIST_MAXIMUM_LENGTH, LIST_MINIMUM_LENGTH, PROBABILITY_OF_EDGE_CASES, PROBABILITY_OF_NULLS, RANDOM_SEED, SQL}
+import com.github.pflooky.datagen.core.model.Constants.{ENABLED_EDGE_CASES, ENABLED_NULL, IS_UNIQUE, LIST_MAXIMUM_LENGTH, LIST_MINIMUM_LENGTH, PROBABILITY_OF_EDGE_CASES, PROBABILITY_OF_NULLS, RANDOM_SEED, SQL, STATIC}
 import net.datafaker.Faker
 import org.apache.spark.sql.functions.{expr, rand, when}
 import org.apache.spark.sql.types.StructField
@@ -29,8 +29,12 @@ trait DataGenerator[T] extends Serializable {
   lazy val probabilityOfNull: Double = if (structField.metadata.contains(PROBABILITY_OF_NULLS)) structField.metadata.getString(PROBABILITY_OF_NULLS).toDouble else 0.1
   lazy val probabilityOfEdgeCases: Double = if (structField.metadata.contains(PROBABILITY_OF_EDGE_CASES)) structField.metadata.getString(PROBABILITY_OF_EDGE_CASES).toDouble else 0.5
   lazy val prevGenerated: mutable.Set[T] = mutable.Set[T]()
+  lazy val optStatic: Option[String] = if (structField.metadata.contains(STATIC)) Some(structField.metadata.getString(STATIC)) else None
 
   def generateSqlExpressionWrapper: String = {
+    if (optStatic.isDefined) {
+      return s"'${optStatic.get}'"
+    }
     val baseSqlExpression = generateSqlExpression
     val caseRandom = optRandomSeed.map(s => rand(s)).getOrElse(rand())
     (enabledEdgeCases, enabledNull) match {

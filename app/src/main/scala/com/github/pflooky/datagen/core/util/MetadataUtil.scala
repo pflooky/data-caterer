@@ -4,7 +4,7 @@ import com.github.pflooky.datagen.core.config.MetadataConfig
 import com.github.pflooky.datagen.core.generator.metadata.ExpressionPredictor
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ColumnMetadata
-import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CSV, DELTA, DISTINCT_COUNT, EXPRESSION, HISTOGRAM, HTTP, HTTP_METHOD, IS_NULLABLE, JDBC, JDBC_TABLE, JMS, JMS_DESTINATION_NAME, JSON, ONE_OF, ORC, PARQUET, PATH, ROW_COUNT}
+import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CSV, DELTA, DISTINCT_COUNT, EXPRESSION, HISTOGRAM, HTTP, IS_NULLABLE, JDBC, JDBC_TABLE, JMS, JMS_DESTINATION_NAME, JSON, ONE_OF, ORC, PARQUET, PATH, ROW_COUNT}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.CatalogColumnStat
@@ -143,9 +143,9 @@ object MetadataUtil {
         options(PATH).replaceAll("s3(a|n?)://|wasb(s?)://|gs://|file://|hdfs://[a-zA-Z0-9]+:[0-9]+", "")
       case JMS =>
         options(JMS_DESTINATION_NAME)
-      case HTTP =>
-        //TODO do we support delete via HTTP?
-        options(HTTP_METHOD)
+//      case HTTP =>
+//        //TODO do we support delete via HTTP?
+//        options(HTTP_METHOD)
       case _ =>
         LOGGER.warn(s"Unsupported data format for record tracking, format=$lowerFormat")
         throw new RuntimeException(s"Unsupported data format for record tracking, format=$lowerFormat")

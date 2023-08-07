@@ -6,15 +6,15 @@ tasks:
     enabled: false
   - name: "json_account_kafka"
     dataSourceName: "kafka"
-    enabled: true
+    enabled: false
   - name: "json_account_file"
     dataSourceName: "json"
     enabled: false
   - name: "json_account_http"
     dataSourceName: "httpbin"
-    enabled: false
+    enabled: true
     
-sinkOptions:
-  foreignKeys:
-    "solace.jms_account.account_id":
-      - "json.file_account.account_id"
+#sinkOptions:
+#  foreignKeys:
+#    "solace.jms_account.account_id":
+#      - "json.file_account.account_id"

@@ -1,12 +1,12 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.http
 
 import com.github.pflooky.datagen.core.generator.metadata.datasource.{DataSourceMetadata, MetadataProcessor}
-import com.github.pflooky.datagen.core.model.Constants.{HTTP_CONTENT_TYPE, HTTP_HEADER_PREFIX, HTTP_METHOD, SCHEMA_LOCATION}
+import com.github.pflooky.datagen.core.model.Constants.SCHEMA_LOCATION
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.parser.OpenAPIV3Parser
 import org.apache.log4j.Logger
 
-import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapConverter}
+import scala.collection.JavaConverters.mapAsScalaMapConverter
 
 class HttpMetadataProcessor(override val dataSourceMetadata: DataSourceMetadata) extends MetadataProcessor {
 
@@ -25,14 +25,16 @@ class HttpMetadataProcessor(override val dataSourceMetadata: DataSourceMetadata)
               val requestContent = pathOperation._2.getRequestBody.getContent.asScala.head
               val requestContentType = requestContent._1
               val schema = requestContent._2.getSchema
-              val headers = pathOperation._2.getParameters.asScala
-                .filter(p => p.getIn == "header")
-                .map(p => (s"$HTTP_HEADER_PREFIX.${p.getName}", ""))
-
-              Map(
-                HTTP_METHOD -> pathOperation._1.name(),
-                HTTP_CONTENT_TYPE -> requestContent._1,
-              ) ++ headers
+//              val headers = pathOperation._2.getParameters.asScala
+//                .filter(p => p.getIn == "header")
+//                .map(p => (s"$HTTP_HEADER_PREFIX.${p.getName}", ""))
+//
+//              Map(
+//                HTTP_METHOD -> pathOperation._1.name(),
+//                HTTP_CONTENT_TYPE -> requestContent._1,
+//              ) ++
+//                headers
+              Map()
             })
         })
         Array()

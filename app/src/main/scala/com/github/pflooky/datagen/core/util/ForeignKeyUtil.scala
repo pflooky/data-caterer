@@ -39,7 +39,7 @@ object ForeignKeyUtil {
             s"to exist from generated data, data-source-name=${fkr._1.dataSource}")
         }
         if (!isSubForeignKeySourceEnabled) {
-          LOGGER.warn(s"Sub data sources within foreign key relationship are not enabled, disabled-task")
+          LOGGER.warn(s"Sub data sources within foreign key relationship are not enabled, disabled-task=${disabledSubSources.mkString(",")}")
         }
         if (!columnExistsMain) {
           LOGGER.warn(s"Main column for foreign key references is not created, data-source-name=${fkr._1.dataSource}, column=${fkr._1.column}")

@@ -54,11 +54,9 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
       .map(s => s"`$s`")
 
     val dfAllFields = df.selectExpr(noSqlGeneratedFields ++ sqlFieldExpr: _*)
-    if (step.count.perColumn.isDefined) {
-      generateRecordsPerColumn(dataGenerators, step, step.count.perColumn.get, dfAllFields)
-    } else {
-      dfAllFields
-    }
+    step.count.perColumn
+      .map(perCol => generateRecordsPerColumn(dataGenerators, step, perCol, dfAllFields))
+      .getOrElse(dfAllFields)
   }
 
   def generateData(dataGenerators: List[DataGenerator[_]], step: Step): DataFrame = {
@@ -80,11 +78,9 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
     val df = sparkSession.createDataFrame(rddGeneratedData, structType)
     df.cache()
 
-    var dfPerCol = if (count.perColumn.isDefined) {
-      generateRecordsPerColumn(dataGenerators, step, count.perColumn.get, df)
-    } else {
-      df
-    }
+    var dfPerCol = count.perColumn
+      .map(perCol => generateRecordsPerColumn(dataGenerators, step, perCol, df))
+      .getOrElse(df)
     val sqlGeneratedFields = structType.fields.filter(f => f.metadata.contains(SQL))
     sqlGeneratedFields.foreach(field => {
       val allFields = structType.fields.filter(_ != field).map(_.name) ++ Array(s"${field.metadata.getString(SQL)} AS `${field.name}`")
@@ -138,10 +134,7 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
         val isOmit = !generatorOptions.getOrElse(OMIT, "false").toString.toBoolean
         isOmit
       })
-      .map(field => {
-        val structField = field.toStructField
-        getDataGenerator(field.generator, structField, faker)
-      })
+      .map(field => getDataGenerator(field.generator, field.toStructField, faker))
     structFieldsWithDataGenerators
   }
 

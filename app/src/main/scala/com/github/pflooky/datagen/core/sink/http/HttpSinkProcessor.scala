@@ -1,8 +1,9 @@
 package com.github.pflooky.datagen.core.sink.http
 
-import com.github.pflooky.datagen.core.model.Constants.{BODY_FIELD, HTTP_CONTENT_TYPE, HTTP_HEADER_PREFIX, HTTP_METHOD, PASSWORD, URL, USERNAME}
+import com.github.pflooky.datagen.core.model.Constants.{PASSWORD, REAL_TIME_BODY_COL, REAL_TIME_CONTENT_TYPE_COL, REAL_TIME_HEADERS_COL, REAL_TIME_METHOD_COL, REAL_TIME_URL_COL, USERNAME}
 import com.github.pflooky.datagen.core.model.Step
 import com.github.pflooky.datagen.core.sink.RealTimeSinkProcessor
+import com.github.pflooky.datagen.core.util.RowUtil.getRowValue
 import dispatch.Defaults._
 import dispatch._
 import org.apache.log4j.Logger
@@ -10,6 +11,7 @@ import org.apache.spark.sql.Row
 
 import java.nio.charset.Charset
 import java.util.Base64
+import scala.collection.mutable
 import scala.util.{Failure, Success}
 
 class HttpSinkProcessor(override var connectionConfig: Map[String, String],
@@ -17,15 +19,12 @@ class HttpSinkProcessor(override var connectionConfig: Map[String, String],
                         http: Http = Http.default) extends RealTimeSinkProcessor[Unit] {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
-  private val METHOD = step.options(HTTP_METHOD)
-  private val HTTP_URL = connectionConfig(URL)
-  private val BODY_FIELD_OPT = step.options.get(BODY_FIELD)
-  private val CONTENT_TYPE = step.options.getOrElse(HTTP_CONTENT_TYPE, "application/json")
-  private val HEADERS = getHeaders
 
   override def createConnection: Unit = {}
 
-  override def close: Unit = {}
+  override def close: Unit = {
+    http.client.close()
+  }
 
   override def pushRowToSink(row: Row): Unit = {
     val request = createHttpRequest(row)
@@ -36,26 +35,26 @@ class HttpSinkProcessor(override var connectionConfig: Map[String, String],
         LOGGER.debug(s"Successful HTTP request, url=${value.getUri}, status-code=${value.getStatusCode}, status-text=${value.getStatusText}, " +
           s"response-body=${value.getResponseBody}")
       case Failure(exception) =>
-        LOGGER.error(s"Failed HTTP request, url=$HTTP_URL, message=${exception.getMessage}")
+        LOGGER.error(s"Failed HTTP request, url=, message=${exception.getMessage}")
     }
   }
 
   def createHttpRequest(row: Row): Req = {
-    val body = BODY_FIELD_OPT.map(row.getAs[String]).getOrElse(row.json)
+    val httpUrl = getRowValue[String](row, REAL_TIME_URL_COL)
+    val body = getRowValue[String](row, REAL_TIME_BODY_COL, "")
+    val method = getRowValue[String](row, REAL_TIME_METHOD_COL, "GET")
+    val headers = getRowValue[mutable.WrappedArray[Row]](row, REAL_TIME_HEADERS_COL, mutable.WrappedArray.empty[Row])
+    val contentType = getRowValue[String](row, REAL_TIME_CONTENT_TYPE_COL, "application/json")
 
-    url(HTTP_URL)
-      .setMethod(METHOD)
+    url(httpUrl)
+      .setMethod(method)
       .setBody(body)
-      .setHeaders(HEADERS)
-      .setContentType(CONTENT_TYPE, Charset.defaultCharset())
+      .setHeaders(getHeaders(headers))
+      .setContentType(contentType, Charset.defaultCharset())
   }
 
-  protected def getHeaders: Map[String, Seq[String]] = {
-    val baseHeaders = step.options.filter(_._1.startsWith(s"$HTTP_HEADER_PREFIX."))
-      .map(h => {
-        val key = h._1.replaceFirst(HTTP_HEADER_PREFIX + "\\.", "")
-        (key, Seq(h._2))
-      })
+  private def getHeaders(rowHeaders: mutable.WrappedArray[Row]): Map[String, Seq[String]] = {
+    val baseHeaders = rowHeaders.map(r => (r.getAs[String]("key"), Seq(r.getAs[String]("value")))).toMap
     if (connectionConfig.contains(USERNAME) && connectionConfig.contains(PASSWORD)) {
       val user = connectionConfig(USERNAME)
       val password = connectionConfig(PASSWORD)
