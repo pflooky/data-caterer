@@ -109,6 +109,7 @@ object Constants {
   lazy val OMIT = "omit"
   lazy val CONSTRAINT_TYPE = "constraintType"
   lazy val STATIC = "static"
+  lazy val CLUSTERING_ORDER = "clusteringOrder"
 
   //one of generator types
   lazy val ONE_OF_STRING = "string"

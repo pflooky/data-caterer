@@ -32,7 +32,7 @@ object MetadataUtil {
   def mapToStructFields(sourceData: DataFrame, dataSourceReadOptions: Map[String, String],
                         columnDataProfilingMetadata: List[DataProfilingMetadata],
                         additionalColumnMetadata: Dataset[ColumnMetadata])(implicit sparkSession: SparkSession): Array[StructField] = {
-    additionalColumnMetadata.cache()
+    if (!additionalColumnMetadata.storageLevel.useMemory) additionalColumnMetadata.cache()
     val fieldsWithMetadata = sourceData.schema.fields.map(field => {
       val baseMetadata = new MetadataBuilder().withMetadata(field.metadata)
       columnDataProfilingMetadata.find(_.columnName == field.name).foreach(c => baseMetadata.withMetadata(mapToMetadata(c.metadata)))

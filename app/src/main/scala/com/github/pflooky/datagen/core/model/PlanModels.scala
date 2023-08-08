@@ -157,7 +157,7 @@ object Field {
     } else {
       Generator(RANDOM, metadataOptions)
     }
-    Field(structField.name, Some(structField.dataType.sql), Some(generator), structField.nullable)
+    Field(structField.name, Some(structField.dataType.sql.toLowerCase), Some(generator), structField.nullable)
   }
 }
 

@@ -1,6 +1,5 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.database
 
-import com.github.pflooky.datagen.core.model.Constants.{EXPRESSION, OMIT}
 import org.apache.spark.sql.Row
 
 case class PostgresMetadata(name: String, connectionConfig: Map[String, String]) extends JdbcMetadata {
@@ -54,11 +53,6 @@ case class PostgresMetadata(name: String, connectionConfig: Map[String, String])
       |WHERE tc.constraint_type = 'FOREIGN KEY'""".stripMargin
 
   override def dataSourceGenerationMetadata(row: Row): Map[String, String] = {
-//    val sourceDataType = row.getAs[String]("source_data_type")
-//    if (sourceDataType.toLowerCase == "serial") {
-//      Map(EXPRESSION -> "monotonically_increasing_id()", OMIT -> "true")
-//    } else {
-      Map()
-//    }
+    Map()
   }
 }

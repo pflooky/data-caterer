@@ -58,6 +58,7 @@ dependencies {
     // kafka
     advancedImpl("org.apache.spark:spark-sql-kafka-0-10_$scalaVersion:$sparkVersion")
     // jms
+    //TODO advancedImpl("jakarta.jms:jakarta.jms-api:3.1.0") jms 3.x
     advancedImpl("javax.jms:javax.jms-api:2.0.1")
     advancedImpl("com.solacesystems:sol-jms:10.20.0")
 
@@ -152,10 +153,6 @@ tasks.compileScala {
     dependsOn(tasks["defineApplicationType"])
 }
 
-//tasks.build {
-//    finalizedBy(tasks["basicJar"], tasks["advancedJar"])
-//}
-
 tasks.test {
     finalizedBy(tasks.reportScoverage)
 }
@@ -209,15 +206,4 @@ fun listConfigurationDependencies(configuration: Configuration) {
     }
     println(out)
 }
-
-//tasks.register<Copy>("unpackShadow") {
-//    dependsOn("shadowJar")
-//    from(zipTree("$buildDir/libs/${tasks.withType(ShadowJar::class.java).getByName("shadowJar").archiveFileName.get()}"))
-//    into("$buildDir/unpacked-shadow")
-//}
-//
-//tasks.build {
-//    finalizedBy("unpackShadow")
-//}
-//tasks.getByName("build").finalizedBy(tasks.getByName("unpackShadow"))
 

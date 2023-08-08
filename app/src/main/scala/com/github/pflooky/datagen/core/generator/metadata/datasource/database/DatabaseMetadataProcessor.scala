@@ -16,12 +16,12 @@ class DatabaseMetadataProcessor(override val dataSourceMetadata: DataSourceMetad
       .options(databaseMetadata.connectionConfig ++ databaseMetadata.metadataTable)
       .load()
       .selectExpr(databaseMetadata.selectExpr: _*)
-    val optFilterQuery = databaseMetadata.createFilterQuery
-    val filteredSchemasAndTables = if (optFilterQuery.isDefined) {
-      allDatabaseSchemasWithTableName.filter(optFilterQuery.get)
-    } else {
-      allDatabaseSchemasWithTableName
-    }
+    val baseTableFilter = "table_type = 'BASE TABLE'"
+    val filteredSchemasAndTables = databaseMetadata.createFilterQuery
+      .map(f => s"$f AND $baseTableFilter")
+      .orElse(Some(baseTableFilter))
+      .map(fq => allDatabaseSchemasWithTableName.filter(fq))
+      .getOrElse(allDatabaseSchemasWithTableName)
     // have to collect here due to being unable to use encoder for DataType and Metadata from Spark. Should be okay given data size is small
     filteredSchemasAndTables.collect()
       .map(r => databaseMetadata.getTableDataOptions(r.getAs[String]("schema"), r.getAs[String]("table")))

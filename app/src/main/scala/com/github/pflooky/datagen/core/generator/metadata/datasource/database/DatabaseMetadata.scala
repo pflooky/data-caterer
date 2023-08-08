@@ -39,16 +39,14 @@ trait JdbcMetadata extends DatabaseMetadata {
 
   override val metadataTable: Map[String, String] = Map(JDBC_TABLE -> "information_schema.tables")
 
-  override val selectExpr: List[String] = List("table_schema AS schema", "table_name AS table")
+  override val selectExpr: List[String] = List("table_schema AS schema", "table_name AS table", "table_type")
 
   override def getTableDataOptions(schema: String, table: String): Map[String, String] = {
     Map(JDBC_TABLE -> s"$schema.$table")
   }
 
   override def createFilterQuery: Option[String] = {
-    val baseFilterQuery = super.createFilterQuery
-    val baseTableFilter = "table_type = 'BASE TABLE'"
-    baseFilterQuery.map(f => s"$f AND $baseTableFilter").orElse(Some(baseTableFilter))
+    super.createFilterQuery
   }
 
   override def toStepName(options: Map[String, String]): String = {
@@ -57,7 +55,6 @@ trait JdbcMetadata extends DatabaseMetadata {
   }
 
   override def getForeignKeys(implicit sparkSession: SparkSession): Dataset[ForeignKeyRelationship] = {
-    implicit val encoder: Encoder[ForeignKeyRelationship] = Encoders.kryo[ForeignKeyRelationship]
     val filteredForeignKeyData: DataFrame = runQuery(sparkSession, foreignKeyQuery)
 
     filteredForeignKeyData.map(r =>
@@ -75,7 +72,6 @@ trait JdbcMetadata extends DatabaseMetadata {
   }
 
   override def getAdditionalColumnMetadata(implicit sparkSession: SparkSession): Dataset[ColumnMetadata] = {
-    implicit val encoder: Encoder[ColumnMetadata] = Encoders.kryo[ColumnMetadata]
     val filteredTableConstraintData: DataFrame = runQuery(sparkSession, additionalColumnMetadataQuery)
 
     filteredTableConstraintData.map(r => {
