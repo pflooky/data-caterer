@@ -16,14 +16,14 @@ class DataGeneratorFactoryTest extends SparkSuite {
   private val dataGeneratorFactory = new DataGeneratorFactory(new Faker() with Serializable)
   private val schema = Schema("manual", Some(
     List(
-      Field("id", Some("string"), Some(Generator("random", Map()))),
-      Field("amount", Some("double"), Some(Generator("random", Map()))),
+      Field("id"),
+      Field("amount", Some("double")),
       Field("debit_credit", Some("string"), Some(Generator("oneOf", Map("oneOf" -> List("D", "C"))))),
       Field("name", Some("string"), Some(Generator("regex", Map("regex" -> "[A-Z][a-z]{2,6} [A-Z][a-z]{2,8}")))),
       Field("code", Some("int"), Some(Generator("sql", Map("sql" -> "CASE WHEN debit_credit == 'D' THEN 1 ELSE 0 END")))),
     )
   ))
-  private val simpleSchema = Schema("manual", Some(List(Field("id", Some("string"), Some(Generator("random", Map()))))))
+  private val simpleSchema = Schema("manual", Some(List(Field("id"))))
 
   test("Can generate data for basic step") {
     val step = Step("transaction", "parquet", Count(total = Some(10)), Map("path" -> "sample/output/parquet/transactions"), schema)

@@ -73,9 +73,15 @@ class DataGeneratorProcessor extends SparkProvider {
       task._2.steps.map(s => {
         val dataSourceName = getDataSourceName(task._1, s)
         val genDf = dataGeneratorFactory.generateDataForStep(s, task._1.dataSourceName)
-        val df = if (s.hasUniqueFields) {
-          uniqueFieldUtil.getUniqueFieldsValues(dataSourceName, genDf)
+
+        val primaryKeys = s.gatherPrimaryKeys
+        val primaryDf = if (primaryKeys.nonEmpty) {
+          genDf.dropDuplicates(primaryKeys)
         } else genDf
+
+        val df = if (s.hasUniqueFields) {
+          uniqueFieldUtil.getUniqueFieldsValues(dataSourceName, primaryDf)
+        } else primaryDf
         (dataSourceName, df)
       })
     ).toMap
@@ -97,7 +103,7 @@ class DataGeneratorProcessor extends SparkProvider {
     sinkDf.foreach(df => {
       val dataSourceName = df._1.split("\\.").head
       val step = stepByDataSourceName(df._1)
-      sinkFactory.pushToSink(df._2, dataSourceName, step, flagsConfig.enableCount)
+      sinkFactory.pushToSink(df._2, dataSourceName, step, flagsConfig)
 
       if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION) && flagsConfig.enableRecordTracking) {
         val format = connectionConfigsByName(dataSourceName)(FORMAT)

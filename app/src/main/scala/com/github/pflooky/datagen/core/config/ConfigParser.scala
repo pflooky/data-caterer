@@ -73,7 +73,8 @@ case class FlagsConfig(
                         enableGenerateData: Boolean,
                         enableRecordTracking: Boolean,
                         enableDeleteGeneratedRecords: Boolean,
-                        enableGeneratePlanAndTasks: Boolean = false
+                        enableGeneratePlanAndTasks: Boolean = false,
+                        enableFailOnError: Boolean = true,
                       ) {
   def this() = this(true, true, true, true)
 }

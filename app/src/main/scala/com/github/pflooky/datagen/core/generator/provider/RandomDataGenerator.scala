@@ -59,7 +59,7 @@ object RandomDataGenerator {
         s"SUBSTRING($GENERATE_FAKER_EXPRESSION_UDF('${tryExpression.get}'), $minLength, $maxLength)"
       } else {
         val sourceDataType = tryGetValue(structField.metadata, SOURCE_COLUMN_DATA_TYPE, "string")
-        val baseSql = s"SUBSTRING(REGEXP_REPLACE(BASE64(MD5(CONCAT($sqlRandom, CURRENT_TIMESTAMP()))), '\\\\+|/|=', ' '), $minLength, $maxLength)"
+        val baseSql = s"SUBSTRING(ARRAY_JOIN(SHUFFLE(SPLIT(REGEXP_REPLACE(BASE64(MD5(CONCAT($sqlRandom, CURRENT_TIMESTAMP()))), '\\\\+|/|=', ' '), '[.]')), ''), $minLength, $maxLength)"
         baseSql
 //        if (!sourceDataType.equalsIgnoreCase("string") && !sourceDataType.equalsIgnoreCase("character varying")) {
 //          s"CONCAT($baseSql, '::$sourceDataType')"

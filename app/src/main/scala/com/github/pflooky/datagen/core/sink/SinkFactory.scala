@@ -1,5 +1,6 @@
 package com.github.pflooky.datagen.core.sink
 
+import com.github.pflooky.datagen.core.config.FlagsConfig
 import com.github.pflooky.datagen.core.exception.UnsupportedRealTimeDataSourceFormat
 import com.github.pflooky.datagen.core.model.Constants._
 import com.github.pflooky.datagen.core.model.Step
@@ -19,26 +20,27 @@ class SinkFactory(
 
   private val LOGGER = Logger.getLogger(getClass.getName)
 
-  def pushToSink(df: DataFrame, dataSourceName: String, step: Step, enableCount: Boolean): Unit = {
+  def pushToSink(df: DataFrame, dataSourceName: String, step: Step, flagsConfig: FlagsConfig): Unit = {
     if (!connectionConfigs.contains(dataSourceName)) {
       throw new RuntimeException(s"Cannot find sink connection details in application config for data source, data-source-name=$dataSourceName, step-name=${step.name}")
     }
     val connectionConfig = connectionConfigs(dataSourceName)
-    val saveMode = connectionConfig.get(SAVE_MODE).map(_.toLowerCase.capitalize).map(SaveMode.valueOf).getOrElse(SaveMode.Ignore)
+    val saveMode = connectionConfig.get(SAVE_MODE).map(_.toLowerCase.capitalize).map(SaveMode.valueOf).getOrElse(SaveMode.Append)
     val saveModeName = saveMode.name()
     val format = connectionConfig(FORMAT)
     val enrichedConnectionConfig = additionalConnectionConfig(format, connectionConfig)
-    val count = if (enableCount) {
+    val count = if (flagsConfig.enableCount) {
       df.count().toString
     } else {
       LOGGER.warn("Count is disabled. It will help with performance. Defaulting to -1")
       "-1"
     }
     LOGGER.info(s"Pushing data to sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, num-records=$count, status=$STARTED")
-    saveData(df, dataSourceName, step, enrichedConnectionConfig, saveMode, saveModeName, format, count)
+    saveData(df, dataSourceName, step, enrichedConnectionConfig, saveMode, saveModeName, format, count, flagsConfig.enableFailOnError)
   }
 
-  private def saveData(df: DataFrame, dataSourceName: String, step: Step, connectionConfig: Map[String, String], saveMode: SaveMode, saveModeName: String, format: String, count: String): Unit = {
+  private def saveData(df: DataFrame, dataSourceName: String, step: Step, connectionConfig: Map[String, String],
+                       saveMode: SaveMode, saveModeName: String, format: String, count: String, enableFailOnError: Boolean = true): Unit = {
     val saveTiming = determineSaveTiming(dataSourceName, format, step.name)
     val trySaveData = Try(if (saveTiming.equalsIgnoreCase(BATCH)) {
       saveBatchData(df, saveMode, connectionConfig, step.options)
@@ -51,7 +53,8 @@ class SinkFactory(
 
     trySaveData match {
       case Failure(exception) =>
-        throw new RuntimeException(s"Failed to save data for sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, num-records=$count, status=$FAILED", exception)
+        LOGGER.error(s"Failed to save data for sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, num-records=$count, status=$FAILED, exception=${exception.getMessage.substring(0, 600)}")
+        if (enableFailOnError) throw new RuntimeException(exception)
       case Success(_) =>
         LOGGER.info(s"Successfully saved data to sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, num-records=$count, status=$FINISHED")
     }
@@ -149,7 +152,9 @@ class SinkFactory(
 
   private def additionalConnectionConfig(format: String, connectionConfig: Map[String, String]): Map[String, String] = {
     format match {
-      case POSTGRES => if (connectionConfig.contains("stringtype")) connectionConfig else connectionConfig ++ Map("stringtype" -> "unspecified")
+      case JDBC => if (connectionConfig(DRIVER).equalsIgnoreCase(POSTGRES_DRIVER) && !connectionConfig.contains("stringtype")) {
+        connectionConfig ++ Map("stringtype" -> "unspecified")
+      } else connectionConfig
       case _ => connectionConfig
     }
 
