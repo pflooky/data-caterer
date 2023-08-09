@@ -21,12 +21,13 @@ class SinkFactory(
 
   def pushToSink(df: DataFrame, dataSourceName: String, step: Step, enableCount: Boolean): Unit = {
     if (!connectionConfigs.contains(dataSourceName)) {
-      throw new RuntimeException(s"Cannot find sink connection details in application.conf for data source, data-source-name=$dataSourceName, step-name=${step.name}")
+      throw new RuntimeException(s"Cannot find sink connection details in application config for data source, data-source-name=$dataSourceName, step-name=${step.name}")
     }
     val connectionConfig = connectionConfigs(dataSourceName)
-    val saveMode = connectionConfig.get(SAVE_MODE).map(_.toLowerCase.capitalize).map(SaveMode.valueOf).getOrElse(SaveMode.Append)
+    val saveMode = connectionConfig.get(SAVE_MODE).map(_.toLowerCase.capitalize).map(SaveMode.valueOf).getOrElse(SaveMode.Ignore)
     val saveModeName = saveMode.name()
     val format = connectionConfig(FORMAT)
+    val enrichedConnectionConfig = additionalConnectionConfig(format, connectionConfig)
     val count = if (enableCount) {
       df.count().toString
     } else {
@@ -34,7 +35,7 @@ class SinkFactory(
       "-1"
     }
     LOGGER.info(s"Pushing data to sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, num-records=$count, status=$STARTED")
-    saveData(df, dataSourceName, step, connectionConfig, saveMode, saveModeName, format, count)
+    saveData(df, dataSourceName, step, enrichedConnectionConfig, saveMode, saveModeName, format, count)
   }
 
   private def saveData(df: DataFrame, dataSourceName: String, step: Step, connectionConfig: Map[String, String], saveMode: SaveMode, saveModeName: String, format: String, count: String): Unit = {
@@ -59,11 +60,11 @@ class SinkFactory(
   private def determineSaveTiming(dataSourceName: String, format: String, stepName: String): String = {
     format match {
       case HTTP | JMS =>
-        LOGGER.info(s"Given the step type is either HTTP or JMS, data will be generated in real-time mode. " +
+        LOGGER.debug(s"Given the step type is either HTTP or JMS, data will be generated in real-time mode. " +
           s"It will be based on requests per second defined at plan level, data-source-name=$dataSourceName, step-name=$stepName, format=$format")
         REAL_TIME
       case _ =>
-        LOGGER.info(s"Will generate data in batch mode for step, data-source-name=$dataSourceName, step-name=$stepName, format=$format")
+        LOGGER.debug(s"Will generate data in batch mode for step, data-source-name=$dataSourceName, step-name=$stepName, format=$format")
         BATCH
     }
   }
@@ -144,5 +145,13 @@ class SinkFactory(
       case JMS => new JmsSinkProcessor(connectionConfig, step)
       case x => throw new UnsupportedRealTimeDataSourceFormat(x)
     }
+  }
+
+  private def additionalConnectionConfig(format: String, connectionConfig: Map[String, String]): Map[String, String] = {
+    format match {
+      case POSTGRES => if (connectionConfig.contains("stringtype")) connectionConfig else connectionConfig ++ Map("stringtype" -> "unspecified")
+      case _ => connectionConfig
+    }
+
   }
 }

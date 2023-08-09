@@ -17,33 +17,14 @@ class DataSourceMetadataFactory extends SparkProvider {
 
   def extractAllDataSourceMetadata(): Option[(Plan, List[Task])] = {
     if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION) && flagsConfig.enableGeneratePlanAndTasks) {
-      LOGGER.info("Attempting to extract all data source metadata as defined in connection configurations in application.conf")
-      val connectionMetadata = connectionConfigsByName.map(connectionConfig => {
-        val format = connectionConfig._2(FORMAT)
-        val connection = format match {
-          case CASSANDRA => Some(CassandraMetadata(connectionConfig._1, connectionConfig._2))
-          case JDBC =>
-            connectionConfig._2(DRIVER) match {
-              case POSTGRES_DRIVER => Some(PostgresMetadata(connectionConfig._1, connectionConfig._2))
-              case MYSQL_DRIVER => Some(MysqlMetadata(connectionConfig._1, connectionConfig._2))
-              case _ => None
-            }
-          case CSV | JSON | PARQUET | DELTA | ORC => Some(FileMetadata(connectionConfig._1, format, connectionConfig._2))
-          case HTTP => Some(HttpMetadata(connectionConfig._1, format, connectionConfig._2))
-          case JMS => Some(JmsMetadata(connectionConfig._1, format, connectionConfig._2))
-          case _ => None
-        }
-        if (connection.isEmpty) {
-          LOGGER.warn(s"Metadata extraction not supported for connection type '${connectionConfig._2(FORMAT)}', connection-name=${connectionConfig._1}")
-        }
-        connection
-      }).toList
+      LOGGER.info("Attempting to extract all data source metadata as defined in connection configurations in application config")
+      val connectionMetadata = connectionConfigsByName.map(getMetadataFromConnectionConfig).filter(_.isDefined).map(_.get).toList
 
-      val metadataPerConnection = connectionMetadata.filter(_.isDefined).map(_.get).map(x => {
+      val metadataPerConnection = connectionMetadata.map(x => {
         //given foreign keys defined for a data source, ensure these columns are always generated (OMIT -> false)
-//        val foreignKeys = x.getForeignKeys
-//        val metadata = getMetadataForDataSource(x)
-//        metadata.filter(y => y.dataSourceMetadata.name)
+        //        val foreignKeys = x.getForeignKeys
+        //        val metadata = getMetadataForDataSource(x)
+        //        metadata.filter(y => y.dataSourceMetadata.name)
         (x, x.getForeignKeys, getMetadataForDataSource(x))
       })
       val generatedTasksFromMetadata = metadataPerConnection.map(m => (m._1.name, Task.fromMetadata(m._1.name, m._1.format, m._3)))
@@ -67,12 +48,11 @@ class DataSourceMetadataFactory extends SparkProvider {
     }
     val allDataSourceReadOptions = metadataProcessor.getSubDataSourcesMetadata
 
-    val numSubDataSources = allDataSourceReadOptions.length
-    if (numSubDataSources == 0) {
-      LOGGER.warn(s"Unable to find any sub data sources, name=${dataSourceMetadata.name}, format=${dataSourceMetadata.format}")
-    } else {
-      LOGGER.info(s"Found sub data sources, name=${dataSourceMetadata.name}, format=${dataSourceMetadata.format}, num-sub-data-sources=$numSubDataSources")
+    allDataSourceReadOptions.length match {
+      case 0 => LOGGER.warn(s"Unable to find any sub data sources, name=${dataSourceMetadata.name}, format=${dataSourceMetadata.format}")
+      case i => LOGGER.info(s"Found sub data sources, name=${dataSourceMetadata.name}, format=${dataSourceMetadata.format}, num-sub-data-sources=$i")
     }
+
     val additionalColumnMetadata = dataSourceMetadata.getAdditionalColumnMetadata
 
     allDataSourceReadOptions.map(dataSourceReadOptions => {
@@ -89,6 +69,27 @@ class DataSourceMetadataFactory extends SparkProvider {
       val structFields = MetadataUtil.mapToStructFields(data, dataSourceReadOptions, fieldsWithDataProfilingMetadata, additionalColumnMetadata)
       DataSourceDetail(dataSourceMetadata, dataSourceReadOptions, StructType(structFields))
     }).toList
+  }
+
+  private def getMetadataFromConnectionConfig(connectionConfig: (String, Map[String, String])): Option[DataSourceMetadata] = {
+    val format = connectionConfig._2(FORMAT)
+    val connection = format match {
+      case CASSANDRA => Some(CassandraMetadata(connectionConfig._1, connectionConfig._2))
+      case JDBC =>
+        connectionConfig._2(DRIVER) match {
+          case POSTGRES_DRIVER => Some(PostgresMetadata(connectionConfig._1, connectionConfig._2))
+          case MYSQL_DRIVER => Some(MysqlMetadata(connectionConfig._1, connectionConfig._2))
+          case _ => None
+        }
+      case CSV | JSON | PARQUET | DELTA | ORC => Some(FileMetadata(connectionConfig._1, format, connectionConfig._2))
+      case HTTP => Some(HttpMetadata(connectionConfig._1, format, connectionConfig._2))
+      case JMS => Some(JmsMetadata(connectionConfig._1, format, connectionConfig._2))
+      case _ => None
+    }
+    if (connection.isEmpty) {
+      LOGGER.warn(s"Metadata extraction not supported for connection type '${connectionConfig._2(FORMAT)}', connection-name=${connectionConfig._1}")
+    }
+    connection
   }
 }
 

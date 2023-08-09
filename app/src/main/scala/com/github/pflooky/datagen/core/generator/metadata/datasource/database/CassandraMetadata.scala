@@ -3,7 +3,7 @@ package com.github.pflooky.datagen.core.generator.metadata.datasource.database
 import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CLUSTERING_ORDER, IS_NULLABLE, IS_PRIMARY_KEY, PRIMARY_KEY_POSITION, SOURCE_COLUMN_DATA_TYPE}
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions.{asc, col, desc, row_number}
-import org.apache.spark.sql.{Dataset, Encoder, Encoders, SparkSession}
+import org.apache.spark.sql.{Dataset, SparkSession}
 
 case class CassandraMetadata(name: String, connectionConfig: Map[String, String]) extends DatabaseMetadata {
 

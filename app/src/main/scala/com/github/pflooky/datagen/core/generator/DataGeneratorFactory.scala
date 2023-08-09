@@ -45,7 +45,7 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
 
     val genSqlExpression = dataGenerators.filter(dg => !dg.structField.metadata.contains(SQL))
       .map(dg => s"${dg.generateSqlExpressionWrapper} AS `${dg.structField.name}`")
-    val df = sparkSession.createDataFrame(Seq.range(0, recordCount).map(Holder))
+    val df = sparkSession.createDataFrame(Seq.range(1, recordCount + 1).map(Holder))
       .selectExpr(genSqlExpression: _*)
 
     val sqlGeneratedFields = structType.fields.filter(f => f.metadata.contains(SQL))
