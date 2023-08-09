@@ -167,6 +167,7 @@ object ForeignKeyUtil {
   }
 
   private def zipWithIndex(df: DataFrame): DataFrame = {
+    if (!df.storageLevel.useMemory) df.cache()
     df.sqlContext.createDataFrame(
       df.rdd.zipWithIndex.map(ln =>
         Row.fromSeq(ln._1.toSeq ++ Seq(ln._2))

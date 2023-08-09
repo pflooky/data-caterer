@@ -82,6 +82,7 @@ class SinkFactory(
       return
     }
 
+    println(connectionConfig ++ stepOptions)
     val partitionedDf = partitionDf(df, stepOptions)
     partitionedDf
       .format(format)

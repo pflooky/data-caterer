@@ -1,6 +1,6 @@
-name: "json_account_file"
+name: "simple_json"
 steps:
-  - name: "account"
+  - name: "file_account"
     type: "json"
     count:
       total: 1000

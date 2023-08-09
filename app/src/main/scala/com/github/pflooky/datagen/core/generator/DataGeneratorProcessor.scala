@@ -45,7 +45,7 @@ class DataGeneratorProcessor extends SparkProvider {
           LOGGER.debug(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=($summaryWithTask)")
           summaryWithTask.foreach(t => LOGGER.debug(s"Enabled task details: ${t._2.toTaskDetailString}"))
         }
-        val stepNames = summaryWithTask.map(t => s"task=${t._2.name}, steps=${t._2.steps.map(_.name).mkString(",")}").mkString("||")
+        val stepNames = summaryWithTask.map(t => s"task=${t._2.name}, num-steps=${t._2.steps.size}, steps=${t._2.steps.map(_.name).mkString(",")}").mkString("||")
         LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=$stepNames")
         //TODO batch up 5000 (configurable number) records total across all steps and progressively push to sinks
         /**
