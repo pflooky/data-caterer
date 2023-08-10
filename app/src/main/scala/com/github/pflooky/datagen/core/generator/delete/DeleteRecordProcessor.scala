@@ -9,6 +9,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import java.io.File
 import scala.reflect.io.Directory
+import scala.util.{Failure, Success, Try}
 
 class DeleteRecordProcessor(connectionConfigsByName: Map[String, Map[String, String]], recordTrackingFolderPath: String)(implicit sparkSession: SparkSession) {
 
@@ -16,7 +17,7 @@ class DeleteRecordProcessor(connectionConfigsByName: Map[String, Map[String, Str
 
   def deleteGeneratedRecords(plan: Plan, stepsByName: Map[String, Step], summaryWithTask: List[(TaskSummary, Task)]): Unit = {
     if (plan.sinkOptions.isDefined && plan.sinkOptions.get.foreignKeys.nonEmpty) {
-      val deleteOrder = ForeignKeyUtil.getDeleteOrder(plan.sinkOptions.get.foreignKeys)
+      val deleteOrder = ForeignKeyUtil.getDeleteOrder(plan.sinkOptions.get.foreignKeysWithoutColumnNames)
       deleteOrder.foreach(foreignKeyName => {
         val foreignKeyRelation = ForeignKeyRelation.fromString(foreignKeyName)
         val connectionConfig = connectionConfigsByName(foreignKeyRelation.dataSource)
@@ -44,9 +45,14 @@ class DeleteRecordProcessor(connectionConfigsByName: Map[String, Map[String, Str
     }
     LOGGER.warn(s"Delete generated records is enabled. If 'enableRecordTracking' has been enabled, all generated records for this data source will be deleted, " +
       s"data-source-name=$dataSourceName, format=$format, details=$options")
-    val trackedRecords = getTrackedRecords(subDataSourcePath)
-    deleteRecordService.deleteRecords(dataSourceName, trackedRecords, options ++ connectionConfig)
-    deleteTrackedRecordsFile(subDataSourcePath)
+    val tryTrackedRecords = Try(getTrackedRecords(subDataSourcePath))
+    tryTrackedRecords match {
+      case Failure(exception) =>
+        LOGGER.error(s"Failed to get tracked records for data source, will continue to try delete other data sources, data-source-name=$dataSourceName, format=$format, details=$options, exception=${exception.getMessage}")
+      case Success(trackedRecords) =>
+        deleteRecordService.deleteRecords(dataSourceName, trackedRecords, options ++ connectionConfig)
+        deleteTrackedRecordsFile(subDataSourcePath)
+    }
   }
 
   def getTrackedRecords(dataSourcePath: String): DataFrame = {

@@ -18,6 +18,14 @@ case class SinkOptions(seed: Option[String] = None, locale: Option[String] = Non
     val targetForeignKeys = targets.map(ForeignKeyRelation.fromString)
     (source, targetForeignKeys)
   }
+
+  def foreignKeysWithoutColumnNames: Map[String, List[String]] = {
+    foreignKeys.map(foreignKey => {
+      val mainFk = foreignKey._1.split("\\.").take(2).mkString(".")
+      val subFks = foreignKey._2.map(sFk => sFk.split("\\.").take(2).mkString("."))
+      (mainFk, subFks)
+    })
+  }
 }
 case class ForeignKeyRelation(dataSource: String, step: String, column: String) {
   override def toString: String = s"$dataSource.$step.$column"
@@ -28,8 +36,11 @@ case class ForeignKeyRelation(dataSource: String, step: String, column: String) 
 object ForeignKeyRelation {
   def fromString(str: String): ForeignKeyRelation = {
     val strSpt = str.split("\\.")
-    if (strSpt.length != 3) throw new ForeignKeyFormatException(str)
-    ForeignKeyRelation(strSpt.head, strSpt(1), strSpt.last)
+    if (strSpt.length == 2) {
+      ForeignKeyRelation(strSpt.head, strSpt.last, "")
+    } else if (strSpt.length != 3) {
+      throw new ForeignKeyFormatException(str)
+    } else ForeignKeyRelation(strSpt.head, strSpt(1), strSpt.last)
   }
 }
 
