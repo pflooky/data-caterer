@@ -4,7 +4,7 @@ import com.github.pflooky.datagen.core.config.MetadataConfig
 import com.github.pflooky.datagen.core.generator.metadata.ExpressionPredictor
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ColumnMetadata
-import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CSV, DELTA, DISTINCT_COUNT, EXPRESSION, HISTOGRAM, HTTP, IS_NULLABLE, JDBC, JDBC_TABLE, JMS, JMS_DESTINATION_NAME, JSON, ONE_OF, ORC, PARQUET, PATH, ROW_COUNT}
+import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CSV, DELTA, DISTINCT_COUNT, EXPRESSION, HISTOGRAM, HTTP, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_TABLE, JMS, JMS_DESTINATION_NAME, JSON, ONE_OF, ORC, PARQUET, PATH, ROW_COUNT}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.CatalogColumnStat
@@ -33,18 +33,26 @@ object MetadataUtil {
                         columnDataProfilingMetadata: List[DataProfilingMetadata],
                         additionalColumnMetadata: Dataset[ColumnMetadata])(implicit sparkSession: SparkSession): Array[StructField] = {
     if (!additionalColumnMetadata.storageLevel.useMemory) additionalColumnMetadata.cache()
+    val dataSourceAdditionalColumnMetadata = additionalColumnMetadata.filter(_.dataSourceReadOptions.equals(dataSourceReadOptions))
+    val primaryKeys = dataSourceAdditionalColumnMetadata.filter(_.metadata.get(IS_PRIMARY_KEY).exists(_.toBoolean))
+    val primaryKeyCount = primaryKeys.count()
+
     val fieldsWithMetadata = sourceData.schema.fields.map(field => {
       val baseMetadata = new MetadataBuilder().withMetadata(field.metadata)
       columnDataProfilingMetadata.find(_.columnName == field.name).foreach(c => baseMetadata.withMetadata(mapToMetadata(c.metadata)))
 
       var nullable = field.nullable
-      val optFieldAdditionalMetadata = additionalColumnMetadata.filter(c => c.dataSourceReadOptions.equals(dataSourceReadOptions) && c.column == field.name)
+      val optFieldAdditionalMetadata = dataSourceAdditionalColumnMetadata.filter(_.column == field.name)
       if (!optFieldAdditionalMetadata.isEmpty) {
         val fieldAdditionalMetadata = optFieldAdditionalMetadata.first()
         fieldAdditionalMetadata.metadata.foreach(m => {
           if (m._1.equals(IS_NULLABLE)) nullable = m._2.toBoolean
           baseMetadata.putString(m._1, String.valueOf(m._2))
         })
+        val isPrimaryKey = fieldAdditionalMetadata.metadata.get(IS_PRIMARY_KEY).exists(_.toBoolean)
+        if (isPrimaryKey && primaryKeyCount == 1) {
+          baseMetadata.putString(IS_UNIQUE, "true")
+        }
       }
       StructField(field.name, field.dataType, nullable, baseMetadata.build())
     })

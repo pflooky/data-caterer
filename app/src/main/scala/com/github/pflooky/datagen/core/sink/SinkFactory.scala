@@ -19,6 +19,7 @@ class SinkFactory(
                  )(implicit val sparkSession: SparkSession) {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
+  private var HAS_LOGGED_COUNT_DISABLE_WARNING = false
 
   def pushToSink(df: DataFrame, dataSourceName: String, step: Step, flagsConfig: FlagsConfig): Unit = {
     if (!connectionConfigs.contains(dataSourceName)) {
@@ -31,10 +32,11 @@ class SinkFactory(
     val enrichedConnectionConfig = additionalConnectionConfig(format, connectionConfig)
     val count = if (flagsConfig.enableCount) {
       df.count().toString
-    } else {
+    } else if (!HAS_LOGGED_COUNT_DISABLE_WARNING) {
       LOGGER.warn("Count is disabled. It will help with performance. Defaulting to -1")
+      HAS_LOGGED_COUNT_DISABLE_WARNING = true
       "-1"
-    }
+    } else "-1"
     LOGGER.info(s"Pushing data to sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, num-records=$count, status=$STARTED")
     saveData(df, dataSourceName, step, enrichedConnectionConfig, saveMode, saveModeName, format, count, flagsConfig.enableFailOnError)
   }
@@ -82,7 +84,6 @@ class SinkFactory(
       return
     }
 
-    println(connectionConfig ++ stepOptions)
     val partitionedDf = partitionDf(df, stepOptions)
     partitionedDf
       .format(format)

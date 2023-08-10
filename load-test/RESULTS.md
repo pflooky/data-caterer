@@ -27,3 +27,4 @@ Run 4 (additional field with unique): 60s
 Run 1: 202s
 Run 2 (with cache before zipWithIndex, shuffle partitions = 10): 147s
 Run 3 (same as 2 with disable count): 122s
+Run 4 (same as 3 run in docker): 22s
