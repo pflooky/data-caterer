@@ -39,7 +39,7 @@ configurations {
 
 dependencies {
     compileOnly("org.scala-lang:scala-library:$scalaSpecificVersion")
-    basicImpl("org.apache.spark:spark-sql_$scalaVersion:$sparkVersion")
+    compileOnly("org.apache.spark:spark-sql_$scalaVersion:$sparkVersion")
 
     // additional spark
     basicImpl("org.apache.spark:spark-avro_$scalaVersion:$sparkVersion")
