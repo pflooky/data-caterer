@@ -53,13 +53,14 @@ case class MysqlMetadata(name: String, connectionConfig: Map[String, String]) ex
       |ORDER BY ke.referenced_table_name""".stripMargin
 
   override def dataSourceGenerationMetadata(row: Row): Map[String, String] = {
-    val dataSourceGeneration = row.getAs[String]("data_source_generation")
-    val baseMetadata = Map(DATA_SOURCE_GENERATION -> dataSourceGeneration, OMIT -> "true")
-    val sqlExpression = dataSourceGeneration.toLowerCase match {
-      case "auto_increment" => "monotonically_increasing_id()"
-      case "on update current_timestamp" => "now()"
-      case _ => ""
-    }
-    baseMetadata ++ Map(EXPRESSION -> sqlExpression)
+//    val dataSourceGeneration = row.getAs[String]("data_source_generation")
+//    val baseMetadata = Map(DATA_SOURCE_GENERATION -> dataSourceGeneration, OMIT -> "true")
+//    val sqlExpression = dataSourceGeneration.toLowerCase match {
+//      case "auto_increment" => "monotonically_increasing_id()"
+//      case "on update current_timestamp" => "now()"
+//      case _ => ""
+//    }
+//    baseMetadata ++ Map(EXPRESSION -> sqlExpression)
+    Map.empty
   }
 }

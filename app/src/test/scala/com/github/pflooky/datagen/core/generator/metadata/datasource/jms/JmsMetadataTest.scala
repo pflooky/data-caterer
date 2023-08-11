@@ -28,7 +28,7 @@ class JmsMetadataTest extends SparkSuite {
     //    val protobufData = sparkSession.emptyDataset[ColumnMetadata]
     //      .selectExpr("from_protobuf('', ') AS event")
     //    protobufData.printSchema()
-    val avroData = sparkSession.createDataFrame(Seq.fill(10)(1).map(Holder))
+    val avroData = sparkSession.createDataFrame(Seq.fill(10)(1L).map(Holder))
       .select(from_avro(lit("".getBytes), avroSchema) as "event")
     //has the correct schema but doesn't contain any additional metadata (i.e. no default)
     avroData.printSchema()
@@ -41,7 +41,7 @@ class JmsMetadataTest extends SparkSuite {
    */
   test("can read protobuf") {
     val protoFile = new File("app/src/test/resources/sample/files/protobuf/example.desc").getAbsolutePath
-    val protobufData = sparkSession.createDataFrame(Seq.fill(10)(1).map(Holder))
+    val protobufData = sparkSession.createDataFrame(Seq.fill(10)(1L).map(Holder))
       .select(from_protobuf(lit("".getBytes), "Proto3AllTypes", protoFile))
     protobufData.printSchema()
   }

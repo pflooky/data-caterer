@@ -3,7 +3,7 @@ package com.github.pflooky.datagen.core.model
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.github.pflooky.datagen.core.exception.{ForeignKeyFormatException, InvalidFieldConfigurationException}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceDetail
-import com.github.pflooky.datagen.core.model.Constants.{GENERATED, IS_PRIMARY_KEY, IS_UNIQUE, ONE_OF, PRIMARY_KEY_POSITION, RANDOM, STATIC}
+import com.github.pflooky.datagen.core.model.Constants.{GENERATED, IS_PRIMARY_KEY, IS_UNIQUE, MAXIMUM, MINIMUM, ONE_OF_GENERATOR, PRIMARY_KEY_POSITION, RANDOM_GENERATOR, STATIC}
 import com.github.pflooky.datagen.core.util.{MetadataUtil, ObjectMapperUtil}
 import org.apache.spark.sql.types.{ArrayType, DataType, Metadata, MetadataBuilder, StructField, StructType}
 
@@ -77,20 +77,20 @@ case class Step(name: String, `type`: String, count: Count = Count(), options: M
           metadata.contains(IS_PRIMARY_KEY) && metadata(IS_PRIMARY_KEY).toString.toBoolean
         } else false
       })
-        .map(field => (field.name, field.generator.get.options(PRIMARY_KEY_POSITION).toString.toInt))
+        .map(field => (field.name, field.generator.get.options.getOrElse(PRIMARY_KEY_POSITION, "1").toString.toInt))
         .sortBy(_._2)
         .map(_._1)
     } else List()
   }
 
-  def hasUniqueFields: Boolean = {
-    schema.fields.exists(fields => {
-      fields.exists(field => {
+  def gatherUniqueFields: List[String] = {
+    schema.fields.map(fields => {
+      fields.filter(field => {
         field.generator
           .flatMap(gen => gen.options.get(IS_UNIQUE).map(_.toString.toBoolean))
           .getOrElse(false)
-      })
-    })
+      }).map(_.name)
+    }).getOrElse(List())
   }
 }
 
@@ -110,8 +110,29 @@ case class Count(@JsonDeserialize(contentAs = classOf[java.lang.Long]) total: Op
       "0"
     }
   }
+
+  def numRecords: Long = {
+    (total, generator, perColumn, perColumn.flatMap(_.generator)) match {
+      case (Some(t), None, Some(perCol), Some(_)) =>
+        perCol.averageCountPerColumn * t
+      case (Some(t), None, Some(perCol), None) =>
+        perCol.count.get * t
+      case (Some(t), Some(gen), None, None) =>
+        gen.averageCount * t
+      case (None, Some(gen), None, None) =>
+        gen.averageCount
+      case (Some(t), None, None, None) =>
+        t
+      case _ => 1000L
+    }
+  }
 }
-case class PerColumnCount(columnNames: List[String] = List(), @JsonDeserialize(contentAs = classOf[java.lang.Long]) count: Option[Long] = Some(10L), generator: Option[Generator] = None)
+case class PerColumnCount(columnNames: List[String] = List(), @JsonDeserialize(contentAs = classOf[java.lang.Long]) count: Option[Long] = Some(10L), generator: Option[Generator] = None) {
+
+  def averageCountPerColumn: Long = {
+    generator.map(_.averageCount).getOrElse(count.map(identity).getOrElse(1L))
+  }
+}
 
 case class Schema(`type`: String = "manual", fields: Option[List[Field]] = None) {
   override def toString: String = {
@@ -163,10 +184,10 @@ case class Field(name: String, `type`: Option[String] = Some("string"), generato
 object Field {
   implicit def fromStructField(structField: StructField): Field = {
     val metadataOptions = MetadataUtil.metadataToMap(structField.metadata)
-    val generator = if (structField.metadata.contains(ONE_OF)) {
-      Generator(ONE_OF, metadataOptions)
+    val generator = if (structField.metadata.contains(ONE_OF_GENERATOR)) {
+      Generator(ONE_OF_GENERATOR, metadataOptions)
     } else {
-      Generator(RANDOM, metadataOptions)
+      Generator(RANDOM_GENERATOR, metadataOptions)
     }
     Field(structField.name, Some(structField.dataType.sql.toLowerCase), Some(generator), structField.nullable)
   }
@@ -175,5 +196,13 @@ object Field {
 case class Generator(`type`: String = "random", options: Map[String, Any] = Map()) {
   override def toString: String = {
     s"type=${`type`}, options=$options"
+  }
+
+  def averageCount: Long = {
+    if (`type`.equalsIgnoreCase(RANDOM_GENERATOR)) {
+      val min = options.get(MINIMUM).map(_.toString.toLong).getOrElse(1L)
+      val max = options.get(MAXIMUM).map(_.toString.toLong).getOrElse(10L)
+      (max + min + 1) / 2
+    } else 1L
   }
 }

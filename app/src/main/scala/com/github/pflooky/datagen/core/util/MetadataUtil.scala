@@ -4,7 +4,7 @@ import com.github.pflooky.datagen.core.config.MetadataConfig
 import com.github.pflooky.datagen.core.generator.metadata.ExpressionPredictor
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ColumnMetadata
-import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CSV, DELTA, DISTINCT_COUNT, EXPRESSION, HISTOGRAM, HTTP, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_TABLE, JMS, JMS_DESTINATION_NAME, JSON, ONE_OF, ORC, PARQUET, PATH, ROW_COUNT}
+import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CSV, DELTA, DISTINCT_COUNT, EXPRESSION, HISTOGRAM, HTTP, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_TABLE, JMS, JMS_DESTINATION_NAME, JSON, ONE_OF_GENERATOR, ORC, PARQUET, PATH, ROW_COUNT}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.CatalogColumnStat
@@ -77,7 +77,7 @@ object MetadataUtil {
       val statisticsMap = columnStatToMap(x._2.toCatalogColumnStat(columnName, x._1.dataType)) ++ Map(ROW_COUNT -> rowCount.toString)
       val optOneOfColumn = determineIfOneOfColumn(sourceData, columnName, statisticsMap, metadataConfig)
       val optFakerExpression = ExpressionPredictor.getFakerExpression(sourceData.schema.fields.find(_.name == columnName).get)
-      val optionalMetadataMap = Map(EXPRESSION -> optFakerExpression, ONE_OF -> optOneOfColumn)
+      val optionalMetadataMap = Map(EXPRESSION -> optFakerExpression, ONE_OF_GENERATOR -> optOneOfColumn)
         .filter(_._2.isDefined)
         .map(x => (x._1, x._2.get))
       val statWithOptionalMetadata = statisticsMap ++ optionalMetadataMap

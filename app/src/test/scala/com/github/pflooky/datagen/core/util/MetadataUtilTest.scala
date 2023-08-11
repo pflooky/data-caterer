@@ -2,7 +2,7 @@ package com.github.pflooky.datagen.core.util
 
 import com.github.pflooky.datagen.core.config.MetadataConfig
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.{ColumnMetadata, PostgresMetadata}
-import com.github.pflooky.datagen.core.model.Constants.ONE_OF
+import com.github.pflooky.datagen.core.model.Constants.ONE_OF_GENERATOR
 import org.apache.spark.sql.types.MetadataBuilder
 import org.apache.spark.sql.{Encoder, Encoders}
 
@@ -31,7 +31,7 @@ class MetadataUtilTest extends SparkSuite {
     val df = sparkSession.createDataFrame(Seq(Account("acc123", "peter", Date.valueOf("2023-01-01"), 10)))
     val dataProfilingMetadata = List(
       DataProfilingMetadata("account_id", Map("minLen" -> "2", "maxLen" -> "10")),
-      DataProfilingMetadata("name", Map("distinctCount" -> "2", "count" -> "100", ONE_OF -> Some(Array("peter", "john")))),
+      DataProfilingMetadata("name", Map("distinctCount" -> "2", "count" -> "100", ONE_OF_GENERATOR -> Some(Array("peter", "john")))),
       DataProfilingMetadata("open_date", Map()),
     )
     val columnMetadata = sparkSession.createDataset(Seq(
@@ -78,7 +78,7 @@ class MetadataUtilTest extends SparkSuite {
     val accountIdField = result.find(_.columnName == "account_id").get
     assert(accountIdField.metadata == Map("count" -> "4", "distinctCount" -> "4", "version" -> "2", "maxLen" -> "6", "avgLen" -> "6", "nullCount" -> "0"))
     val nameField = result.find(_.columnName == "name").get
-    assert(nameField.metadata == Map("count" -> "4", "distinctCount" -> "2", "version" -> "2", "maxLen" -> "5", "avgLen" -> "5", "nullCount" -> "0", ONE_OF -> Some(Array("peter", "john"))))
+    assert(nameField.metadata == Map("count" -> "4", "distinctCount" -> "2", "version" -> "2", "maxLen" -> "5", "avgLen" -> "5", "nullCount" -> "0", ONE_OF_GENERATOR -> Some(Array("peter", "john"))))
     val dateField = result.find(_.columnName == "open_date").get
     assert(dateField.metadata == Map("count" -> "4", "distinctCount" -> "4", "min" -> "2023-01-01", "version" -> "2", "max" -> "2023-02-04", "maxLen" -> "4", "avgLen" -> "4", "nullCount" -> "0"))
     val amountField = result.find(_.columnName == "age").get

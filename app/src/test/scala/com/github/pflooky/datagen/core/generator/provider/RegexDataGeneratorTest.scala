@@ -2,7 +2,7 @@ package com.github.pflooky.datagen.core.generator.provider
 
 import com.github.pflooky.datagen.core.exception.InvalidDataGeneratorConfigurationException
 import com.github.pflooky.datagen.core.generator.provider.RegexDataGenerator.RandomRegexDataGenerator
-import com.github.pflooky.datagen.core.model.Constants.REGEX
+import com.github.pflooky.datagen.core.model.Constants.REGEX_GENERATOR
 import org.apache.spark.sql.types.{MetadataBuilder, StringType, StructField}
 import org.junit.runner.RunWith
 import org.scalatest.funsuite.AnyFunSuite
@@ -13,7 +13,7 @@ class RegexDataGeneratorTest extends AnyFunSuite {
 
   test("Can generate data based on regex") {
     val regex = "ACC100[0-9]{5}"
-    val metadata = new MetadataBuilder().putString(REGEX, regex).build()
+    val metadata = new MetadataBuilder().putString(REGEX_GENERATOR, regex).build()
     val regexDataGenerator = new RandomRegexDataGenerator(StructField("random_regex", StringType, false, metadata))
 
     assert(regexDataGenerator.edgeCases.isEmpty)

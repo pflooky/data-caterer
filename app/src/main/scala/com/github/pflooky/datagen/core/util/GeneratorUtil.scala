@@ -2,8 +2,8 @@ package com.github.pflooky.datagen.core.util
 
 import com.github.pflooky.datagen.core.exception.{InvalidCountGeneratorConfigurationException, UnsupportedDataGeneratorType}
 import com.github.pflooky.datagen.core.generator.provider.{DataGenerator, OneOfDataGenerator, RandomDataGenerator, RegexDataGenerator}
-import com.github.pflooky.datagen.core.model.Constants.{ONE_OF, RANDOM, RECORD_COUNT_GENERATOR_COL, REGEX, SQL}
-import com.github.pflooky.datagen.core.model.{Count, Generator, Step}
+import com.github.pflooky.datagen.core.model.Constants.{ONE_OF_GENERATOR, RANDOM_GENERATOR, RECORD_COUNT_GENERATOR_COL, REGEX_GENERATOR, SQL_GENERATOR}
+import com.github.pflooky.datagen.core.model.{Count, Generator, Step, TaskSummary}
 import net.datafaker.Faker
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, Row}
@@ -17,9 +17,9 @@ object GeneratorUtil {
     if (optGenerator.isDefined) {
       optGenerator.get.`type` match {
         //TODO: Slightly abusing random data generator giving back correct data type for sql type generated data
-        case RANDOM | SQL => RandomDataGenerator.getGeneratorForStructField(structField, faker)
-        case ONE_OF => OneOfDataGenerator.getGenerator(structField, faker)
-        case REGEX => RegexDataGenerator.getGenerator(structField, faker)
+        case RANDOM_GENERATOR | SQL_GENERATOR => RandomDataGenerator.getGeneratorForStructField(structField, faker)
+        case ONE_OF_GENERATOR => OneOfDataGenerator.getGenerator(structField, faker)
+        case REGEX_GENERATOR => RegexDataGenerator.getGenerator(structField, faker)
         case x => throw new UnsupportedDataGeneratorType(x)
       }
     } else {
@@ -39,22 +39,8 @@ object GeneratorUtil {
     )
   }
 
-  def getRecordCount(count: Count, faker: Faker): Long = {
-    (count.generator, count.total, count.perColumn) match {
-      case (Some(generator), _, _) =>
-        getGeneratedCount(generator, faker)
-      case (_, Some(total), _) =>
-        total.asInstanceOf[Number].longValue()
-      case (_, _, Some(perColumnCount)) =>
-        (perColumnCount.generator, perColumnCount.count) match {
-          case (Some(generator), _) =>
-            getGeneratedCount(generator, faker)
-          case (_, Some(total)) =>
-            total.asInstanceOf[Number].longValue()
-          case _ => throw new InvalidCountGeneratorConfigurationException(count)
-        }
-      case _ => throw new InvalidCountGeneratorConfigurationException(count)
-    }
+  def getDataSourceName(taskSummary: TaskSummary, step: Step): String = {
+    s"${taskSummary.dataSourceName}.${step.name}"
   }
 
   private def getGeneratedCount(generator: Generator, faker: Faker): Long = {

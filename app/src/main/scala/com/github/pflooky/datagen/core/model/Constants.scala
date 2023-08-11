@@ -57,10 +57,10 @@ object Constants {
   lazy val MYSQL_DRIVER = "com.mysql.cj.jdbc.Driver"
 
   //generator types
-  lazy val RANDOM = "random"
-  lazy val ONE_OF = "oneOf"
-  lazy val REGEX = "regex"
-  lazy val SQL = "sql"
+  lazy val RANDOM_GENERATOR = "random"
+  lazy val ONE_OF_GENERATOR = "oneOf"
+  lazy val REGEX_GENERATOR = "regex"
+  lazy val SQL_GENERATOR = "sql"
 
   //special column names
   lazy val PER_COLUMN_COUNT = "_per_col_count"

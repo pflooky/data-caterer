@@ -3,7 +3,7 @@ steps:
   - name: "accounts"
     type: "postgres"
     count:
-      total: 10
+      total: 1000000
     options:
       dbtable: "account.accounts"
     schema:
@@ -13,6 +13,7 @@ steps:
           generator:
             type: "regex"
             options:
+              isPrimaryKey: "true"
               regex: "ACC1[0-9]{5,10}"
         - name: "account_status"
           type: "string"
@@ -30,9 +31,9 @@ steps:
           type: "string"
           generator:
             type: "random"
-        - name: "customer_id"
+        - name: "customer_id_int"
           type: "int"
           generator:
             type: "random"
             options:
-              isUnique: true  #TODO: make unique values when generating
+              isUnique: true

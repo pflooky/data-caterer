@@ -18,6 +18,7 @@ trait ConfigParser {
   lazy val flagsConfig: FlagsConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("flags").unwrapped(), classOf[FlagsConfig])
   lazy val foldersConfig: FoldersConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("folders").unwrapped(), classOf[FoldersConfig])
   lazy val metadataConfig: MetadataConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("metadata").unwrapped(), classOf[MetadataConfig])
+  lazy val generationConfig: GenerationConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("generation").unwrapped(), classOf[GenerationConfig])
   lazy val sparkMaster: String = config.getString(SPARK_MASTER)
   lazy val baseSparkConfig: Map[String, String] = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("spark.config").unwrapped(), classOf[Map[String, String]])
   lazy val connectionConfigsByName: Map[String, Map[String, String]] = getConnectionConfigsByName
@@ -95,4 +96,11 @@ case class MetadataConfig(
                            oneOfMinCount: Int = 1000,
                          ) {
   def this() = this(1000, 1000)
+}
+
+case class GenerationConfig(
+                           numRecordsPerBatch: Long = 100000,
+                           numRecordsPerStep: Option[Long] = None,
+                         ) {
+  def this() = this(100000, None)
 }

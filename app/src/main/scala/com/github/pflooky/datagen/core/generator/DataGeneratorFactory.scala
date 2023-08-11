@@ -4,7 +4,7 @@ import com.github.pflooky.datagen.core.exception.InvalidStepCountGeneratorConfig
 import com.github.pflooky.datagen.core.generator.provider.DataGenerator
 import com.github.pflooky.datagen.core.model.Constants._
 import com.github.pflooky.datagen.core.model._
-import com.github.pflooky.datagen.core.util.GeneratorUtil.{getDataGenerator, getRecordCount}
+import com.github.pflooky.datagen.core.util.GeneratorUtil.getDataGenerator
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import net.datafaker.Faker
 import org.apache.spark.sql.expressions.UserDefinedFunction
@@ -15,7 +15,7 @@ import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import scala.util.Random
 
 
-case class Holder(__index_inc: Int)
+case class Holder(__index_inc: Long)
 
 class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession) {
 
@@ -29,27 +29,30 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
   }))
 
   def generateDataForStep(step: Step, dataSourceName: String): DataFrame = {
-    val structFieldsWithDataGenerators = if (step.schema.fields.isDefined) {
-      getStructWithGenerators(step.schema.fields.get)
-    } else {
-      List()
-    }
-
-    generateDataViaSql(structFieldsWithDataGenerators, step)
+    val structFieldsWithDataGenerators = step.schema.fields.map(getStructWithGenerators).getOrElse(List())
+    val recordCount = step.count.numRecords.toInt
+    val averagePerCol = step.count.perColumn.map(perCol => perCol.averageCountPerColumn).getOrElse(1L)
+    val indexedDf = sparkSession.createDataFrame(Seq.range(1L, recordCount / averagePerCol + 1).map(Holder))
+    generateDataViaSql(structFieldsWithDataGenerators, step, indexedDf)
       .alias(s"$dataSourceName.${step.name}")
   }
 
-  def generateDataViaSql(dataGenerators: List[DataGenerator[_]], step: Step): DataFrame = {
+  def generateDataForStep(step: Step, dataSourceName: String, startIndex: Long, endIndex: Long): DataFrame = {
+    val structFieldsWithDataGenerators = step.schema.fields.map(getStructWithGenerators).getOrElse(List())
+    val indexedDf = sparkSession.createDataFrame(Seq.range(startIndex, endIndex + 1).map(Holder))
+    generateDataViaSql(structFieldsWithDataGenerators, step, indexedDf)
+      .alias(s"$dataSourceName.${step.name}")
+  }
+
+  def generateDataViaSql(dataGenerators: List[DataGenerator[_]], step: Step, indexedDf: DataFrame): DataFrame = {
     val structType = StructType(dataGenerators.map(_.structField))
-    val recordCount = getRecordCount(step.count, faker).toInt
 
-    val genSqlExpression = dataGenerators.filter(dg => !dg.structField.metadata.contains(SQL))
+    val genSqlExpression = dataGenerators.filter(dg => !dg.structField.metadata.contains(SQL_GENERATOR))
       .map(dg => s"${dg.generateSqlExpressionWrapper} AS `${dg.structField.name}`")
-    val df = sparkSession.createDataFrame(Seq.range(1, recordCount + 1).map(Holder))
-      .selectExpr(genSqlExpression: _*)
+    val df = indexedDf.selectExpr(genSqlExpression: _*)
 
-    val sqlGeneratedFields = structType.fields.filter(f => f.metadata.contains(SQL))
-    val sqlFieldExpr = sqlGeneratedFields.map(f => s"${f.metadata.getString(SQL)} AS `${f.name}`")
+    val sqlGeneratedFields = structType.fields.filter(f => f.metadata.contains(SQL_GENERATOR))
+    val sqlFieldExpr = sqlGeneratedFields.map(f => s"${f.metadata.getString(SQL_GENERATOR)} AS `${f.name}`")
     val noSqlGeneratedFields = df.columns.filter(c => !sqlGeneratedFields.exists(_.name.equalsIgnoreCase(c)))
       .map(s => s"`$s`")
 
@@ -81,9 +84,9 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
     var dfPerCol = count.perColumn
       .map(perCol => generateRecordsPerColumn(dataGenerators, step, perCol, df))
       .getOrElse(df)
-    val sqlGeneratedFields = structType.fields.filter(f => f.metadata.contains(SQL))
+    val sqlGeneratedFields = structType.fields.filter(f => f.metadata.contains(SQL_GENERATOR))
     sqlGeneratedFields.foreach(field => {
-      val allFields = structType.fields.filter(_ != field).map(_.name) ++ Array(s"${field.metadata.getString(SQL)} AS `${field.name}`")
+      val allFields = structType.fields.filter(_ != field).map(_.name) ++ Array(s"${field.metadata.getString(SQL_GENERATOR)} AS `${field.name}`")
       dfPerCol = dfPerCol.selectExpr(allFields: _*)
     })
     dfPerCol

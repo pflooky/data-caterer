@@ -27,25 +27,7 @@ object ForeignKeyUtil {
     val foreignKeyRelations = sinkOptions.foreignKeys
       .map(fk => sinkOptions.gatherForeignKeyRelations(fk._1))
     val enabledForeignKeys = foreignKeyRelations
-      .filter(fkr => {
-        val isMainForeignKeySourceEnabled = enabledSources.contains(fkr._1.dataSource)
-        val subForeignKeySources = fkr._2.map(_.dataSource)
-        val isSubForeignKeySourceEnabled = subForeignKeySources.forall(enabledSources.contains)
-        val disabledSubSources = subForeignKeySources.filter(s => !enabledSources.contains(s))
-        val columnExistsMain = generatedDataForeachTask(fkr._1.dataFrameName).columns.contains(fkr._1.column)
-
-        if (!isMainForeignKeySourceEnabled) {
-          LOGGER.warn(s"Foreign key data source is not enabled. Data source needs to be enabled for foreign key relationship " +
-            s"to exist from generated data, data-source-name=${fkr._1.dataSource}")
-        }
-        if (!isSubForeignKeySourceEnabled) {
-          LOGGER.warn(s"Sub data sources within foreign key relationship are not enabled, disabled-task=${disabledSubSources.mkString(",")}")
-        }
-        if (!columnExistsMain) {
-          LOGGER.warn(s"Main column for foreign key references is not created, data-source-name=${fkr._1.dataSource}, column=${fkr._1.column}")
-        }
-        isMainForeignKeySourceEnabled && isSubForeignKeySourceEnabled && columnExistsMain
-      })
+      .filter(fkr => isValidForeignKeyRelation(generatedDataForeachTask, enabledSources, fkr))
 
     val foreignKeyAppliedDfs = enabledForeignKeys.flatMap(foreignKeyDetails => {
       val sourceDfName = foreignKeyDetails._1.dataFrameName
@@ -74,6 +56,26 @@ object ForeignKeyUtil {
       .filter(foreignKeyAppliedDfs.contains)
       .map(s => (s, foreignKeyAppliedDfs(s)))
     generatedDataForeachTask.toList.filter(t => !insertOrderDfs.exists(_._1.equalsIgnoreCase(t._1))) ++ insertOrderDfs
+  }
+
+  private def isValidForeignKeyRelation(generatedDataForeachTask: Map[String, DataFrame], enabledSources: List[String], fkr: (ForeignKeyRelation, List[ForeignKeyRelation])) = {
+    val isMainForeignKeySourceEnabled = enabledSources.contains(fkr._1.dataSource)
+    val subForeignKeySources = fkr._2.map(_.dataSource)
+    val isSubForeignKeySourceEnabled = subForeignKeySources.forall(enabledSources.contains)
+    val disabledSubSources = subForeignKeySources.filter(s => !enabledSources.contains(s))
+    val columnExistsMain = generatedDataForeachTask(fkr._1.dataFrameName).columns.contains(fkr._1.column)
+
+    if (!isMainForeignKeySourceEnabled) {
+      LOGGER.warn(s"Foreign key data source is not enabled. Data source needs to be enabled for foreign key relationship " +
+        s"to exist from generated data, data-source-name=${fkr._1.dataSource}")
+    }
+    if (!isSubForeignKeySourceEnabled) {
+      LOGGER.warn(s"Sub data sources within foreign key relationship are not enabled, disabled-task=${disabledSubSources.mkString(",")}")
+    }
+    if (!columnExistsMain) {
+      LOGGER.warn(s"Main column for foreign key references is not created, data-source-name=${fkr._1.dataSource}, column=${fkr._1.column}")
+    }
+    isMainForeignKeySourceEnabled && isSubForeignKeySourceEnabled && columnExistsMain
   }
 
   private def applyForeignKeysToTargetDf(sourceDf: DataFrame, targetDf: DataFrame, sourceColumn: String, targetColumn: String): DataFrame = {

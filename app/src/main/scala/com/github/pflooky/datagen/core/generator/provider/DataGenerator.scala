@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.provider
 
-import com.github.pflooky.datagen.core.model.Constants.{ENABLED_EDGE_CASES, ENABLED_NULL, IS_UNIQUE, LIST_MAXIMUM_LENGTH, LIST_MINIMUM_LENGTH, PROBABILITY_OF_EDGE_CASES, PROBABILITY_OF_NULLS, RANDOM_SEED, SQL, STATIC}
+import com.github.pflooky.datagen.core.model.Constants.{ENABLED_EDGE_CASES, ENABLED_NULL, IS_UNIQUE, LIST_MAXIMUM_LENGTH, LIST_MINIMUM_LENGTH, PROBABILITY_OF_EDGE_CASES, PROBABILITY_OF_NULLS, RANDOM_SEED, SQL_GENERATOR, STATIC}
 import net.datafaker.Faker
 import org.apache.spark.sql.functions.{expr, rand, when}
 import org.apache.spark.sql.types.StructField

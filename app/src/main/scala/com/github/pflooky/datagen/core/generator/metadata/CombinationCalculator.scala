@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.metadata
 
-import com.github.pflooky.datagen.core.model.Constants.{EXPRESSION, ONE_OF}
+import com.github.pflooky.datagen.core.model.Constants.{EXPRESSION, ONE_OF_GENERATOR}
 import com.github.pflooky.datagen.core.model.Schema
 import net.datafaker.Faker
 import org.apache.log4j.Logger
@@ -24,8 +24,8 @@ object CombinationCalculator {
             val totalCombinations = getNumberCombinationsForFakerExpression(expression, faker)
             LOGGER.info(s"Total combinations for faker expression, expression=$expression, combinations=$totalCombinations")
             totalCombinations
-          } else if (generator.`type` == ONE_OF && generator.options.contains(ONE_OF)) {
-            BigInt(generator.options(ONE_OF).asInstanceOf[List[_]].size)
+          } else if (generator.`type` == ONE_OF_GENERATOR && generator.options.contains(ONE_OF_GENERATOR)) {
+            BigInt(generator.options(ONE_OF_GENERATOR).asInstanceOf[List[_]].size)
           } else {
             BigInt(1)
           }

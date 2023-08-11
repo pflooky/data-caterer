@@ -3,11 +3,11 @@ package com.github.pflooky.datagen.core.generator
 import com.github.pflooky.datagen.core.generator.delete.DeleteRecordProcessor
 import com.github.pflooky.datagen.core.generator.track.RecordTrackingProcessor
 import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING, FORMAT}
-import com.github.pflooky.datagen.core.model.{Plan, Step, Task, TaskSummary}
+import com.github.pflooky.datagen.core.model.{Plan, Task, TaskSummary}
 import com.github.pflooky.datagen.core.parser.PlanParser
 import com.github.pflooky.datagen.core.sink.SinkFactory
-import com.github.pflooky.datagen.core.util.GeneratorUtil.getRecordCount
-import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, SparkProvider, UniqueFieldUtil}
+import com.github.pflooky.datagen.core.util.GeneratorUtil.getDataSourceName
+import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, SparkProvider, UniqueFieldsUtil}
 import net.datafaker.Faker
 import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
@@ -27,8 +27,12 @@ class DataGeneratorProcessor extends SparkProvider {
     val enabledPlannedTasks = plan.tasks.filter(_.enabled)
     val enabledTaskMap = enabledPlannedTasks.map(t => (t.name, t)).toMap
     val tasks = PlanParser.parseTasks(foldersConfig.taskFolderPath)
+    val tasksByName = tasks.filter(t => enabledTaskMap.contains(t.name)).map(t => (t.name, t)).toMap
+    val summaryWithTask = plan.tasks.map(t => (t, tasksByName(t.name)))
+    val faker = getDataFaker(plan)
 
-    generateData(plan.copy(tasks = enabledPlannedTasks), tasks.filter(t => enabledTaskMap.contains(t.name)).toList)
+//    generateData(plan.copy(tasks = enabledPlannedTasks), tasks.filter(t => enabledTaskMap.contains(t.name)).toList)
+    new BatchDataProcessor().splitAndProcess(plan.copy(tasks = enabledPlannedTasks), summaryWithTask, faker)
   }
 
   def generateData(plan: Plan, tasks: List[Task]): Unit = {
@@ -52,6 +56,7 @@ class DataGeneratorProcessor extends SparkProvider {
          * can do the following for batching the data:
          * 1. calculate the total counts across all steps
          * 2. create accumulators to keep track of count for each step
+         * 3. keep track of primary keys and unique fields already produced
          */
         val sinkDf = getAllStepDf(plan, summaryWithTask)
         pushDataToSinks(summaryWithTask, sinkDf)
@@ -67,7 +72,7 @@ class DataGeneratorProcessor extends SparkProvider {
   private def getAllStepDf(plan: Plan, executableTasks: List[(TaskSummary, Task)]): List[(String, DataFrame)] = {
     val faker = getDataFaker(plan)
     val dataGeneratorFactory = new DataGeneratorFactory(faker)
-    val uniqueFieldUtil = new UniqueFieldUtil(executableTasks)
+    val uniqueFieldUtil = new UniqueFieldsUtil(executableTasks)
 
     val generatedDataForeachTask = executableTasks.flatMap(task =>
       task._2.steps.map(s => {
@@ -79,7 +84,7 @@ class DataGeneratorProcessor extends SparkProvider {
           genDf.dropDuplicates(primaryKeys)
         } else genDf
 
-        val df = if (s.hasUniqueFields) {
+        val df = if (s.gatherUniqueFields.nonEmpty) {
           uniqueFieldUtil.getUniqueFieldsValues(dataSourceName, primaryDf)
         } else primaryDf
         (dataSourceName, df)
@@ -94,7 +99,7 @@ class DataGeneratorProcessor extends SparkProvider {
     sinkDf
   }
 
-  private def pushDataToSinks(executableTasks: List[(TaskSummary, Task)], sinkDf: List[(String, DataFrame)]): Unit = {
+  def pushDataToSinks(executableTasks: List[(TaskSummary, Task)], sinkDf: List[(String, DataFrame)]): Unit = {
     val sinkFactory = new SinkFactory(connectionConfigsByName, applicationType)
     val stepByDataSourceName = executableTasks.flatMap(task =>
       task._2.steps.map(s => (getDataSourceName(task._1, s), s))
@@ -111,19 +116,6 @@ class DataGeneratorProcessor extends SparkProvider {
       } else if (applicationType.equalsIgnoreCase(BASIC_APPLICATION) && flagsConfig.enableRecordTracking) {
         LOGGER.warn(s"Please upgrade from the free plan to paid plan to enable record tracking. More details here: $DATA_CATERER_SITE_PRICING")
       }
-    })
-  }
-
-  private def getDataSourceName(taskSummary: TaskSummary, step: Step): String = {
-    s"${taskSummary.dataSourceName}.${step.name}"
-  }
-
-  private def getCountPerStep(tasks: List[Task], faker: Faker): List[(String, Long)] = {
-    tasks.flatMap(task => {
-      task.steps.map(step => {
-        val stepName = s"${task.name}_${step.name}"
-        (stepName, getRecordCount(step.count, faker))
-      })
     })
   }
 

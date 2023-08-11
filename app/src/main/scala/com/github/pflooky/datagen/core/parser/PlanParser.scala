@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.parser
 
 import com.github.pflooky.datagen.core.exception.TaskParseException
-import com.github.pflooky.datagen.core.model.Constants.ONE_OF
+import com.github.pflooky.datagen.core.model.Constants.ONE_OF_GENERATOR
 import com.github.pflooky.datagen.core.model.{Plan, Schema, Step, Task}
 import com.github.pflooky.datagen.core.util.FileUtil.{CLOUD_STORAGE_REGEX, getFileContentFromFileSystem, isCloudStoragePath}
 import com.github.pflooky.datagen.core.util.{FileUtil, ObjectMapperUtil}
@@ -88,7 +88,7 @@ object PlanParser {
   private def schemaToString(schema: Schema): Schema = {
     val mappedFields = schema.fields.map(fields => {
       fields.map(field => {
-        if (field.generator.isDefined && field.generator.get.`type` != ONE_OF) {
+        if (field.generator.isDefined && field.generator.get.`type` != ONE_OF_GENERATOR) {
           val fieldGenOpt = toStringValues(field.generator.get.options)
           field.copy(generator = Some(field.generator.get.copy(options = fieldGenOpt)))
         } else {

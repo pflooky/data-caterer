@@ -3,7 +3,7 @@ package com.github.pflooky.datagen.core.util
 import com.github.pflooky.datagen.core.model.Constants.IS_UNIQUE
 import com.github.pflooky.datagen.core.model.{Count, Field, Generator, Schema, Step, Task, TaskSummary}
 
-class UniqueFieldUtilTest extends SparkSuite {
+class UniqueFieldsUtilTest extends SparkSuite {
 
   test("Can identify the unique columns and create a data frame with unique values for column") {
     val tasks = List((
@@ -17,16 +17,15 @@ class UniqueFieldUtilTest extends SparkSuite {
         ))))
       ))
     ))
-    val uniqueColumnUtil = new UniqueFieldUtil(tasks)
+    val uniqueColumnUtil = new UniqueFieldsUtil(tasks)
 
     val uniqueColumns = uniqueColumnUtil.uniqueFieldsDf
     assert(uniqueColumns.size == 2)
     assert(uniqueColumnUtil.uniqueFieldsDf.size == 2)
     assert(uniqueColumnUtil.uniqueFieldsDf.head._2.isEmpty)
-    val col = uniqueColumns.filter(_._1.column == "account_id").head
+    val col = uniqueColumns.filter(_._1.columns == List("account_id")).head
     assert(col._1.dataSource == "postgresAccount")
     assert(col._1.step == "accounts")
-    assert(col._1.column == "account_id")
 
     val generatedData = sparkSession.createDataFrame(Seq(
       Account("acc1", "peter"), Account("acc1", "john"), Account("acc2", "jack"), Account("acc3", "bob")
@@ -39,7 +38,7 @@ class UniqueFieldUtilTest extends SparkSuite {
     data.foreach(a => assert(expectedUniqueAccounts.contains(a)))
     assert(uniqueColumnUtil.uniqueFieldsDf.size == 2)
     assert(uniqueColumnUtil.uniqueFieldsDf.head._2.count() == 3)
-    val currentUniqueAcc = uniqueColumnUtil.uniqueFieldsDf.filter(_._1.column == "account_id").head._2.collect().map(_.getString(0))
+    val currentUniqueAcc = uniqueColumnUtil.uniqueFieldsDf.filter(_._1.columns == List("account_id")).head._2.collect().map(_.getString(0))
     currentUniqueAcc.foreach(a => assert(expectedUniqueAccounts.contains(a)))
 
     val generatedData2 = sparkSession.createDataFrame(Seq(
@@ -55,9 +54,9 @@ class UniqueFieldUtilTest extends SparkSuite {
     assert(data2.head.getString(0) == "acc4")
     assert(data2.head.getString(1) == "cat")
 
-    val currentUniqueAcc2 = uniqueColumnUtil.uniqueFieldsDf.filter(_._1.column == "account_id").head._2.collect().map(_.getString(0))
+    val currentUniqueAcc2 = uniqueColumnUtil.uniqueFieldsDf.filter(_._1.columns == List("account_id")).head._2.collect().map(_.getString(0))
     currentUniqueAcc2.foreach(a => assert(expectedUniqueAccounts2.contains(a)))
-    val currentUniqueName = uniqueColumnUtil.uniqueFieldsDf.filter(_._1.column == "name").head._2.collect().map(_.getString(0))
+    val currentUniqueName = uniqueColumnUtil.uniqueFieldsDf.filter(_._1.columns == List("name")).head._2.collect().map(_.getString(0))
     currentUniqueName.foreach(a => assert(expectedUniqueNames.contains(a)))
   }
 }

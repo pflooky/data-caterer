@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.provider
 
 import com.github.pflooky.datagen.core.exception.InvalidDataGeneratorConfigurationException
-import com.github.pflooky.datagen.core.model.Constants.{GENERATE_REGEX_UDF, REGEX}
+import com.github.pflooky.datagen.core.model.Constants.{GENERATE_REGEX_UDF, REGEX_GENERATOR}
 import net.datafaker.Faker
 import org.apache.spark.sql.types.StructField
 
@@ -14,8 +14,8 @@ object RegexDataGenerator {
   }
 
   class RandomRegexDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends NullableDataGenerator[String] {
-    private val regex = Try(structField.metadata.getString(REGEX))
-      .getOrElse(throw new InvalidDataGeneratorConfigurationException(structField, REGEX))
+    private val regex = Try(structField.metadata.getString(REGEX_GENERATOR))
+      .getOrElse(throw new InvalidDataGeneratorConfigurationException(structField, REGEX_GENERATOR))
 
     override val edgeCases: List[String] = List()
 

@@ -15,7 +15,7 @@ object OneOfDataGenerator {
   class RandomOneOfDataGenerator(val structField: StructField, val faker: Faker = new Faker()) extends DataGenerator[Any] {
     private lazy val oneOfValues = getOneOfList
     private lazy val oneOfArrayLength = oneOfValues.length
-    assert(structField.metadata.contains(ONE_OF), s"$ONE_OF not defined for data generator in metadata, unable to generate data, name=${structField.name}, " +
+    assert(structField.metadata.contains(ONE_OF_GENERATOR), s"$ONE_OF_GENERATOR not defined for data generator in metadata, unable to generate data, name=${structField.name}, " +
       s"type=${structField.dataType}, metadata=${structField.metadata}")
 
     override def generate: Any = {
@@ -30,10 +30,10 @@ object OneOfDataGenerator {
     private def getOneOfList: Array[Any] = {
       lazy val arrayType = Try(structField.metadata.getString(ARRAY_TYPE)).getOrElse(ONE_OF_STRING)
       val x = arrayType.toLowerCase match {
-        case ONE_OF_STRING => structField.metadata.getStringArray(ONE_OF)
-        case ONE_OF_LONG => structField.metadata.getLongArray(ONE_OF)
-        case ONE_OF_DOUBLE => structField.metadata.getDoubleArray(ONE_OF)
-        case ONE_OF_BOOLEAN => structField.metadata.getBooleanArray(ONE_OF)
+        case ONE_OF_STRING => structField.metadata.getStringArray(ONE_OF_GENERATOR)
+        case ONE_OF_LONG => structField.metadata.getLongArray(ONE_OF_GENERATOR)
+        case ONE_OF_DOUBLE => structField.metadata.getDoubleArray(ONE_OF_GENERATOR)
+        case ONE_OF_BOOLEAN => structField.metadata.getBooleanArray(ONE_OF_GENERATOR)
         case _ => Array()
       }
       x.asInstanceOf[Array[Any]]
