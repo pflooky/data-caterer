@@ -7,7 +7,6 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 class UniqueFieldsUtil(executableTasks: List[(TaskSummary, Task)])(implicit sparkSession: SparkSession) {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
-  private var isUniqueFieldsDfEmpty = true
   var uniqueFieldsDf: Map[UniqueFields, DataFrame] = getUniqueFields
 
   def getUniqueFieldsValues(dataSourceStep: String, df: DataFrame): DataFrame = {
@@ -20,7 +19,7 @@ class UniqueFieldsUtil(executableTasks: List[(TaskSummary, Task)])(implicit spar
     existingFieldValues.foreach(existingCol => {
       val columns = existingCol._1.columns
       val dfWithUnique = finalDf.dropDuplicates(columns)
-      finalDf = if (!isUniqueFieldsDfEmpty) dfWithUnique.join(existingCol._2, columns, "left_anti") else dfWithUnique
+      finalDf = if (existingCol._2.columns.nonEmpty) dfWithUnique.join(existingCol._2, columns, "left_anti") else dfWithUnique
     })
 
     //update the map with the latest values
@@ -33,7 +32,6 @@ class UniqueFieldsUtil(executableTasks: List[(TaskSummary, Task)])(implicit spar
       combinedValuesDf.cache()
       uniqueFieldsDf = uniqueFieldsDf ++ Map(col._1 -> combinedValuesDf)
     })
-    isUniqueFieldsDfEmpty = false
     finalDf
   }
 
