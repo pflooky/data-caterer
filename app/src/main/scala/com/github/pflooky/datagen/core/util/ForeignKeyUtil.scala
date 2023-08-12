@@ -93,7 +93,7 @@ object ForeignKeyUtil {
       .withColumn(targetColumn, col(s"_src_$sourceColumn"))
       .drop(s"_src_$sourceColumn")
     LOGGER.debug(s"Applied source DF keys with target DF, source=$sourceColumn, target=$targetColumn")
-    res.cache()
+    if (!res.storageLevel.useMemory) res.cache()
     res
   }
 

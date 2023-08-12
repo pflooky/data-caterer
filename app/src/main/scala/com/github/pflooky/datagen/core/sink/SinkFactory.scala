@@ -55,10 +55,12 @@ class SinkFactory(
 
     trySaveData match {
       case Failure(exception) =>
-        LOGGER.error(s"Failed to save data for sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, num-records=$count, status=$FAILED, exception=${exception.getMessage.substring(0, 600)}")
+        LOGGER.error(s"Failed to save data for sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, " +
+          s"num-records=$count, status=$FAILED, exception=${exception.getMessage.take(500)}")
         if (enableFailOnError) throw new RuntimeException(exception)
       case Success(_) =>
-        LOGGER.info(s"Successfully saved data to sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, num-records=$count, status=$FINISHED")
+        LOGGER.info(s"Successfully saved data to sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, " +
+          s"num-records=$count, status=$FINISHED")
     }
   }
 

@@ -79,7 +79,7 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
 
     val rddGeneratedData = sparkSession.sparkContext.parallelize(generatedData)
     val df = sparkSession.createDataFrame(rddGeneratedData, structType)
-    df.cache()
+    if (!df.storageLevel.useMemory) df.cache()
 
     var dfPerCol = count.perColumn
       .map(perCol => generateRecordsPerColumn(dataGenerators, step, perCol, df))

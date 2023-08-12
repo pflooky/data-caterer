@@ -29,7 +29,7 @@ class UniqueFieldsUtil(executableTasks: List[(TaskSummary, Task)])(implicit spar
       if (!existingDf.storageLevel.useMemory) existingDf.cache()
       if (!newFieldValuesDf.storageLevel.useMemory) newFieldValuesDf.cache()
       val combinedValuesDf = if (existingDf.isEmpty) newFieldValuesDf else newFieldValuesDf.union(existingDf)
-      combinedValuesDf.cache()
+      if (!combinedValuesDf.storageLevel.useMemory) combinedValuesDf.cache()
       uniqueFieldsDf = uniqueFieldsDf ++ Map(col._1 -> combinedValuesDf)
     })
     finalDf

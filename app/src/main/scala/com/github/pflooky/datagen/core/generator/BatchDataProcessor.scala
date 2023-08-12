@@ -49,7 +49,7 @@ class BatchDataProcessor extends SparkProvider {
           trackRecordsPerStep = trackRecordsPerStep ++ Map(recordStepName -> stepRecords.copy(currentNumRecords = dfRecordCount))
 
           val df = if (s.gatherPrimaryKeys.nonEmpty) uniqueFieldUtil.getUniqueFieldsValues(dataSourceStepName, genDf) else genDf
-          df.cache()
+          if (!df.storageLevel.useMemory) df.cache()
           (dataSourceStepName, df)
         })
       ).toMap
