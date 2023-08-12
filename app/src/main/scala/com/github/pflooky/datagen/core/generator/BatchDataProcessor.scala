@@ -48,7 +48,7 @@ class BatchDataProcessor extends SparkProvider {
           LOGGER.debug(s"Step record count for batch, batch=$batch, step-name=${s.name}, target-num-records=${stepRecords.numRecordsPerBatch}, actual-num-records=$dfRecordCount")
           trackRecordsPerStep = trackRecordsPerStep ++ Map(recordStepName -> stepRecords.copy(currentNumRecords = dfRecordCount))
 
-          val df = if (s.gatherPrimaryKeys.nonEmpty) uniqueFieldUtil.getUniqueFieldsValues(dataSourceStepName, genDf) else genDf
+          val df = if (s.gatherPrimaryKeys.nonEmpty && generationConfig.enableUniqueCheck) uniqueFieldUtil.getUniqueFieldsValues(dataSourceStepName, genDf) else genDf
           if (!df.storageLevel.useMemory) df.cache()
           (dataSourceStepName, df)
         })

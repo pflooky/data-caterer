@@ -101,6 +101,7 @@ case class MetadataConfig(
 case class GenerationConfig(
                            numRecordsPerBatch: Long = 100000,
                            numRecordsPerStep: Option[Long] = None,
+                           enableUniqueCheck: Boolean = false,
                          ) {
   def this() = this(100000, None)
 }

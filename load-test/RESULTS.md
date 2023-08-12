@@ -28,3 +28,17 @@ Run 1: 202s
 Run 2 (with cache before zipWithIndex, shuffle partitions = 10): 147s
 Run 3 (same as 2 with disable count): 122s
 Run 4 (same as 3 run in docker): 22s
+
+## Postgres Multiple Tables
+
+- Write to balances and transactions
+- 1,000,000 in balances
+- 2,000,000 in transactions, 5 transactions per 200,000 accounts
+- Link account_number between balances and transactions
+
+### Result
+
+Run 1 (no primary keys defined): 166s
+Run 2 (shuffle partitions from 10 to 3): 149s
+Run 3 (batch size 1,000,000): 105s
+Run 4 (shuffle partitions from 3 to 1): 109s

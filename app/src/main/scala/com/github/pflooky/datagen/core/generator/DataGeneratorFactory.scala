@@ -32,14 +32,14 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
     val structFieldsWithDataGenerators = step.schema.fields.map(getStructWithGenerators).getOrElse(List())
     val recordCount = step.count.numRecords.toInt
     val averagePerCol = step.count.perColumn.map(perCol => perCol.averageCountPerColumn).getOrElse(1L)
-    val indexedDf = sparkSession.createDataFrame(Seq.range(1L, recordCount / averagePerCol + 1).map(Holder))
+    val indexedDf = sparkSession.createDataFrame(Seq.range(0L, recordCount / averagePerCol).map(Holder))
     generateDataViaSql(structFieldsWithDataGenerators, step, indexedDf)
       .alias(s"$dataSourceName.${step.name}")
   }
 
   def generateDataForStep(step: Step, dataSourceName: String, startIndex: Long, endIndex: Long): DataFrame = {
     val structFieldsWithDataGenerators = step.schema.fields.map(getStructWithGenerators).getOrElse(List())
-    val indexedDf = sparkSession.createDataFrame(Seq.range(startIndex, endIndex + 1).map(Holder))
+    val indexedDf = sparkSession.createDataFrame(Seq.range(startIndex, endIndex).map(Holder))
     generateDataViaSql(structFieldsWithDataGenerators, step, indexedDf)
       .alias(s"$dataSourceName.${step.name}")
   }
