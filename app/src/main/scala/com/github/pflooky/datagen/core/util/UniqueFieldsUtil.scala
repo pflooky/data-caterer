@@ -14,6 +14,7 @@ class UniqueFieldsUtil(executableTasks: List[(TaskSummary, Task)])(implicit spar
     //get all the unique values that have been generated for each column so far
     val existingFieldValues = uniqueFieldsDf.filter(uniqueDf => uniqueDf._1.getDataSourceName == dataSourceStep)
     var finalDf = df
+    if (!finalDf.storageLevel.useMemory) finalDf.cache()
 
     //drop duplicate records for data via dropDuplicates and then anti join with previously generated values
     existingFieldValues.foreach(existingCol => {
