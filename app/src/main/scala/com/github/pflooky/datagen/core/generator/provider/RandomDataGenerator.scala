@@ -43,7 +43,8 @@ object RandomDataGenerator {
     assert(minLength <= maxLength, s"minLength has to be less than or equal to maxLength, field-name=${structField.name}")
     private lazy val tryExpression = Try(structField.metadata.getString(EXPRESSION))
 
-    override val edgeCases: List[String] = List("", "\n", "\r", "\t", " ", "\\u0000", "\\ufff")
+    override val edgeCases: List[String] = List("", "\n", "\r", "\t", " ", "\\u0000", "\\ufff",
+      "İyi günler", "Спасибо", "Καλημέρα", "صباح الخير", "Förlåt", "你好吗", "Nhà vệ sinh ở đâu", "こんにちは", "नमस्ते", "Բարեւ", "Здравейте")
 
     override def generate: String = {
       if (tryExpression.isSuccess) {

@@ -1,6 +1,7 @@
 package com.github.pflooky.datagen.core.generator
 
 import com.github.pflooky.datagen.core.generator.delete.DeleteRecordProcessor
+import com.github.pflooky.datagen.core.generator.result.DataGenerationResultWriter
 import com.github.pflooky.datagen.core.generator.track.RecordTrackingProcessor
 import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING, FORMAT}
 import com.github.pflooky.datagen.core.model.{Plan, Task, TaskSummary}
@@ -13,6 +14,7 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.DataFrame
 
 import java.io.Serializable
+import java.time.LocalDateTime
 import java.util.{Locale, Random}
 import scala.util.{Failure, Success, Try}
 
@@ -21,6 +23,7 @@ class DataGeneratorProcessor extends SparkProvider {
   private val LOGGER = Logger.getLogger(getClass.getName)
   private lazy val recordTrackingFactory = new RecordTrackingProcessor(foldersConfig.recordTrackingFolderPath)
   private lazy val deleteRecordProcessor = new DeleteRecordProcessor(connectionConfigsByName, foldersConfig.recordTrackingFolderPath)
+  private lazy val dataGenerationResultWriter = new DataGenerationResultWriter(metadataConfig, foldersConfig)
 
   def generateData(): Unit = {
     val plan = PlanParser.parsePlan(foldersConfig.planFilePath)
@@ -28,17 +31,20 @@ class DataGeneratorProcessor extends SparkProvider {
     val enabledTaskMap = enabledPlannedTasks.map(t => (t.name, t)).toMap
     val tasks = PlanParser.parseTasks(foldersConfig.taskFolderPath)
     val tasksByName = tasks.filter(t => enabledTaskMap.contains(t.name)).map(t => (t.name, t)).toMap
-    val summaryWithTask = plan.tasks.map(t => (t, tasksByName(t.name)))
+    val summaryWithTask = enabledPlannedTasks.map(t => (t, tasksByName(t.name)))
     val faker = getDataFaker(plan)
 
 //    generateData(plan.copy(tasks = enabledPlannedTasks), tasks.filter(t => enabledTaskMap.contains(t.name)).toList)
-    new BatchDataProcessor().splitAndProcess(plan.copy(tasks = enabledPlannedTasks), summaryWithTask, faker)
+    val generationResult = new BatchDataProcessor().splitAndProcess(plan.copy(tasks = enabledPlannedTasks), summaryWithTask, faker)
+    if (flagsConfig.enableSaveSinkMetadata) {
+      dataGenerationResultWriter.writeResult(plan, generationResult)
+    }
   }
 
   def generateData(plan: Plan, tasks: List[Task]): Unit = {
     val tasksByName = tasks.map(t => (t.name, t)).toMap
-    val stepsByName = tasks.flatMap(_.steps).map(s => (s.name, s)).toMap
     val summaryWithTask = plan.tasks.map(t => (t, tasksByName(t.name)))
+    val faker = getDataFaker(plan)
 
     (flagsConfig.enableGenerateData, flagsConfig.enableDeleteGeneratedRecords, applicationType) match {
       case (true, enableDelete, _) =>
@@ -58,9 +64,12 @@ class DataGeneratorProcessor extends SparkProvider {
          * 2. create accumulators to keep track of count for each step
          * 3. keep track of primary keys and unique fields already produced
          */
-        val sinkDf = getAllStepDf(plan, summaryWithTask)
-        pushDataToSinks(summaryWithTask, sinkDf)
+        val generationResult = new BatchDataProcessor().splitAndProcess(plan, summaryWithTask, faker)
+        if (flagsConfig.enableSaveSinkMetadata) {
+          dataGenerationResultWriter.writeResult(plan, generationResult)
+        }
       case (_, true, ADVANCED_APPLICATION) =>
+        val stepsByName = tasks.flatMap(_.steps).filter(_.enabled).map(s => (s.name, s)).toMap
         deleteRecordProcessor.deleteGeneratedRecords(plan, stepsByName, summaryWithTask)
       case (_, true, BASIC_APPLICATION) =>
         LOGGER.warn(s"Please upgrade from the free plan to paid plan to enable generated records to be deleted. More details here: $DATA_CATERER_SITE_PRICING")
@@ -75,7 +84,7 @@ class DataGeneratorProcessor extends SparkProvider {
     val uniqueFieldUtil = new UniqueFieldsUtil(executableTasks)
 
     val generatedDataForeachTask = executableTasks.flatMap(task =>
-      task._2.steps.map(s => {
+      task._2.steps.filter(_.enabled).map(s => {
         val dataSourceName = getDataSourceName(task._1, s)
         val genDf = dataGeneratorFactory.generateDataForStep(s, task._1.dataSourceName)
 
@@ -100,7 +109,7 @@ class DataGeneratorProcessor extends SparkProvider {
   }
 
   def pushDataToSinks(executableTasks: List[(TaskSummary, Task)], sinkDf: List[(String, DataFrame)]): Unit = {
-    val sinkFactory = new SinkFactory(connectionConfigsByName, applicationType)
+    val sinkFactory = new SinkFactory(connectionConfigsByName, flagsConfig, metadataConfig, applicationType)
     val stepByDataSourceName = executableTasks.flatMap(task =>
       task._2.steps.map(s => (getDataSourceName(task._1, s), s))
     ).toMap
@@ -108,7 +117,7 @@ class DataGeneratorProcessor extends SparkProvider {
     sinkDf.foreach(df => {
       val dataSourceName = df._1.split("\\.").head
       val step = stepByDataSourceName(df._1)
-      sinkFactory.pushToSink(df._2, dataSourceName, step, flagsConfig)
+      sinkFactory.pushToSink(df._2, dataSourceName, step, flagsConfig, LocalDateTime.now())
 
       if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION) && flagsConfig.enableRecordTracking) {
         val format = connectionConfigsByName(dataSourceName)(FORMAT)

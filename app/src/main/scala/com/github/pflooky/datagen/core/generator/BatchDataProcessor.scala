@@ -1,42 +1,36 @@
 package com.github.pflooky.datagen.core.generator
 
-import com.github.pflooky.datagen.core.config.GenerationConfig
 import com.github.pflooky.datagen.core.generator.track.RecordTrackingProcessor
 import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING, FORMAT}
-import com.github.pflooky.datagen.core.model.{Plan, Task, TaskSummary}
+import com.github.pflooky.datagen.core.model.{DataSourceResult, Plan, Task, TaskSummary}
 import com.github.pflooky.datagen.core.sink.SinkFactory
 import com.github.pflooky.datagen.core.util.GeneratorUtil.getDataSourceName
-import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, RecordCountUtil, SparkProvider, UniqueFieldsUtil}
+import com.github.pflooky.datagen.core.util.RecordCountUtil.calculateNumBatches
+import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, SparkProvider, UniqueFieldsUtil}
 import net.datafaker.Faker
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
+
+import java.time.LocalDateTime
 
 class BatchDataProcessor extends SparkProvider {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
   private lazy val recordTrackingProcessor = new RecordTrackingProcessor(foldersConfig.recordTrackingFolderPath)
-  private lazy val sinkFactory = new SinkFactory(connectionConfigsByName, applicationType)
+  private lazy val sinkFactory = new SinkFactory(connectionConfigsByName, flagsConfig, metadataConfig, applicationType)
 
   def splitAndProcess(plan: Plan, executableTasks: List[(TaskSummary, Task)], faker: Faker)
-                     (implicit sparkSession: SparkSession): Unit = {
+                     (implicit sparkSession: SparkSession): List[DataSourceResult] = {
     val dataGeneratorFactory = new DataGeneratorFactory(faker)
     val uniqueFieldUtil = new UniqueFieldsUtil(executableTasks)
     val tasks = executableTasks.map(_._2)
+    var (numBatches, trackRecordsPerStep) = calculateNumBatches(tasks, generationConfig)
 
-    val countPerStep = getCountPerStep(tasks, generationConfig).toMap
-    val totalRecordsToGenerate = countPerStep.values.sum
-    if (totalRecordsToGenerate <= generationConfig.numRecordsPerBatch) {
-      LOGGER.debug(s"Generating all records for all steps in single batch, total-records=$totalRecordsToGenerate, configured-records-per-batch=${generationConfig.numRecordsPerBatch}")
-    }
-
-    val numBatches = Math.max((totalRecordsToGenerate / generationConfig.numRecordsPerBatch).toInt, 1)
-    LOGGER.debug(s"Number of batches for data generation, num-batches=$numBatches")
-    var trackRecordsPerStep = RecordCountUtil.stepToRecordCountMap(tasks, numBatches)
-
-    (1 to numBatches).foreach(batch => {
+    val dataSourceResults = (1 to numBatches).flatMap(batch => {
+      val startTime = LocalDateTime.now()
       LOGGER.info(s"Starting batch, batch=$batch, num-batches=$numBatches")
       val generatedDataForeachTask = executableTasks.flatMap(task =>
-        task._2.steps.map(s => {
+        task._2.steps.filter(_.enabled).map(s => {
           val dataSourceStepName = getDataSourceName(task._1, s)
           val recordStepName = s"${task._2.name}_${s.name}"
           val stepRecords = trackRecordsPerStep(recordStepName)
@@ -48,7 +42,7 @@ class BatchDataProcessor extends SparkProvider {
           LOGGER.debug(s"Step record count for batch, batch=$batch, step-name=${s.name}, target-num-records=${stepRecords.numRecordsPerBatch}, actual-num-records=$dfRecordCount")
           trackRecordsPerStep = trackRecordsPerStep ++ Map(recordStepName -> stepRecords.copy(currentNumRecords = dfRecordCount))
 
-          val df = if (s.gatherPrimaryKeys.nonEmpty && generationConfig.enableUniqueCheck) uniqueFieldUtil.getUniqueFieldsValues(dataSourceStepName, genDf) else genDf
+          val df = if (s.gatherPrimaryKeys.nonEmpty && flagsConfig.enableUniqueCheck) uniqueFieldUtil.getUniqueFieldsValues(dataSourceStepName, genDf) else genDf
           if (!df.storageLevel.useMemory) df.cache()
           (dataSourceStepName, df)
         })
@@ -57,20 +51,24 @@ class BatchDataProcessor extends SparkProvider {
       val sinkDf = plan.sinkOptions
         .map(_ => ForeignKeyUtil.getDataFramesWithForeignKeys(plan, generatedDataForeachTask))
         .getOrElse(generatedDataForeachTask.toList)
-      pushDataToSinks(executableTasks, sinkDf)
+      val sinkResults = pushDataToSinks(executableTasks, sinkDf, batch, startTime)
       sinkDf.foreach(_._2.unpersist())
       LOGGER.info(s"Finished batch, batch=$batch, num-batches=$numBatches")
-    })
+      sinkResults
+    }).toList
     LOGGER.debug(s"Completed all batches, num-batches=$numBatches")
+    dataSourceResults
   }
 
-  def pushDataToSinks(executableTasks: List[(TaskSummary, Task)], sinkDf: List[(String, DataFrame)]): Unit = {
-    val stepByDataSourceName = executableTasks.flatMap(task => task._2.steps.map(s => (getDataSourceName(task._1, s), s))).toMap
+  def pushDataToSinks(executableTasks: List[(TaskSummary, Task)], sinkDf: List[(String, DataFrame)], batchNum: Int, startTime: LocalDateTime): List[DataSourceResult] = {
+    val stepAndTaskByDataSourceName = executableTasks.flatMap(task =>
+      task._2.steps.map(s => (getDataSourceName(task._1, s), (s, task._2)))
+    ).toMap
 
-    sinkDf.foreach(df => {
+    sinkDf.map(df => {
       val dataSourceName = df._1.split("\\.").head
-      val step = stepByDataSourceName(df._1)
-      sinkFactory.pushToSink(df._2, dataSourceName, step, flagsConfig)
+      val (step, task) = stepAndTaskByDataSourceName(df._1)
+      val sinkResult = sinkFactory.pushToSink(df._2, dataSourceName, step, flagsConfig, startTime)
 
       if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION) && flagsConfig.enableRecordTracking) {
         val format = connectionConfigsByName(dataSourceName)(FORMAT)
@@ -78,26 +76,8 @@ class BatchDataProcessor extends SparkProvider {
       } else if (applicationType.equalsIgnoreCase(BASIC_APPLICATION) && flagsConfig.enableRecordTracking) {
         LOGGER.warn(s"Please upgrade from the free plan to paid plan to enable record tracking. More details here: $DATA_CATERER_SITE_PRICING")
       }
+      DataSourceResult(dataSourceName, task, step, sinkResult, batchNum)
     })
-  }
-
-  private def getCountPerStep(tasks: List[Task], generationConfig: GenerationConfig): List[(String, Long)] = {
-    //TODO need to take into account the foreign keys defined
-    //the main foreign key controls the number of records produced by the children data sources
-    val baseStepCounts = tasks.flatMap(task => {
-      task.steps.map(step => {
-        val stepName = s"${task.name}_${step.name}"
-        val stepCount = generationConfig.numRecordsPerStep
-          .map(c => {
-            LOGGER.debug(s"Step count total is defined in generation config, overriding count total defined in step, " +
-              s"task-name=${task.name}, step-name=${step.name}, records-per-step=$c")
-            step.count.copy(total = Some(c))
-          })
-          .getOrElse(step.count)
-        (stepName, stepCount.numRecords)
-      })
-    })
-    baseStepCounts
   }
 }
 

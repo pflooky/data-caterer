@@ -3,14 +3,18 @@ package com.github.pflooky.datagen.core.util
 import com.github.pflooky.datagen.core.config.MetadataConfig
 import com.github.pflooky.datagen.core.generator.metadata.ExpressionPredictor
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
-import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ColumnMetadata
-import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CSV, DELTA, DISTINCT_COUNT, EXPRESSION, HISTOGRAM, HTTP, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_TABLE, JMS, JMS_DESTINATION_NAME, JSON, ONE_OF_GENERATOR, ORC, PARQUET, PATH, ROW_COUNT}
+import com.github.pflooky.datagen.core.generator.metadata.datasource.database.{CassandraMetadata, ColumnMetadata, MysqlMetadata, PostgresMetadata}
+import com.github.pflooky.datagen.core.generator.metadata.datasource.file.FileMetadata
+import com.github.pflooky.datagen.core.generator.metadata.datasource.http.HttpMetadata
+import com.github.pflooky.datagen.core.generator.metadata.datasource.jms.JmsMetadata
+import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CSV, DELTA, DISTINCT_COUNT, DRIVER, EXPRESSION, FORMAT, HISTOGRAM, HTTP, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_TABLE, JMS, JMS_DESTINATION_NAME, JSON, MYSQL_DRIVER, ONE_OF_GENERATOR, ORC, PARQUET, PATH, POSTGRES_DRIVER, ROW_COUNT}
+import com.github.pflooky.datagen.core.model.Field
 import org.apache.log4j.Logger
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.CatalogColumnStat
 import org.apache.spark.sql.execution.command.AnalyzeColumnCommand
 import org.apache.spark.sql.types.{BinaryType, BooleanType, DataType, DateType, DecimalType, DoubleType, FloatType, IntegerType, LongType, Metadata, MetadataBuilder, ShortType, StringType, StructField, TimestampType}
-import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, Encoder, Encoders, SparkSession}
 
 import scala.util.{Failure, Success, Try}
 
@@ -20,6 +24,7 @@ object MetadataUtil {
   private val OBJECT_MAPPER = ObjectMapperUtil.jsonObjectMapper
   private val mapStringToAnyClass = Map[String, Any]()
   private val TEMP_CACHED_TABLE_NAME = "temp_table"
+  implicit private val columnMetadataEncoder: Encoder[ColumnMetadata] = Encoders.kryo[ColumnMetadata]
 
   def metadataToMap(metadata: Metadata): Map[String, Any] = {
     OBJECT_MAPPER.readValue(metadata.json, mapStringToAnyClass.getClass)
@@ -27,6 +32,11 @@ object MetadataUtil {
 
   def mapToMetadata(mapMetadata: Map[String, Any]): Metadata = {
     Metadata.fromJson(OBJECT_MAPPER.writeValueAsString(mapMetadata))
+  }
+
+  def mapToStructFields(sourceData: DataFrame, dataSourceReadOptions: Map[String, String],
+                        columnDataProfilingMetadata: List[DataProfilingMetadata])(implicit sparkSession: SparkSession): Array[StructField] = {
+    mapToStructFields(sourceData, dataSourceReadOptions, columnDataProfilingMetadata, sparkSession.emptyDataset[ColumnMetadata])
   }
 
   def mapToStructFields(sourceData: DataFrame, dataSourceReadOptions: Map[String, String],
@@ -115,7 +125,14 @@ object MetadataUtil {
 
   private def columnStatToMap(catalogColumnStat: CatalogColumnStat): Map[String, String] = {
     catalogColumnStat.toMap("col")
-      .map(kv => (kv._1.replaceFirst("col\\.", ""), kv._2))
+      .map(kv => {
+        val baseStatName = kv._1.replaceFirst("col\\.", "")
+        if (baseStatName.equalsIgnoreCase("minvalue")) {
+          ("min", kv._2)
+        } else if (baseStatName.equalsIgnoreCase("maxvalue")) {
+          ("max", kv._2)
+        } else (baseStatName, kv._2)
+      })
       .filter(_._1 != "version")
   }
 
@@ -159,6 +176,34 @@ object MetadataUtil {
         throw new RuntimeException(s"Unsupported data format for record tracking, format=$lowerFormat")
     }
     s"$recordTrackingFolderPath/$lowerFormat/$dataSourceName/$subPath"
+  }
+
+  def getMetadataFromConnectionConfig(connectionConfig: (String, Map[String, String])): Option[DataSourceMetadata] = {
+    val format = connectionConfig._2(FORMAT)
+    val connection = format match {
+      case CASSANDRA => Some(CassandraMetadata(connectionConfig._1, connectionConfig._2))
+      case JDBC =>
+        connectionConfig._2(DRIVER) match {
+          case POSTGRES_DRIVER => Some(PostgresMetadata(connectionConfig._1, connectionConfig._2))
+          case MYSQL_DRIVER => Some(MysqlMetadata(connectionConfig._1, connectionConfig._2))
+          case _ => None
+        }
+      case CSV | JSON | PARQUET | DELTA | ORC => Some(FileMetadata(connectionConfig._1, format, connectionConfig._2))
+      case HTTP => Some(HttpMetadata(connectionConfig._1, format, connectionConfig._2))
+      case JMS => Some(JmsMetadata(connectionConfig._1, format, connectionConfig._2))
+      case _ => None
+    }
+    if (connection.isEmpty) {
+      LOGGER.warn(s"Metadata extraction not supported for connection type '${connectionConfig._2(FORMAT)}', connection-name=${connectionConfig._1}")
+    }
+    connection
+  }
+
+  def getFieldMetadata(dataSourceName: String, df: DataFrame, connectionConfig: Map[String, String], metadataConfig: MetadataConfig)(implicit sparkSession: SparkSession): Array[Field] = {
+    val dataSourceMetadata = getMetadataFromConnectionConfig((dataSourceName, connectionConfig)).get
+    val fieldMetadata = getFieldDataProfilingMetadata(df, connectionConfig, dataSourceMetadata, metadataConfig)
+    val structFields = mapToStructFields(df, connectionConfig, fieldMetadata)
+    structFields.map(Field.fromStructField)
   }
 }
 

@@ -12,8 +12,8 @@ steps:
         generator:
           type: "random"
           options:
-            maxValue: 10
-            minValue: 1
+            max: 10
+            min: 1
     schema:
       fields:
         - name: "account_id"
@@ -33,19 +33,19 @@ steps:
           generator:
             type: "random"
             options:
-              minValue: 2021
-              maxValue: 2022
+              min: 2021
+              max: 2022
         - name: "amount"
           type: "double"
           generator:
             type: "random"
             options:
-              minValue: 10.0
-              maxValue: 100.0
+              min: 10.0
+              max: 100.0
         - name: "txn_date"
           type: "date"
           generator:
             type: "random"
             options:
-              minValue: "2021-01-01"
-              maxValue: "2021-12-31"
+              min: "2021-01-01"
+              max: "2021-12-31"

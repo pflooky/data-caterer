@@ -25,6 +25,9 @@ plugins {
 repositories {
     // Use Maven Central for resolving dependencies.
     mavenCentral()
+    maven {
+        url = uri("https://plugins.gradle.org/m2/")
+    }
 }
 
 val basicImpl: Configuration by configurations.creating
@@ -72,6 +75,7 @@ dependencies {
     basicImpl("com.github.pureconfig:pureconfig_$scalaVersion:0.17.2")
     basicImpl("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.2")
     basicImpl("com.fasterxml.jackson.module:jackson-module-scala_$scalaVersion:2.15.2")
+    basicImpl("org.scala-lang.modules:scala-xml_$scalaVersion:2.2.0")
 }
 
 testing {

@@ -9,10 +9,10 @@ tasks:
     enabled: false
   - name: "json_account_file"
     dataSourceName: "json"
-    enabled: false
+    enabled: true
   - name: "json_account_http"
     dataSourceName: "httpbin"
-    enabled: true
+    enabled: false
     
 #sinkOptions:
 #  foreignKeys:

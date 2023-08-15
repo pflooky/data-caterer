@@ -7,6 +7,7 @@ import com.github.pflooky.datagen.core.generator.metadata.datasource.http.{HttpM
 import com.github.pflooky.datagen.core.generator.metadata.datasource.jms.{JmsMetadata, JmsMetadataProcessor}
 import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, CASSANDRA, CSV, DATA_CATERER_SITE_PRICING, DELTA, DRIVER, FORMAT, HTTP, JDBC, JMS, JSON, MYSQL_DRIVER, ORC, PARQUET, POSTGRES_DRIVER}
 import com.github.pflooky.datagen.core.model.{Plan, Task}
+import com.github.pflooky.datagen.core.util.MetadataUtil.getMetadataFromConnectionConfig
 import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, MetadataUtil, SparkProvider}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types.StructType
@@ -69,27 +70,6 @@ class DataSourceMetadataFactory extends SparkProvider {
       val structFields = MetadataUtil.mapToStructFields(data, dataSourceReadOptions, fieldsWithDataProfilingMetadata, additionalColumnMetadata)
       DataSourceDetail(dataSourceMetadata, dataSourceReadOptions, StructType(structFields))
     }).toList
-  }
-
-  private def getMetadataFromConnectionConfig(connectionConfig: (String, Map[String, String])): Option[DataSourceMetadata] = {
-    val format = connectionConfig._2(FORMAT)
-    val connection = format match {
-      case CASSANDRA => Some(CassandraMetadata(connectionConfig._1, connectionConfig._2))
-      case JDBC =>
-        connectionConfig._2(DRIVER) match {
-          case POSTGRES_DRIVER => Some(PostgresMetadata(connectionConfig._1, connectionConfig._2))
-          case MYSQL_DRIVER => Some(MysqlMetadata(connectionConfig._1, connectionConfig._2))
-          case _ => None
-        }
-      case CSV | JSON | PARQUET | DELTA | ORC => Some(FileMetadata(connectionConfig._1, format, connectionConfig._2))
-      case HTTP => Some(HttpMetadata(connectionConfig._1, format, connectionConfig._2))
-      case JMS => Some(JmsMetadata(connectionConfig._1, format, connectionConfig._2))
-      case _ => None
-    }
-    if (connection.isEmpty) {
-      LOGGER.warn(s"Metadata extraction not supported for connection type '${connectionConfig._2(FORMAT)}', connection-name=${connectionConfig._1}")
-    }
-    connection
   }
 }
 

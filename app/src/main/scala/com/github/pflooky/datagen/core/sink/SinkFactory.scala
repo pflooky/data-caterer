@@ -1,27 +1,31 @@
 package com.github.pflooky.datagen.core.sink
 
-import com.github.pflooky.datagen.core.config.FlagsConfig
+import com.github.pflooky.datagen.core.config.{FlagsConfig, MetadataConfig}
 import com.github.pflooky.datagen.core.exception.UnsupportedRealTimeDataSourceFormat
 import com.github.pflooky.datagen.core.model.Constants._
-import com.github.pflooky.datagen.core.model.Step
+import com.github.pflooky.datagen.core.model.{SinkResult, Step}
 import com.github.pflooky.datagen.core.sink.http.HttpSinkProcessor
 import com.github.pflooky.datagen.core.sink.jms.JmsSinkProcessor
+import com.github.pflooky.datagen.core.util.MetadataUtil.getFieldMetadata
 import com.google.common.util.concurrent.RateLimiter
 import org.apache.log4j.Logger
 import org.apache.spark.sql.execution.streaming.sources.RateStreamProvider.ROWS_PER_SECOND
 import org.apache.spark.sql.{DataFrame, DataFrameWriter, Dataset, Row, SaveMode, SparkSession}
 
+import java.time.LocalDateTime
 import scala.util.{Failure, Success, Try}
 
 class SinkFactory(
                    val connectionConfigs: Map[String, Map[String, String]],
+                   val flagsConfig: FlagsConfig,
+                   val metadataConfig: MetadataConfig,
                    val applicationType: String = "advanced"
                  )(implicit val sparkSession: SparkSession) {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
   private var HAS_LOGGED_COUNT_DISABLE_WARNING = false
 
-  def pushToSink(df: DataFrame, dataSourceName: String, step: Step, flagsConfig: FlagsConfig): Unit = {
+  def pushToSink(df: DataFrame, dataSourceName: String, step: Step, flagsConfig: FlagsConfig, startTime: LocalDateTime): SinkResult = {
     if (!connectionConfigs.contains(dataSourceName)) {
       throw new RuntimeException(s"Cannot find sink connection details in application config for data source, data-source-name=$dataSourceName, step-name=${step.name}")
     }
@@ -38,29 +42,31 @@ class SinkFactory(
       "-1"
     } else "-1"
     LOGGER.info(s"Pushing data to sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, num-records=$count, status=$STARTED")
-    saveData(df, dataSourceName, step, enrichedConnectionConfig, saveMode, saveModeName, format, count, flagsConfig.enableFailOnError)
+    saveData(df, dataSourceName, step, enrichedConnectionConfig, saveMode, saveModeName, format, count, flagsConfig.enableFailOnError, startTime)
   }
 
   private def saveData(df: DataFrame, dataSourceName: String, step: Step, connectionConfig: Map[String, String],
-                       saveMode: SaveMode, saveModeName: String, format: String, count: String, enableFailOnError: Boolean = true): Unit = {
+                       saveMode: SaveMode, saveModeName: String, format: String, count: String, enableFailOnError: Boolean, startTime: LocalDateTime): SinkResult = {
     val saveTiming = determineSaveTiming(dataSourceName, format, step.name)
+    val baseSinkResult = SinkResult(dataSourceName, format, saveModeName)
     val trySaveData = Try(if (saveTiming.equalsIgnoreCase(BATCH)) {
-      saveBatchData(df, saveMode, connectionConfig, step.options)
+      saveBatchData(dataSourceName, df, saveMode, connectionConfig, step.options, count, startTime)
     } else if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION)) {
-      saveRealTimeData(df, format, connectionConfig, step)
+      saveRealTimeData(dataSourceName, df, format, connectionConfig, step, count, startTime)
     } else if (applicationType.equalsIgnoreCase(BASIC_APPLICATION)) {
       LOGGER.warn(s"Please upgrade from the free plan to paid plan to enable generating real-time data. More details here: $DATA_CATERER_SITE_PRICING")
-      return
-    })
+      baseSinkResult
+    } else baseSinkResult)
 
     trySaveData match {
       case Failure(exception) =>
         LOGGER.error(s"Failed to save data for sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, " +
           s"num-records=$count, status=$FAILED, exception=${exception.getMessage.take(500)}")
-        if (enableFailOnError) throw new RuntimeException(exception)
-      case Success(_) =>
+        if (enableFailOnError) throw new RuntimeException(exception) else baseSinkResult
+      case Success(sinkResult) =>
         LOGGER.info(s"Successfully saved data to sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, " +
           s"num-records=$count, status=$FINISHED")
+        sinkResult
     }
   }
 
@@ -76,22 +82,24 @@ class SinkFactory(
     }
   }
 
-  private def saveBatchData(df: DataFrame, saveMode: SaveMode, connectionConfig: Map[String, String], stepOptions: Map[String, String]): Unit = {
+  private def saveBatchData(dataSourceName: String, df: DataFrame, saveMode: SaveMode, connectionConfig: Map[String, String],
+                            stepOptions: Map[String, String], count: String, startTime: LocalDateTime): SinkResult = {
     val format = connectionConfig(FORMAT)
     if (applicationType.equalsIgnoreCase(BASIC_APPLICATION) && (
       !BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS.contains(format) ||
         (format.equalsIgnoreCase(JDBC) && !connectionConfig(DRIVER).equalsIgnoreCase(POSTGRES_DRIVER)))) {
       LOGGER.warn(s"Please upgrade from the free plan to paid plan to enable generating data to all types of data source. " +
-        s"Free tier only includes all file formats and Postgres, format=$format. More details here: $DATA_CATERER_SITE_PRICING")
-      return
+        s"Free tier only includes all file formats and Postgres, data-source-name=$dataSourceName, format=$format. More details here: $DATA_CATERER_SITE_PRICING")
+      return SinkResult(dataSourceName, format, saveMode.name())
     }
 
     val partitionedDf = partitionDf(df, stepOptions)
-    partitionedDf
+    val trySaveData = Try(partitionedDf
       .format(format)
       .mode(saveMode)
       .options(connectionConfig ++ stepOptions)
-      .save()
+      .save())
+    mapToSinkResult(dataSourceName, df, saveMode, connectionConfig, stepOptions, count, format, trySaveData.isSuccess, startTime)
   }
 
   private def partitionDf(df: DataFrame, stepOptions: Map[String, String]): DataFrameWriter[Row] = {
@@ -102,21 +110,25 @@ class SinkFactory(
       .getOrElse(partitionDf.write)
   }
 
-  private def saveRealTimeData(df: DataFrame, format: String, connectionConfig: Map[String, String], step: Step): Unit = {
+  private def saveRealTimeData(dataSourceName: String, df: DataFrame, format: String, connectionConfig: Map[String, String],
+                               step: Step, count: String, startTime: LocalDateTime): SinkResult = {
     val rowsPerSecond = step.options.getOrElse(ROWS_PER_SECOND, DEFAULT_ROWS_PER_SECOND)
     LOGGER.info(s"Rows per second for generating data, rows-per-second=$rowsPerSecond")
-    saveRealTimeGuava(df, format, connectionConfig, step, rowsPerSecond)
+    saveRealTimeGuava(dataSourceName, df, format, connectionConfig, step, rowsPerSecond, count, startTime)
   }
 
-  private def saveRealTimeGuava(df: DataFrame, format: String, connectionConfig: Map[String, String], step: Step, rowsPerSecond: String): Unit = {
+  private def saveRealTimeGuava(dataSourceName: String, df: DataFrame, format: String, connectionConfig: Map[String, String],
+                                step: Step, rowsPerSecond: String, count: String, startTime: LocalDateTime): SinkResult = {
     val rateLimiter = RateLimiter.create(rowsPerSecond.toInt)
     val sinkProcessor = getRealTimeSinkProcessor(format, connectionConfig, step)
     sinkProcessor.init()
-    df.collect().foreach(row => {
+    val saveResult = df.collect().map(row => {
       rateLimiter.acquire()
-      sinkProcessor.pushRowToSink(row)
+      Try(sinkProcessor.pushRowToSink(row))
     })
     sinkProcessor.close
+    val isSuccess = saveResult.forall(_.isSuccess)
+    mapToSinkResult(dataSourceName, df, SaveMode.Append, connectionConfig, step.options, count, format, isSuccess, startTime)
   }
 
   @deprecated("Unstable for JMS connections")
@@ -161,6 +173,18 @@ class SinkFactory(
       } else connectionConfig
       case _ => connectionConfig
     }
+  }
 
+  private def mapToSinkResult(dataSourceName: String, df: DataFrame, saveMode: SaveMode, connectionConfig: Map[String, String],
+                              stepOptions: Map[String, String], count: String, format: String, isSuccess: Boolean, startTime: LocalDateTime): SinkResult = {
+    val sample = df.take(metadataConfig.numSinkSamples).map(_.json)
+    val sinkResult = SinkResult(dataSourceName, format, saveMode.name(), stepOptions, count.toLong, isSuccess, sample, startTime)
+
+    if (flagsConfig.enableSinkMetadata) {
+      val fields = getFieldMetadata(dataSourceName, df, connectionConfig, metadataConfig)
+      sinkResult.copy(generatedMetadata = fields)
+    } else {
+      sinkResult
+    }
   }
 }
