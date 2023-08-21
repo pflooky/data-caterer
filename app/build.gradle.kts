@@ -18,7 +18,7 @@ plugins {
     scala
     application
 
-    id("org.scoverage") version "8.0.2"
+    id("org.scoverage") version "8.0.3"
     id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
@@ -162,6 +162,7 @@ tasks.test {
 }
 
 configure<ScoverageExtension> {
+    scoverageScalaVersion.set(scalaSpecificVersion)
     excludedFiles.add(".*CombinationCalculator.*")
     excludedPackages.add("com.github.pflooky.datagen.core.exception.*")
 }
