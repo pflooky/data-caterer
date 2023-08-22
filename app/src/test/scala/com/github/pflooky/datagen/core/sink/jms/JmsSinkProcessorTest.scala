@@ -23,11 +23,7 @@ class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
   test("Push value as a basic text message") {
     val mockSession = mock[Session]
     val mockMessageProducer = mock[MessageProducer]
-    val jmsSinkProcessor = new JmsSinkProcessor(Map(), step) {
-      override def createConnection: (MessageProducer, Session, Connection) = {
-        (mockMessageProducer, mockSession, mockConnection)
-      }
-    }
+    val jmsSinkProcessor = JmsSinkProcessor.createConnections(mockMessageProducer, mockSession, mockConnection, step)
 
     val mockRow = mock[Row]
     val mockMessage = mock[TestTextMessage]
@@ -44,11 +40,7 @@ class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
     val schema = Schema("manual", Some(fields))
     val mockSession = mock[Session]
     val mockMessageProducer = mock[MessageProducer]
-    val jmsSinkProcessor = new JmsSinkProcessor(Map(), step.copy(schema = schema)) {
-      override def createConnection: (MessageProducer, Session, Connection) = {
-        (mockMessageProducer, mockSession, mockConnection)
-      }
-    }
+    val jmsSinkProcessor = JmsSinkProcessor.createConnections(mockMessageProducer, mockSession, mockConnection, step.copy(schema = schema))
 
     val mockRow = mock[Row]
     val mockMessage = mock[TestTextMessage]
@@ -66,11 +58,7 @@ class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
     val schema = Schema("manual", Some(fields))
     val mockSession = mock[Session]
     val mockMessageProducer = mock[MessageProducer]
-    val jmsSinkProcessor = new JmsSinkProcessor(Map(), step.copy(schema = schema)) {
-      override def createConnection: (MessageProducer, Session, Connection) = {
-        (mockMessageProducer, mockSession, mockConnection)
-      }
-    }
+    val jmsSinkProcessor = JmsSinkProcessor.createConnections(mockMessageProducer, mockSession, mockConnection, step.copy(schema = schema))
 
     val mockRow = mock[Row]
     val mockMessage = mock[TestTextMessage]
@@ -98,15 +86,8 @@ class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
       "user" -> "admin",
       "password" -> "admin"
     )
-    val mockSession = mock[Session]
-    val mockMessageProducer = mock[MessageProducer]
-    val jmsSinkProcessor = new JmsSinkProcessor(connectionConfig, step) {
-      override def createConnection: (MessageProducer, Session, Connection) = {
-        (mockMessageProducer, mockSession, mockConnection)
-      }
-    }
 
-    val res = jmsSinkProcessor.getConnectionProperties
+    val res = JmsSinkProcessor.getConnectionProperties(connectionConfig)
     assert(res.size() == 4)
     assert(res.containsKey(Context.INITIAL_CONTEXT_FACTORY))
     assert(res.getProperty(Context.INITIAL_CONTEXT_FACTORY) == connectionConfig("initialContextFactory"))
@@ -119,7 +100,7 @@ class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
   }
 
   test("Throw exception when incomplete connection configuration provided") {
-    assertThrows[RuntimeException](new JmsSinkProcessor(Map(), step).createConnection)
+    assertThrows[RuntimeException](JmsSinkProcessor.createConnections(Map(), step))
   }
 
 }

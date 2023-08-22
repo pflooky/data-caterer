@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.result
 
 import com.github.pflooky.datagen.core.model.Constants.HISTOGRAM
-import com.github.pflooky.datagen.core.model.{DataSourceResult, DataSourceResultSummary, Generator, Plan, Step, StepResultSummary, TaskResultSummary}
+import com.github.pflooky.datagen.core.model.{DataSourceResult, DataSourceResultSummary, FlagsConfig, Generator, Plan, Step, StepResultSummary, TaskResultSummary}
 import org.joda.time.DateTime
 
 import scala.xml.{Node, NodeBuffer, NodeSeq}
@@ -27,8 +27,8 @@ class ResultHtmlWriter {
     </html>
   }
 
-  def overview(plan: Plan, stepResultSummary: List[StepResultSummary],
-               taskResultSummary: List[TaskResultSummary], dataSourceResultSummary: List[DataSourceResultSummary]): Node = {
+  def overview(plan: Plan, stepResultSummary: List[StepResultSummary], taskResultSummary: List[TaskResultSummary],
+               dataSourceResultSummary: List[DataSourceResultSummary], flagsConfig: FlagsConfig): Node = {
     <html>
       <head>
         <title>
@@ -41,7 +41,11 @@ class ResultHtmlWriter {
         <div>Generated at
           {DateTime.now()}
         </div>
-        <h1>Summary</h1>{planSummary(plan, stepResultSummary, taskResultSummary, dataSourceResultSummary)}<h2>Task Summary</h2>{tasksSummary(taskResultSummary)}<h2>Step Summary</h2>{stepsSummary(stepResultSummary)}
+        <h1>Summary</h1>
+        <h2>Flag Summary</h2>{flagsSummary(flagsConfig)}
+        <h2>Plan Summary</h2>{planSummary(plan, stepResultSummary, taskResultSummary, dataSourceResultSummary)}
+        <h2>Task Summary</h2>{tasksSummary(taskResultSummary)}
+        <h2>Step Summary</h2>{stepsSummary(stepResultSummary)}
       </body>
     </html>
   }
@@ -67,11 +71,6 @@ class ResultHtmlWriter {
           <tbody>
             <tr>
               <td>
-                <a href="plan.html" target="mainFrame">Plan</a>
-              </td>
-            </tr>
-            <tr>
-              <td>
                 <a href="tasks.html" target="mainFrame">Task</a>
               </td>
             </tr>
@@ -89,6 +88,43 @@ class ResultHtmlWriter {
         </table>
       </body>
     </html>
+  }
+
+  def flagsSummary(flagsConfig: FlagsConfig): Node = {
+    <table class="table table-striped" style="font-size: 13px">
+      <thead>
+        <tr>
+          <th>Generate Metadata</th>
+          <th>Generate Data</th>
+          <th>Record Tracking</th>
+          <th>Delete Data</th>
+          <th>Calculate Generated Metadata</th>
+          <th>Unique Check</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            {checkMark(flagsConfig.enableGeneratePlanAndTasks)}
+          </td>
+          <td>
+            {checkMark(flagsConfig.enableGenerateData)}
+          </td>
+          <td>
+            {checkMark(flagsConfig.enableRecordTracking)}
+          </td>
+          <td>
+            {checkMark(flagsConfig.enableDeleteGeneratedRecords)}
+          </td>
+          <td>
+            {checkMark(flagsConfig.enableSinkMetadata)}
+          </td>
+          <td>
+            {checkMark(flagsConfig.enableUniqueCheck)}
+          </td>
+        </tr>
+      </tbody>
+    </table>
   }
 
   def planSummary(plan: Plan, stepResultSummary: List[StepResultSummary],
@@ -133,11 +169,6 @@ class ResultHtmlWriter {
         </tr>
       </tbody>
     </table>
-  }
-
-  def planDetails(plan: Plan): Node = {
-    <html>
-    </html>
   }
 
   def tasksSummary(taskResultSummary: List[TaskResultSummary]): Node = {
@@ -214,9 +245,9 @@ class ResultHtmlWriter {
       <thead>
         <tr>
           <th>Name</th>
-          <th>Options</th>
           <th>Num Records</th>
           <th>Success</th>
+          <th>Options</th>
           <th>Num Batches</th>
           <th>Time Taken (s)</th>
         </tr>
@@ -231,13 +262,13 @@ class ResultHtmlWriter {
             </a>
           </td>
           <td>
-            {optionsString(res)}
-          </td>
-          <td>
             {res.numRecords}
           </td>
           <td>
             {checkMark(res.isSuccess)}
+          </td>
+          <td>
+            {optionsString(res)}
           </td>
           <td>
             {res.dataSourceResults.map(_.batchNum).max}
@@ -266,12 +297,12 @@ class ResultHtmlWriter {
           <thead>
             <tr>
               <th>Name</th>
+              <th>Num Records</th>
+              <th>Success</th>
               <th>Type</th>
               <th>Enabled</th>
-              <th>Success</th>
               <th>Options</th>
               <th>Count</th>
-              <th>Num Records</th>
               <th>Fields</th>
             </tr>
           </thead>
@@ -282,22 +313,22 @@ class ResultHtmlWriter {
                 {res.step.name}
               </td>
               <td>
+                {res.numRecords}
+              </td>
+              <td>
+                {checkMark(res.isSuccess)}
+              </td>
+              <td>
                 {res.step.`type`}
               </td>
               <td>
                 {checkMark(res.step.enabled)}
               </td>
               <td>
-                {checkMark(res.isSuccess)}
-              </td>
-              <td>
                 {optionsString(res)}
               </td>
               <td>
                 {res.step.count.numRecordsString}
-              </td>
-              <td>
-                {res.numRecords}
               </td>
               <td>
                 {fieldMetadata(res.step, res.dataSourceResults)}
@@ -323,49 +354,96 @@ class ResultHtmlWriter {
     }).toMap
     <html>
       <body>
+        <details>
+          <table class="tablesorter table table-striped" style="font-size: 13px">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Nullable</th>
+                <th>Generator Type</th>
+                <th>Metadata</th>
+                <th>Compare Generated Metadata</th>
+              </tr>
+            </thead>
+            <tbody>
+              {originalFields.map(field => {
+              val generator = field.generator.getOrElse(Generator())
+              <tr>
+                <td>
+                  {field.name}
+                </td>
+                <td>
+                  {field.`type`.getOrElse("string")}
+                </td>
+                <td>
+                  {checkMark(field.nullable)}
+                </td>
+                <td>
+                  {generator.`type`}
+                </td>
+                <td>
+                  {generator.options.mkString("\n")}
+                </td>
+                <td>
+                  {metadataMatch(field.name).mkString("\n")}
+                </td>
+              </tr>
+            })}
+            </tbody>
+          </table>
+        </details>
+      </body>
+    </html>
+  }
+
+  def dataSourceDetails(dataSourceResults: List[DataSourceResult]): Node = {
+    val resByDataSource = dataSourceResults.groupBy(_.sinkResult.name)
+    <html>
+      <head>
+        <title>
+          Data Source Details - Data Caterer
+        </title>{plugins}<style>
+        {css}
+      </style>
+      </head>
+      <body>
+        <h1>Data Sources</h1>
         <table class="tablesorter table table-striped" style="font-size: 13px">
           <thead>
             <tr>
               <th>Name</th>
-              <th>Type</th>
-              <th>Nullable</th>
-              <th>Generator Type</th>
-              <th>Metadata</th>
-              <th>Compare Generated Metadata</th>
+              <th>Num Records</th>
+              <th>Success</th>
+              <th>Format</th>
+              <th>Options</th>
             </tr>
           </thead>
           <tbody>
-            {originalFields.map(field => {
-            val generator = field.generator.getOrElse(Generator())
+            {resByDataSource.map(ds => {
+            val numRecords = ds._2.map(_.sinkResult.count).sum
+            val success = ds._2.forall(_.sinkResult.isSuccess)
             <tr>
               <td>
-                {field.name}
+                {ds._1}
               </td>
               <td>
-                {field.`type`.getOrElse("string")}
+                {numRecords}
               </td>
               <td>
-                {checkMark(field.nullable)}
+                {checkMark(success)}
               </td>
               <td>
-                {generator.`type`}
+                {ds._2.map(_.sinkResult.format).distinct.mkString("\n")}
               </td>
               <td>
-                {generator.options.mkString("\n")}
-              </td>
-              <td>
-                {metadataMatch(field.name).mkString("\n")}
+                {ds._2.map(_.sinkResult.options).distinct.mkString("\n")}
               </td>
             </tr>
           })}
           </tbody>
         </table>
       </body>
-    </html>
-  }
-
-  def dataSourceDetails(dataSourceResults: List[DataSourceResult]): Node = {
-    <html>
     </html>
   }
 

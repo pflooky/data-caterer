@@ -2,7 +2,7 @@ package com.github.pflooky.datagen.core.sink.http
 
 import com.github.pflooky.datagen.core.model.Constants.{PASSWORD, REAL_TIME_BODY_COL, REAL_TIME_CONTENT_TYPE_COL, REAL_TIME_HEADERS_COL, REAL_TIME_METHOD_COL, REAL_TIME_URL_COL, USERNAME}
 import com.github.pflooky.datagen.core.model.Step
-import com.github.pflooky.datagen.core.sink.RealTimeSinkProcessor
+import com.github.pflooky.datagen.core.sink.{RealTimeSinkProcessor, SinkProcessor}
 import com.github.pflooky.datagen.core.util.RowUtil.getRowValue
 import dispatch.Defaults._
 import dispatch._
@@ -14,15 +14,25 @@ import java.util.Base64
 import scala.collection.mutable
 import scala.util.{Failure, Success}
 
-class HttpSinkProcessor(override var connectionConfig: Map[String, String],
-                        override var step: Step,
-                        http: Http = Http.default) extends RealTimeSinkProcessor[Unit] {
+object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
 
-  override def createConnection: Unit = {}
+  var connectionConfig: Map[String, String] = _
+  var step: Step = _
+  var http: Http = Http.default
+
+  override def createConnections(connectionConfig: Map[String, String], step: Step): SinkProcessor[_] = this
+  override def createConnection(connectionConfig: Map[String, String], step: Step): Unit = {}
+
+  def createConnections(connectionConfig: Map[String, String], step: Step, http: Http): SinkProcessor[_] = {
+    this.http = http
+    this
+  }
 
   override def close: Unit = {
+    //TODO hack to wait for all connections to be finished, hard to know as connections are used across all partitions
+    Thread.sleep(2000)
     http.client.close()
   }
 
@@ -41,8 +51,8 @@ class HttpSinkProcessor(override var connectionConfig: Map[String, String],
 
   def createHttpRequest(row: Row): Req = {
     val httpUrl = getRowValue[String](row, REAL_TIME_URL_COL)
-    val body = getRowValue[String](row, REAL_TIME_BODY_COL, "")
     val method = getRowValue[String](row, REAL_TIME_METHOD_COL, "GET")
+    val body = getRowValue[String](row, REAL_TIME_BODY_COL, "")
     val headers = getRowValue[mutable.WrappedArray[Row]](row, REAL_TIME_HEADERS_COL, mutable.WrappedArray.empty[Row])
     val contentType = getRowValue[String](row, REAL_TIME_CONTENT_TYPE_COL, "application/json")
 

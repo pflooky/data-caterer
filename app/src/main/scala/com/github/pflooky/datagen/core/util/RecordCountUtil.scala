@@ -1,7 +1,6 @@
 package com.github.pflooky.datagen.core.util
 
-import com.github.pflooky.datagen.core.config.GenerationConfig
-import com.github.pflooky.datagen.core.model.Task
+import com.github.pflooky.datagen.core.model.{GenerationConfig, Task}
 import org.apache.log4j.Logger
 
 object RecordCountUtil {

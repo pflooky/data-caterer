@@ -1,6 +1,7 @@
 package com.github.pflooky.datagen.core.config
 
 import com.github.pflooky.datagen.core.model.Constants.{APPLICATION_CONFIG_PATH, FORMAT, SPARK_MASTER, SUPPORTED_CONNECTION_FORMATS}
+import com.github.pflooky.datagen.core.model.{FlagsConfig, FoldersConfig, GenerationConfig, MetadataConfig}
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
 import org.apache.log4j.Logger
@@ -67,45 +68,4 @@ trait ConfigParser {
     connectionConfigsByName.flatMap(connectionConf => connectionConf._2.filter(_._1.startsWith("spark")))
   }
 
-}
-
-case class FlagsConfig(
-                        enableCount: Boolean,
-                        enableGenerateData: Boolean,
-                        enableRecordTracking: Boolean,
-                        enableDeleteGeneratedRecords: Boolean,
-                        enableGeneratePlanAndTasks: Boolean = false,
-                        enableFailOnError: Boolean = true,
-                        enableUniqueCheck: Boolean = false,
-                        enableSinkMetadata: Boolean = true,
-                        enableSaveSinkMetadata: Boolean = true,
-                      ) {
-  def this() = this(true, true, true, true)
-}
-
-case class FoldersConfig(
-                          planFilePath: String,
-                          taskFolderPath: String,
-                          generatedPlanAndTaskFolderPath: String = "/tmp",
-                          generatedDataResultsFolderPath: String = "/tmp",
-                          recordTrackingFolderPath: String = "/tmp"
-                        ) {
-  def this() = this("", "")
-}
-
-case class MetadataConfig(
-                           numRecordsFromDataSource: Int,
-                           numRecordsForAnalysis: Int,
-                           oneOfDistinctCountVsCountThreshold: Double = 0.2,
-                           oneOfMinCount: Int = 1000,
-                           numSinkSamples: Int = 10,
-                         ) {
-  def this() = this(1000, 1000)
-}
-
-case class GenerationConfig(
-                           numRecordsPerBatch: Long = 100000,
-                           numRecordsPerStep: Option[Long] = None,
-                         ) {
-  def this() = this(100000, None)
 }

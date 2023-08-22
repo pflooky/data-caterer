@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.sink.http
 
-import com.github.pflooky.datagen.core.model.Constants.{BODY_FIELD, PASSWORD, REAL_TIME_BODY_COL, REAL_TIME_CONTENT_TYPE_COL, REAL_TIME_HEADERS_COL, REAL_TIME_METHOD_COL, REAL_TIME_URL_COL, URL, USERNAME}
+import com.github.pflooky.datagen.core.model.Constants.{REAL_TIME_BODY_COL, REAL_TIME_CONTENT_TYPE_COL, REAL_TIME_HEADERS_COL, REAL_TIME_METHOD_COL, REAL_TIME_URL_COL, URL}
 import com.github.pflooky.datagen.core.model.{Count, Schema, Step}
 import dispatch.{Future, Http, Req}
 import org.apache.spark.sql.Row
@@ -12,7 +12,6 @@ import org.scalatest.funsuite.AnyFunSuite
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
 
 class HttpSinkProcessorTest extends AnyFunSuite with MockFactory {
@@ -20,17 +19,11 @@ class HttpSinkProcessorTest extends AnyFunSuite with MockFactory {
   private val headerStruct = StructType(Seq(StructField("key", StringType), StructField("value", StringType)))
 
   test("Can send HTTP POST request with body and headers") {
-    val step = Step("step1", "json", Count(), Map(), Schema("manual", None))
-    val connectionConfig = Map(
-      USERNAME -> "admin",
-      PASSWORD -> "password"
-    )
     val headersArray = new mutable.WrappedArrayBuilder[Row](ClassTag(classOf[Row]))
     val header1 = new GenericRowWithSchema(Array("id", "id123"), headerStruct)
     val header2 = new GenericRowWithSchema(Array("type", "account"), headerStruct)
     headersArray += header1
     headersArray += header2
-    val httpSinkProcessor = new HttpSinkProcessor(connectionConfig, step)
     val mockRow = mock[Row]
     (mockRow.schema _).expects().anyNumberOfTimes().returns(StructType(Seq(
       StructField(REAL_TIME_URL_COL, StringType),
@@ -48,7 +41,7 @@ class HttpSinkProcessorTest extends AnyFunSuite with MockFactory {
     (mockRow.getAs[mutable.WrappedArray[Row]](_: String)).expects(REAL_TIME_HEADERS_COL).once().returns(headersArray.result())
     (mockRow.getAs[String](_: String)).expects(REAL_TIME_CONTENT_TYPE_COL).once().returns("application/json")
 
-    val res = httpSinkProcessor.createHttpRequest(mockRow).toRequest
+    val res = HttpSinkProcessor.createHttpRequest(mockRow).toRequest
 
     assert(res.getUrl == "http://localhost:8080/customer")
     assert(res.getMethod == "POST")
@@ -64,7 +57,7 @@ class HttpSinkProcessorTest extends AnyFunSuite with MockFactory {
     val mockHttp = mock[Http]
     val mockRow = mock[Row]
     val step = Step("step1", "json", Count(), Map(), Schema("manual", None))
-    val httpSinkProcessor = new HttpSinkProcessor(Map(), step, mockHttp)
+    val httpSinkProcessor = HttpSinkProcessor.createConnections(Map(), step, mockHttp)
     val mockResp = mock[Response]
     val futureResp = Future.successful(mockResp)
 
@@ -79,7 +72,7 @@ class HttpSinkProcessorTest extends AnyFunSuite with MockFactory {
     val mockRow = mock[Row]
     val connectionConfig = Map(URL -> "http://localhost:8080/help")
     val step = Step("step1", "json", Count(), Map(), Schema("manual", None))
-    val httpSinkProcessor = new HttpSinkProcessor(connectionConfig, step, mockHttp)
+    val httpSinkProcessor = HttpSinkProcessor.createConnections(connectionConfig, step, mockHttp)
     val futureResp = Future.failed(new Throwable())
 
     (mockRow.schema _).expects().anyNumberOfTimes().returns(StructType(Seq(StructField(REAL_TIME_URL_COL, StringType))))

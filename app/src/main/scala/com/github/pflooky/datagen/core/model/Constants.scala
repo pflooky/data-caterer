@@ -29,6 +29,7 @@ object Constants {
   lazy val JMS_CONNECTION_FACTORY = "connectionFactory"
   lazy val JMS_VPN_NAME = "vpnName"
   lazy val SCHEMA_LOCATION = "schemaLocation"
+  lazy val ROWS_PER_SECOND = "rowsPerSecond"
 
   //custom spark options
   lazy val METADATA_FILTER_SCHEMA = "filterSchema"

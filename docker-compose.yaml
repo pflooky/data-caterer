@@ -60,8 +60,10 @@ services:
     ulimits:
       memlock: -1
 
-  httbin:
+  httpbin:
     image: "kennethreitz/httpbin:latest"
+    environment:
+      - "GUNICORN_CMD_ARGS=--capture-output --error-logfile - --access-logfile - --access-logformat '%(h)s %(t)s %(r)s %(s)s Host: %({Host}i)s}'"
     ports:
       - "80:80"
 

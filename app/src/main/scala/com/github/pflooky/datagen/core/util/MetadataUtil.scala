@@ -1,6 +1,5 @@
 package com.github.pflooky.datagen.core.util
 
-import com.github.pflooky.datagen.core.config.MetadataConfig
 import com.github.pflooky.datagen.core.generator.metadata.ExpressionPredictor
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.{CassandraMetadata, ColumnMetadata, MysqlMetadata, PostgresMetadata}
@@ -8,7 +7,7 @@ import com.github.pflooky.datagen.core.generator.metadata.datasource.file.FileMe
 import com.github.pflooky.datagen.core.generator.metadata.datasource.http.HttpMetadata
 import com.github.pflooky.datagen.core.generator.metadata.datasource.jms.JmsMetadata
 import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CSV, DELTA, DISTINCT_COUNT, DRIVER, EXPRESSION, FORMAT, HISTOGRAM, HTTP, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_TABLE, JMS, JMS_DESTINATION_NAME, JSON, MYSQL_DRIVER, ONE_OF_GENERATOR, ORC, PARQUET, PATH, POSTGRES_DRIVER, ROW_COUNT}
-import com.github.pflooky.datagen.core.model.Field
+import com.github.pflooky.datagen.core.model.{Field, MetadataConfig}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.CatalogColumnStat
@@ -23,7 +22,7 @@ object MetadataUtil {
   private val LOGGER = Logger.getLogger(getClass.getName)
   private val OBJECT_MAPPER = ObjectMapperUtil.jsonObjectMapper
   private val mapStringToAnyClass = Map[String, Any]()
-  private val TEMP_CACHED_TABLE_NAME = "temp_table"
+  private val TEMP_CACHED_TABLE_NAME = "__temp_table"
   implicit private val columnMetadataEncoder: Encoder[ColumnMetadata] = Encoders.kryo[ColumnMetadata]
 
   def metadataToMap(metadata: Metadata): Map[String, Any] = {
@@ -168,9 +167,9 @@ object MetadataUtil {
         options(PATH).replaceAll("s3(a|n?)://|wasb(s?)://|gs://|file://|hdfs://[a-zA-Z0-9]+:[0-9]+", "")
       case JMS =>
         options(JMS_DESTINATION_NAME)
-//      case HTTP =>
-//        //TODO do we support delete via HTTP?
-//        options(HTTP_METHOD)
+      //      case HTTP =>
+      //        //TODO do we support delete via HTTP?
+      //        options(HTTP_METHOD)
       case _ =>
         LOGGER.warn(s"Unsupported data format for record tracking, format=$lowerFormat")
         throw new RuntimeException(s"Unsupported data format for record tracking, format=$lowerFormat")

@@ -23,7 +23,7 @@ class DataGeneratorProcessor extends SparkProvider {
   private val LOGGER = Logger.getLogger(getClass.getName)
   private lazy val recordTrackingFactory = new RecordTrackingProcessor(foldersConfig.recordTrackingFolderPath)
   private lazy val deleteRecordProcessor = new DeleteRecordProcessor(connectionConfigsByName, foldersConfig.recordTrackingFolderPath)
-  private lazy val dataGenerationResultWriter = new DataGenerationResultWriter(metadataConfig, foldersConfig)
+  private lazy val dataGenerationResultWriter = new DataGenerationResultWriter(metadataConfig, foldersConfig, flagsConfig)
 
   def generateData(): Unit = {
     val plan = PlanParser.parsePlan(foldersConfig.planFilePath)
@@ -34,7 +34,7 @@ class DataGeneratorProcessor extends SparkProvider {
     val summaryWithTask = enabledPlannedTasks.map(t => (t, tasksByName(t.name)))
     val faker = getDataFaker(plan)
 
-//    generateData(plan.copy(tasks = enabledPlannedTasks), tasks.filter(t => enabledTaskMap.contains(t.name)).toList)
+    //    generateData(plan.copy(tasks = enabledPlannedTasks), tasks.filter(t => enabledTaskMap.contains(t.name)).toList)
     val generationResult = new BatchDataProcessor().splitAndProcess(plan.copy(tasks = enabledPlannedTasks), summaryWithTask, faker)
     if (flagsConfig.enableSaveSinkMetadata) {
       dataGenerationResultWriter.writeResult(plan, generationResult)
@@ -57,13 +57,6 @@ class DataGeneratorProcessor extends SparkProvider {
         }
         val stepNames = summaryWithTask.map(t => s"task=${t._2.name}, num-steps=${t._2.steps.size}, steps=${t._2.steps.map(_.name).mkString(",")}").mkString("||")
         LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=$stepNames")
-        //TODO batch up 5000 (configurable number) records total across all steps and progressively push to sinks
-        /**
-         * can do the following for batching the data:
-         * 1. calculate the total counts across all steps
-         * 2. create accumulators to keep track of count for each step
-         * 3. keep track of primary keys and unique fields already produced
-         */
         val generationResult = new BatchDataProcessor().splitAndProcess(plan, summaryWithTask, faker)
         if (flagsConfig.enableSaveSinkMetadata) {
           dataGenerationResultWriter.writeResult(plan, generationResult)

@@ -3,16 +3,16 @@ description: "Create account data in JSON"
 tasks:
   - name: "json_account_jms"
     dataSourceName: "solace"
-    enabled: false
+    enabled: true
   - name: "json_account_kafka"
     dataSourceName: "kafka"
     enabled: false
   - name: "json_account_file"
     dataSourceName: "json"
-    enabled: true
+    enabled: false
   - name: "json_account_http"
     dataSourceName: "httpbin"
-    enabled: false
+    enabled: true
     
 #sinkOptions:
 #  foreignKeys:
