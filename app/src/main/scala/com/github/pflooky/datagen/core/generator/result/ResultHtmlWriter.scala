@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.result
 
 import com.github.pflooky.datagen.core.model.Constants.HISTOGRAM
-import com.github.pflooky.datagen.core.model.{DataSourceResult, DataSourceResultSummary, FlagsConfig, Generator, Plan, Step, StepResultSummary, TaskResultSummary}
+import com.github.pflooky.datagen.core.model.{DataSourceResult, DataSourceResultSummary, DataSourceValidationResult, ExpressionValidation, FlagsConfig, Generator, Plan, Step, StepResultSummary, TaskResultSummary, ValidationConfigResult}
 import org.joda.time.DateTime
 
 import scala.xml.{Node, NodeBuffer, NodeSeq}
@@ -28,7 +28,7 @@ class ResultHtmlWriter {
   }
 
   def overview(plan: Plan, stepResultSummary: List[StepResultSummary], taskResultSummary: List[TaskResultSummary],
-               dataSourceResultSummary: List[DataSourceResultSummary], flagsConfig: FlagsConfig): Node = {
+               dataSourceResultSummary: List[DataSourceResultSummary], optValidationResults: Option[List[ValidationConfigResult]], flagsConfig: FlagsConfig): Node = {
     <html>
       <head>
         <title>
@@ -42,10 +42,7 @@ class ResultHtmlWriter {
           {DateTime.now()}
         </div>
         <h1>Summary</h1>
-        <h2>Flag Summary</h2>{flagsSummary(flagsConfig)}
-        <h2>Plan Summary</h2>{planSummary(plan, stepResultSummary, taskResultSummary, dataSourceResultSummary)}
-        <h2>Task Summary</h2>{tasksSummary(taskResultSummary)}
-        <h2>Step Summary</h2>{stepsSummary(stepResultSummary)}
+        <h2>Flag Summary</h2>{flagsSummary(flagsConfig)}<h2>Plan Summary</h2>{planSummary(plan, stepResultSummary, taskResultSummary, dataSourceResultSummary)}<h2>Task Summary</h2>{tasksSummary(taskResultSummary)}<h2>Validation Summary</h2>{validationSummary(optValidationResults)}
       </body>
     </html>
   }
@@ -82,6 +79,11 @@ class ResultHtmlWriter {
             <tr>
               <td>
                 <a href="data-sources.html" target="mainFrame">Data Source</a>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <a href="validations.html" target="mainFrame">Validation</a>
               </td>
             </tr>
           </tbody>
@@ -423,7 +425,7 @@ class ResultHtmlWriter {
             {resByDataSource.map(ds => {
             val numRecords = ds._2.map(_.sinkResult.count).sum
             val success = ds._2.forall(_.sinkResult.isSuccess)
-            <tr>
+            <tr id={ds._1}>
               <td>
                 {ds._1}
               </td>
@@ -447,6 +449,95 @@ class ResultHtmlWriter {
     </html>
   }
 
+  def validations(optValidationResults: Option[List[ValidationConfigResult]]): Node = {
+    <html>
+      <head>
+        <title>
+          Validations - Data Caterer
+        </title>{plugins}<style>
+        {css}
+      </style>
+      </head>
+      <body>
+        <h1>Validations</h1>{validationSummary(optValidationResults)}<h2>Details</h2>
+        <table class="tablesorter table table-striped" style="font-size: 13px">
+          <thead>
+            <tr>
+              <th>Data Source</th>
+              <th>Options</th>
+              <th>Success</th>
+              <th>Validation</th>
+              <th>Error Sample</th>
+            </tr>
+          </thead>
+          <tbody>
+            {optValidationResults.getOrElse(List()).flatMap(validationConfRes => {
+            validationConfRes.dataSourceValidationResults.flatMap(dataSourceValidationRes => {
+              val dataSourceLink = s"data-sources.html#${dataSourceValidationRes.dataSourceName}"
+              dataSourceValidationRes.validationResults.map(validationRes => {
+                <tr>
+                  <td>
+                    <a href={dataSourceLink}>
+                      {dataSourceValidationRes.dataSourceName}
+                    </a>
+                  </td>
+                  <td>
+                    {dataSourceValidationRes.options.mkString("\n")}
+                  </td>
+                  <td>
+                    {checkMark(validationRes.isSuccess)}
+                  </td>
+                  <td>
+                    {validationRes.validation match {
+                    case ExpressionValidation(expr) =>
+                      s"expr -> $expr"
+                    case _ => ""
+                  }}
+                  </td>
+                  <td>
+                    {if (validationRes.isSuccess) "" else validationRes.sampleErrorValues.get.take(5).map(_.json).mkString("\n")}
+                  </td>
+                </tr>
+              })
+            })
+          })}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  }
+
+  def validationSummary(optValidationResults: Option[List[ValidationConfigResult]]): Node = {
+    <table class="tablesorter table table-striped" style="font-size: 13px">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+          <th>Data Sources</th>
+          <th>Success</th>
+        </tr>
+      </thead>
+      <tbody>
+        {optValidationResults.getOrElse(List()).map(validationConfRes => {
+        <tr>
+          <td>
+            {validationConfRes.name}
+          </td>
+          <td>
+            {validationConfRes.description}
+          </td>
+          <td>
+            {toDataSourceLinks(validationConfRes.dataSourceValidationResults.map(_.dataSourceName).distinct)}
+          </td>
+          <td>
+            {checkMark(validationConfRes.dataSourceValidationResults.forall(_.validationResults.forall(_.isSuccess)))}
+          </td>
+        </tr>
+      })}
+      </tbody>
+    </table>
+  }
+
   private def checkMark(isSuccess: Boolean): NodeSeq = if (isSuccess) xml.EntityRef("#9989") else xml.EntityRef("#10060")
 
   private def optionsString(res: StepResultSummary) = res.step.options.map(s => s"${s._1} -> ${s._2}").mkString("\n")
@@ -457,6 +548,17 @@ class ResultHtmlWriter {
         val stepLink = s"steps.html#${step.name}"
         <a href={stepLink}>
           {s"${step.name}"}
+        </a>
+      }))
+    }
+  }
+
+  private def toDataSourceLinks(dataSourceNames: List[String]): Node = {
+    {
+      xml.Group(dataSourceNames.map(dataSource => {
+        val dataSourceLink = s"data-sources.html#$dataSource"
+        <a href={dataSourceLink}>
+          {dataSource}
         </a>
       }))
     }

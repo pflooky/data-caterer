@@ -1,6 +1,7 @@
 package com.github.pflooky.datagen.core.generator
 
 import com.github.pflooky.datagen.core.model.Constants.ADVANCED_APPLICATION
+import com.github.pflooky.datagen.core.model.{FlagsConfig, FoldersConfig}
 import com.github.pflooky.datagen.core.util.SparkSuite
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
@@ -15,6 +16,10 @@ class DataGeneratorProcessorTest extends SparkSuite {
     val basePath = "src/test/resources/sample/data"
     val dataGeneratorProcessor = new DataGeneratorProcessor() {
       override lazy val applicationType: String = ADVANCED_APPLICATION
+
+      override lazy val flagsConfig: FlagsConfig = FlagsConfig(false, true, true, false)
+
+      override lazy val foldersConfig: FoldersConfig = FoldersConfig("sample/plan/simple-json-plan.yaml", "sample/task", basePath, recordTrackingFolderPath = s"$basePath/recordTracking")
     }
 
     dataGeneratorProcessor.generateData()
@@ -23,10 +28,10 @@ class DataGeneratorProcessorTest extends SparkSuite {
       .json(s"$basePath/generated/json/account-gen")
     val generatedCount = generatedData.count()
     assert(generatedCount > 0)
-//    val recordTrackingData = sparkSession.read
-//      .parquet(s"$basePath/recordTracking/json/account_json/src/test/resources/sample/data/generated/json/account-gen")
-//    val recordTrackCount = recordTrackingData.count()
-//    assert(recordTrackCount > 0 && recordTrackCount == generatedCount)
+    val recordTrackingData = sparkSession.read
+      .parquet(s"$basePath/recordTracking/json/account_json/src/test/resources/sample/data/generated/json/account-gen")
+    val recordTrackCount = recordTrackingData.count()
+    assert(recordTrackCount > 0 && recordTrackCount == generatedCount)
     new Directory(new File(basePath)).deleteRecursively()
   }
 

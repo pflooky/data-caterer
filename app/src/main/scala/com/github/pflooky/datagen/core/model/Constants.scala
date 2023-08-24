@@ -132,6 +132,13 @@ object Constants {
   lazy val FINISHED = "finished"
   lazy val FAILED = "failed"
 
+  //validation options
+  lazy val VALIDATION_COLUMN = "column"
+  lazy val VALIDATION_TYPE = "type"
+  lazy val VALIDATION_DESCRIPTION = "description"
+  lazy val VALIDATION_ERROR_THRESHOLD = "errorThreshold"
+  lazy val VALIDATION_EQUAL = "equal"
+
   //misc
   lazy val APPLICATION_CONFIG_PATH = "APPLICATION_CONFIG_PATH"
   lazy val BATCH = "batch"

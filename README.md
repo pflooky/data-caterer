@@ -44,7 +44,7 @@ Full docs can be found [here](https://pflooky.github.io/data-caterer-docs/).
 
 ### Datagen plan
 
-[Sample plan](app/src/main/resources/plan/customer-create-plan.yaml)
+[Sample plan](app/src/test/resources/sample/plan/customer-create-plan.yaml)
 
 <details><summary>Detailed summary</summary><br>
 
@@ -81,7 +81,7 @@ sinkOptions:
 
 ### Datagen Task
 
-[Sample task](app/src/main/resources/task/postgres/postgres-transaction-task.yaml)
+[Sample task](app/src/test/resources/sample/task/postgres/postgres-transaction-task.yaml)
 
 <details><summary>Detailed summary</summary><br>
 
@@ -269,4 +269,4 @@ Data Caterer is able to support the following data sinks:
 
 ## Resources
 
-https://github.com/apache/spark/blob/master/sql/catalyst/src/test/scala/org/apache/spark/sql/RandomDataGenerator.scala
+[Spark test data generator](https://github.com/apache/spark/blob/master/sql/catalyst/src/test/scala/org/apache/spark/sql/RandomDataGenerator.scala)

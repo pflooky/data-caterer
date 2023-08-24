@@ -101,7 +101,7 @@ object MetadataUtil {
                                       dataSourceName: String, dataSourceFormat: String)(implicit sparkSession: SparkSession): Unit = {
     //have to create temp view then analyze the column stats which can be found in the cached data
     sourceData.createOrReplaceTempView(TEMP_CACHED_TABLE_NAME)
-    sparkSession.catalog.cacheTable(TEMP_CACHED_TABLE_NAME)
+    if (!sparkSession.catalog.isCached(TEMP_CACHED_TABLE_NAME)) sparkSession.catalog.cacheTable(TEMP_CACHED_TABLE_NAME)
     val optColumnsToAnalyze = Some(sourceData.schema.fields.filter(f => analyzeSupportsType(f.dataType)).map(_.name).toSeq)
     val tryAnalyzeData = Try(AnalyzeColumnCommand(TableIdentifier(TEMP_CACHED_TABLE_NAME), optColumnsToAnalyze, false).run(sparkSession))
     tryAnalyzeData match {

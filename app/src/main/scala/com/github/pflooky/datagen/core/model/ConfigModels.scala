@@ -11,6 +11,7 @@ case class FlagsConfig(
                         enableUniqueCheck: Boolean = false,
                         enableSinkMetadata: Boolean = true,
                         enableSaveSinkMetadata: Boolean = true,
+                        enableValidation: Boolean = false,
                       ) {
   def this() = this(true, true, true, true)
 }
@@ -20,7 +21,8 @@ case class FoldersConfig(
                           taskFolderPath: String,
                           generatedPlanAndTaskFolderPath: String = "/tmp",
                           generatedDataResultsFolderPath: String = "/tmp",
-                          recordTrackingFolderPath: String = "/tmp"
+                          recordTrackingFolderPath: String = "/tmp",
+                          validationFolderPath: String = "/tmp/validation",
                         ) {
   def this() = this("", "")
 }

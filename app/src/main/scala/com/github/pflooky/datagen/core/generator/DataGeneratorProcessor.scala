@@ -2,43 +2,34 @@ package com.github.pflooky.datagen.core.generator
 
 import com.github.pflooky.datagen.core.generator.delete.DeleteRecordProcessor
 import com.github.pflooky.datagen.core.generator.result.DataGenerationResultWriter
-import com.github.pflooky.datagen.core.generator.track.RecordTrackingProcessor
-import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING, FORMAT}
+import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING}
 import com.github.pflooky.datagen.core.model.{Plan, Task, TaskSummary}
 import com.github.pflooky.datagen.core.parser.PlanParser
-import com.github.pflooky.datagen.core.sink.SinkFactory
-import com.github.pflooky.datagen.core.util.GeneratorUtil.getDataSourceName
-import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, SparkProvider, UniqueFieldsUtil}
+import com.github.pflooky.datagen.core.util.SparkProvider
+import com.github.pflooky.datagen.core.validator.ValidationProcessor
 import net.datafaker.Faker
 import org.apache.log4j.Logger
-import org.apache.spark.sql.DataFrame
 
 import java.io.Serializable
-import java.time.LocalDateTime
 import java.util.{Locale, Random}
 import scala.util.{Failure, Success, Try}
 
 class DataGeneratorProcessor extends SparkProvider {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
-  private lazy val recordTrackingFactory = new RecordTrackingProcessor(foldersConfig.recordTrackingFolderPath)
   private lazy val deleteRecordProcessor = new DeleteRecordProcessor(connectionConfigsByName, foldersConfig.recordTrackingFolderPath)
   private lazy val dataGenerationResultWriter = new DataGenerationResultWriter(metadataConfig, foldersConfig, flagsConfig)
+  private lazy val validationProcessor = new ValidationProcessor(connectionConfigsByName, foldersConfig.validationFolderPath)
+  private lazy val batchDataProcessor = new BatchDataProcessor(connectionConfigsByName, foldersConfig, metadataConfig, flagsConfig, generationConfig, applicationType)
 
   def generateData(): Unit = {
     val plan = PlanParser.parsePlan(foldersConfig.planFilePath)
     val enabledPlannedTasks = plan.tasks.filter(_.enabled)
     val enabledTaskMap = enabledPlannedTasks.map(t => (t.name, t)).toMap
     val tasks = PlanParser.parseTasks(foldersConfig.taskFolderPath)
-    val tasksByName = tasks.filter(t => enabledTaskMap.contains(t.name)).map(t => (t.name, t)).toMap
-    val summaryWithTask = enabledPlannedTasks.map(t => (t, tasksByName(t.name)))
-    val faker = getDataFaker(plan)
+    val enabledTasks = tasks.filter(t => enabledTaskMap.contains(t.name)).toList
 
-    //    generateData(plan.copy(tasks = enabledPlannedTasks), tasks.filter(t => enabledTaskMap.contains(t.name)).toList)
-    val generationResult = new BatchDataProcessor().splitAndProcess(plan.copy(tasks = enabledPlannedTasks), summaryWithTask, faker)
-    if (flagsConfig.enableSaveSinkMetadata) {
-      dataGenerationResultWriter.writeResult(plan, generationResult)
-    }
+    generateData(plan.copy(tasks = enabledPlannedTasks), enabledTasks)
   }
 
   def generateData(plan: Plan, tasks: List[Task]): Unit = {
@@ -47,20 +38,8 @@ class DataGeneratorProcessor extends SparkProvider {
     val faker = getDataFaker(plan)
 
     (flagsConfig.enableGenerateData, flagsConfig.enableDeleteGeneratedRecords, applicationType) match {
-      case (true, enableDelete, _) =>
-        if (enableDelete) {
-          LOGGER.warn("Both enableGenerateData and enableDeleteGeneratedData are true. Please only enable one at a time. Will continue with generating data")
-        }
-        if (LOGGER.isDebugEnabled) {
-          LOGGER.debug(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=($summaryWithTask)")
-          summaryWithTask.foreach(t => LOGGER.debug(s"Enabled task details: ${t._2.toTaskDetailString}"))
-        }
-        val stepNames = summaryWithTask.map(t => s"task=${t._2.name}, num-steps=${t._2.steps.size}, steps=${t._2.steps.map(_.name).mkString(",")}").mkString("||")
-        LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=$stepNames")
-        val generationResult = new BatchDataProcessor().splitAndProcess(plan, summaryWithTask, faker)
-        if (flagsConfig.enableSaveSinkMetadata) {
-          dataGenerationResultWriter.writeResult(plan, generationResult)
-        }
+      case (true, _, _) =>
+        generateData(plan, summaryWithTask, faker)
       case (_, true, ADVANCED_APPLICATION) =>
         val stepsByName = tasks.flatMap(_.steps).filter(_.enabled).map(s => (s.name, s)).toMap
         deleteRecordProcessor.deleteGeneratedRecords(plan, stepsByName, summaryWithTask)
@@ -71,54 +50,23 @@ class DataGeneratorProcessor extends SparkProvider {
     }
   }
 
-  private def getAllStepDf(plan: Plan, executableTasks: List[(TaskSummary, Task)]): List[(String, DataFrame)] = {
-    val faker = getDataFaker(plan)
-    val dataGeneratorFactory = new DataGeneratorFactory(faker)
-    val uniqueFieldUtil = new UniqueFieldsUtil(executableTasks)
-
-    val generatedDataForeachTask = executableTasks.flatMap(task =>
-      task._2.steps.filter(_.enabled).map(s => {
-        val dataSourceName = getDataSourceName(task._1, s)
-        val genDf = dataGeneratorFactory.generateDataForStep(s, task._1.dataSourceName)
-
-        val primaryKeys = s.gatherPrimaryKeys
-        val primaryDf = if (primaryKeys.nonEmpty) {
-          genDf.dropDuplicates(primaryKeys)
-        } else genDf
-
-        val df = if (s.gatherUniqueFields.nonEmpty) {
-          uniqueFieldUtil.getUniqueFieldsValues(dataSourceName, primaryDf)
-        } else primaryDf
-        (dataSourceName, df)
-      })
-    ).toMap
-
-    val sinkDf = if (plan.sinkOptions.isDefined && plan.sinkOptions.get.foreignKeys.nonEmpty) {
-      ForeignKeyUtil.getDataFramesWithForeignKeys(plan, generatedDataForeachTask)
-    } else {
-      generatedDataForeachTask.toList
+  private def generateData(plan: Plan, summaryWithTask: List[(TaskSummary, Task)], faker: Faker with Serializable): Unit = {
+    if (flagsConfig.enableDeleteGeneratedRecords) {
+      LOGGER.warn("Both enableGenerateData and enableDeleteGeneratedData are true. Please only enable one at a time. Will continue with generating data")
     }
-    sinkDf
-  }
+    if (LOGGER.isDebugEnabled) {
+      LOGGER.debug(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=($summaryWithTask)")
+      summaryWithTask.foreach(t => LOGGER.debug(s"Enabled task details: ${t._2.toTaskDetailString}"))
+    }
+    val stepNames = summaryWithTask.map(t => s"task=${t._2.name}, num-steps=${t._2.steps.size}, steps=${t._2.steps.map(_.name).mkString(",")}").mkString("||")
+    LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=$stepNames")
+    val generationResult = batchDataProcessor.splitAndProcess(plan, summaryWithTask, faker)
 
-  def pushDataToSinks(executableTasks: List[(TaskSummary, Task)], sinkDf: List[(String, DataFrame)]): Unit = {
-    val sinkFactory = new SinkFactory(connectionConfigsByName, flagsConfig, metadataConfig, applicationType)
-    val stepByDataSourceName = executableTasks.flatMap(task =>
-      task._2.steps.map(s => (getDataSourceName(task._1, s), s))
-    ).toMap
+    val optValidationResults = if (flagsConfig.enableValidation) Some(validationProcessor.executeValidations) else None
 
-    sinkDf.foreach(df => {
-      val dataSourceName = df._1.split("\\.").head
-      val step = stepByDataSourceName(df._1)
-      sinkFactory.pushToSink(df._2, dataSourceName, step, flagsConfig, LocalDateTime.now())
-
-      if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION) && flagsConfig.enableRecordTracking) {
-        val format = connectionConfigsByName(dataSourceName)(FORMAT)
-        recordTrackingFactory.trackRecords(df._2, dataSourceName, format, step)
-      } else if (applicationType.equalsIgnoreCase(BASIC_APPLICATION) && flagsConfig.enableRecordTracking) {
-        LOGGER.warn(s"Please upgrade from the free plan to paid plan to enable record tracking. More details here: $DATA_CATERER_SITE_PRICING")
-      }
-    })
+    if (flagsConfig.enableSaveSinkMetadata) {
+      dataGenerationResultWriter.writeResult(plan, generationResult, optValidationResults)
+    }
   }
 
   private def getDataFaker(plan: Plan): Faker with Serializable = {

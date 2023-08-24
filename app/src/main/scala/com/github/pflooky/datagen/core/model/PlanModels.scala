@@ -9,7 +9,7 @@ import org.apache.spark.sql.types.{ArrayType, DataType, Metadata, MetadataBuilde
 
 import scala.language.implicitConversions
 
-case class Plan(name: String, description: String, tasks: List[TaskSummary], sinkOptions: Option[SinkOptions] = None)
+case class Plan(name: String, description: String = "Data generation plan", tasks: List[TaskSummary] = List(), sinkOptions: Option[SinkOptions] = None, validations: List[String] = List())
 
 case class SinkOptions(seed: Option[String] = None, locale: Option[String] = None, foreignKeys: Map[String, List[String]] = Map()) {
   def gatherForeignKeyRelations(key: String): (ForeignKeyRelation, List[ForeignKeyRelation]) = {
@@ -63,7 +63,7 @@ object Task {
   }
 }
 
-case class Step(name: String, `type`: String, count: Count = Count(), options: Map[String, String] = Map(), schema: Schema = Schema(), enabled: Boolean = true) {
+case class Step(name: String, `type`: String = "json", count: Count = Count(), options: Map[String, String] = Map(), schema: Schema = Schema(), enabled: Boolean = true) {
   def toStepDetailString: String = {
     s"name=$name, type=${`type`}, options=$options, step-num-records=(${count.numRecordsString}), schema-summary=(${schema.toString})"
   }

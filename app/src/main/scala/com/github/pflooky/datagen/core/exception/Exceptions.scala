@@ -14,6 +14,10 @@ class TaskParseException(taskFileName: String, throwable: Throwable) extends Run
   override def getMessage: String = s"Failed to parse task from file, task-file-name: $taskFileName"
 }
 
+class ParseFileException(filePath: String, parseToType: String, throwable: Throwable) extends RuntimeException(throwable) {
+  override def getMessage: String = s"Failed to parse file to expected type, file=$filePath, parse-to-type=$parseToType"
+}
+
 class ForeignKeyFormatException(foreignKey: String) extends RuntimeException {
   override def getMessage: String = s"Foreign key should be split by '.' according to format: <dataSourceName>.<stepName>.<columnName>, foreign-key=$foreignKey"
 }

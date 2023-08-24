@@ -2,18 +2,19 @@ package com.github.pflooky.datagen.core.generator
 
 import com.github.pflooky.datagen.core.generator.track.RecordTrackingProcessor
 import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING, FORMAT}
-import com.github.pflooky.datagen.core.model.{DataSourceResult, Plan, Task, TaskSummary}
+import com.github.pflooky.datagen.core.model.{DataSourceResult, FlagsConfig, FoldersConfig, GenerationConfig, MetadataConfig, Plan, Task, TaskSummary}
 import com.github.pflooky.datagen.core.sink.SinkFactory
 import com.github.pflooky.datagen.core.util.GeneratorUtil.getDataSourceName
 import com.github.pflooky.datagen.core.util.RecordCountUtil.calculateNumBatches
-import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, SparkProvider, UniqueFieldsUtil}
+import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, UniqueFieldsUtil}
 import net.datafaker.Faker
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import java.time.LocalDateTime
 
-class BatchDataProcessor extends SparkProvider {
+class BatchDataProcessor(connectionConfigsByName: Map[String, Map[String, String]], foldersConfig: FoldersConfig,
+                         metadataConfig: MetadataConfig, flagsConfig: FlagsConfig, generationConfig: GenerationConfig, applicationType: String)(implicit sparkSession: SparkSession) {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
   private lazy val recordTrackingProcessor = new RecordTrackingProcessor(foldersConfig.recordTrackingFolderPath)

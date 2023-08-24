@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.result
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include
-import com.github.pflooky.datagen.core.model.{DataSourceResult, DataSourceResultSummary, Field, FlagsConfig, FoldersConfig, MetadataConfig, Plan, Step, StepResultSummary, Task, TaskResultSummary}
+import com.github.pflooky.datagen.core.model.{DataSourceResult, DataSourceResultSummary, Field, FlagsConfig, FoldersConfig, MetadataConfig, Plan, Step, StepResultSummary, Task, TaskResultSummary, ValidationConfigResult}
 import com.github.pflooky.datagen.core.util.FileUtil.writeStringToFile
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import org.apache.hadoop.fs.FileSystem
@@ -15,7 +15,7 @@ class DataGenerationResultWriter(metadataConfig: MetadataConfig, foldersConfig: 
   private lazy val LOGGER = Logger.getLogger(getClass.getName)
   private lazy val OBJECT_MAPPER = ObjectMapperUtil.jsonObjectMapper
 
-  def writeResult(plan: Plan, generationResult: List[DataSourceResult]): Unit = {
+  def writeResult(plan: Plan, generationResult: List[DataSourceResult], optValidationResults: Option[List[ValidationConfigResult]]): Unit = {
     OBJECT_MAPPER.setSerializationInclusion(Include.NON_ABSENT)
     val (stepSummary, taskSummary, dataSourceSummary) = getSummaries(generationResult)
     val fileSystem = FileSystem.get(sparkSession.sparkContext.hadoopConfiguration)
@@ -23,16 +23,16 @@ class DataGenerationResultWriter(metadataConfig: MetadataConfig, foldersConfig: 
 
     LOGGER.info(s"Writing data generation summary to html files, folder-path=${foldersConfig.generatedDataResultsFolderPath}")
     val htmlWriter = new ResultHtmlWriter()
-    val htmlOverviewContent = htmlWriter.overview(plan, stepSummary, taskSummary, dataSourceSummary, flagsConfig)
     val fileWriter = writeToFile(fileSystem, foldersConfig.generatedDataResultsFolderPath) _
 
     fileWriter("index.html", htmlWriter.index)
-    fileWriter("overview.html", htmlOverviewContent)
+    fileWriter("overview.html", htmlWriter.overview(plan, stepSummary, taskSummary, dataSourceSummary, optValidationResults, flagsConfig))
     fileWriter("navbar.html", htmlWriter.navBarDetails)
 
     fileWriter("tasks.html", htmlWriter.taskDetails(taskSummary))
     fileWriter("steps.html", htmlWriter.stepDetails(stepSummary))
     fileWriter("data-sources.html", htmlWriter.dataSourceDetails(stepSummary.flatMap(_.dataSourceResults)))
+    fileWriter("validations.html", htmlWriter.validations(optValidationResults))
   }
 
   private def writeToFile(fileSystem: FileSystem, folderPath: String)(fileName: String, content: Node): Unit = {

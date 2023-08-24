@@ -6,7 +6,7 @@ import com.github.pflooky.datagen.core.model.{FlagsConfig, MetadataConfig, SinkR
 import com.github.pflooky.datagen.core.util.MetadataUtil.getFieldMetadata
 import com.google.common.util.concurrent.RateLimiter
 import org.apache.log4j.Logger
-import org.apache.spark.sql.{DataFrame, DataFrameWriter, Dataset, Encoder, Encoders, Row, SaveMode, SparkSession}
+import org.apache.spark.sql.{DataFrame, DataFrameWriter, Dataset, Row, SaveMode, SparkSession}
 
 import java.time.LocalDateTime
 import scala.collection.mutable.ListBuffer
@@ -21,9 +21,6 @@ class SinkFactory(
 
   private val LOGGER = Logger.getLogger(getClass.getName)
   private var HAS_LOGGED_COUNT_DISABLE_WARNING = false
-  implicit private val encoderTryUnit: Encoder[Try[Unit]] = Encoders.kryo[Try[Unit]]
-  implicit private val encoderOptionThrowable: Encoder[Option[Throwable]] = Encoders.kryo[Option[Throwable]]
-  implicit private val encoderRateLimiter: Encoder[RateLimiter] = Encoders.kryo[RateLimiter]
 
   def pushToSink(df: DataFrame, dataSourceName: String, step: Step, flagsConfig: FlagsConfig, startTime: LocalDateTime): SinkResult = {
     if (!connectionConfigs.contains(dataSourceName)) {
@@ -122,8 +119,6 @@ class SinkFactory(
     val rowsPerSecond = step.options.getOrElse(ROWS_PER_SECOND, DEFAULT_ROWS_PER_SECOND)
     LOGGER.info(s"Rows per second for generating data, rows-per-second=$rowsPerSecond")
     saveRealTimeGuava(dataSourceName, df, format, connectionConfig, step, rowsPerSecond, count, startTime)
-//    saveRealTimeSpark(df, format, connectionConfig, step, rowsPerSecond)
-//    SinkResult(dataSourceName, format, SaveMode.Append.name())
   }
 
   private def saveRealTimeGuava(dataSourceName: String, df: DataFrame, format: String, connectionConfig: Map[String, String],
@@ -138,7 +133,7 @@ class SinkFactory(
 
       part.foreach(row => {
         rateLimiter.acquire()
-        sinkProcessor.pushRowToSink(row)
+        saveResult.append(Try(sinkProcessor.pushRowToSink(row)))
       })
       sinkProcessor.close
     })
@@ -191,14 +186,6 @@ class SinkFactory(
   }
 
   private def getTimeout(totalRows: Int, rowsPerSecond: Int): Long = totalRows / rowsPerSecond * 1000
-
-  private def getRealTimeSinkProcessor(format: String, connectionConfig: Map[String, String], step: Step): RealTimeSinkProcessor[_] = {
-    format match {
-//      case HTTP => new HttpSinkProcessor(connectionConfig, step)
-//      case JMS => new JmsSinkProcessor(connectionConfig, step)
-      case x => throw new UnsupportedRealTimeDataSourceFormat(x)
-    }
-  }
 
   private def additionalConnectionConfig(format: String, connectionConfig: Map[String, String]): Map[String, String] = {
     format match {
