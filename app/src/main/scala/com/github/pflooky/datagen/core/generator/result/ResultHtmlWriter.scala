@@ -41,8 +41,8 @@ class ResultHtmlWriter {
         <div>Generated at
           {DateTime.now()}
         </div>
-        <h1>Summary</h1>
-        <h2>Flag Summary</h2>{flagsSummary(flagsConfig)}<h2>Plan Summary</h2>{planSummary(plan, stepResultSummary, taskResultSummary, dataSourceResultSummary)}<h2>Task Summary</h2>{tasksSummary(taskResultSummary)}<h2>Validation Summary</h2>{validationSummary(optValidationResults)}
+        <h1>Data Caterer Summary</h1>
+        <h2>Flags</h2>{flagsSummary(flagsConfig)}<h2>Plan</h2>{planSummary(plan, stepResultSummary, taskResultSummary, dataSourceResultSummary)}<h2>Tasks</h2>{tasksSummary(taskResultSummary)}<h2>Validations</h2>{validationSummary(optValidationResults)}
       </body>
     </html>
   }
@@ -101,6 +101,7 @@ class ResultHtmlWriter {
           <th>Record Tracking</th>
           <th>Delete Data</th>
           <th>Calculate Generated Metadata</th>
+          <th>Validate Data</th>
           <th>Unique Check</th>
         </tr>
       </thead>
@@ -120,6 +121,9 @@ class ResultHtmlWriter {
           </td>
           <td>
             {checkMark(flagsConfig.enableSinkMetadata)}
+          </td>
+          <td>
+            {checkMark(flagsConfig.enableValidation)}
           </td>
           <td>
             {checkMark(flagsConfig.enableUniqueCheck)}
@@ -463,10 +467,12 @@ class ResultHtmlWriter {
         <table class="tablesorter table table-striped" style="font-size: 13px">
           <thead>
             <tr>
+              <th>Description</th>
               <th>Data Source</th>
               <th>Options</th>
               <th>Success</th>
               <th>Validation</th>
+              <th>Num Failed</th>
               <th>Error Sample</th>
             </tr>
           </thead>
@@ -476,6 +482,9 @@ class ResultHtmlWriter {
               val dataSourceLink = s"data-sources.html#${dataSourceValidationRes.dataSourceName}"
               dataSourceValidationRes.validationResults.map(validationRes => {
                 <tr>
+                  <td>
+                    {validationRes.validation.description.getOrElse("Validate")}
+                  </td>
                   <td>
                     <a href={dataSourceLink}>
                       {dataSourceValidationRes.dataSourceName}
@@ -490,9 +499,14 @@ class ResultHtmlWriter {
                   <td>
                     {validationRes.validation match {
                     case ExpressionValidation(expr) =>
-                      s"expr -> $expr"
+                      s"""expr -> $expr
+                         |errorThreshold -> ${validationRes.validation.errorThreshold.getOrElse(0.0)}
+                         |""".stripMargin
                     case _ => ""
                   }}
+                  </td>
+                  <td>
+                    {validationRes.sampleErrorValues.map(_.count()).getOrElse(0)}
                   </td>
                   <td>
                     {if (validationRes.isSuccess) "" else validationRes.sampleErrorValues.get.take(5).map(_.json).mkString("\n")}
@@ -519,9 +533,10 @@ class ResultHtmlWriter {
       </thead>
       <tbody>
         {optValidationResults.getOrElse(List()).map(validationConfRes => {
+        val validationLink = s"validations.html#${validationConfRes.name}"
         <tr>
           <td>
-            {validationConfRes.name}
+            <a href={validationLink}>{validationConfRes.name}</a>
           </td>
           <td>
             {validationConfRes.description}
