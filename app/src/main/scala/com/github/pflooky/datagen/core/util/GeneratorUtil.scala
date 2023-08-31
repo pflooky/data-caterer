@@ -1,13 +1,14 @@
 package com.github.pflooky.datagen.core.util
 
-import com.github.pflooky.datagen.core.exception.{InvalidCountGeneratorConfigurationException, UnsupportedDataGeneratorType}
+import com.github.pflooky.datacaterer.api.model.Constants.{ONE_OF_GENERATOR, RANDOM_GENERATOR, REGEX_GENERATOR, SQL_GENERATOR}
+import com.github.pflooky.datacaterer.api.model.{Generator, Step, TaskSummary}
+import com.github.pflooky.datagen.core.exception.UnsupportedDataGeneratorType
 import com.github.pflooky.datagen.core.generator.provider.{DataGenerator, OneOfDataGenerator, RandomDataGenerator, RegexDataGenerator}
-import com.github.pflooky.datagen.core.model.Constants.{ONE_OF_GENERATOR, RANDOM_GENERATOR, RECORD_COUNT_GENERATOR_COL, REGEX_GENERATOR, SQL_GENERATOR}
-import com.github.pflooky.datagen.core.model.{Count, Generator, Step, TaskSummary}
+import com.github.pflooky.datagen.core.model.Constants.RECORD_COUNT_GENERATOR_COL
 import net.datafaker.Faker
 import org.apache.log4j.Logger
-import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.types.{LongType, Metadata, StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row}
 
 object GeneratorUtil {
 

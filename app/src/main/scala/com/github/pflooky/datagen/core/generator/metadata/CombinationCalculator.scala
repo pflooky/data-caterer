@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.metadata
 
-import com.github.pflooky.datagen.core.model.Constants.{EXPRESSION, ONE_OF_GENERATOR}
-import com.github.pflooky.datagen.core.model.Schema
+import com.github.pflooky.datacaterer.api.model.Constants.{EXPRESSION, ONE_OF_GENERATOR}
+import com.github.pflooky.datacaterer.api.model.Schema
 import net.datafaker.Faker
 import org.apache.log4j.Logger
 

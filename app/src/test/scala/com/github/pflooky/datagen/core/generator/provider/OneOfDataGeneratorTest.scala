@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.provider
 
+import com.github.pflooky.datacaterer.api.model.Constants.ONE_OF_GENERATOR
 import com.github.pflooky.datagen.core.generator.provider.OneOfDataGenerator.RandomOneOfDataGenerator
-import com.github.pflooky.datagen.core.model.Constants.{ARRAY_TYPE, ONE_OF_GENERATOR, ONE_OF_STRING}
 import org.apache.spark.sql.types.{MetadataBuilder, StringType, StructField}
 import org.junit.runner.RunWith
 import org.scalatest.funsuite.AnyFunSuite
@@ -14,7 +14,6 @@ class OneOfDataGeneratorTest extends AnyFunSuite {
 
   test("Can generate data based on one-of generator") {
     val metadata = new MetadataBuilder()
-      .putString(ARRAY_TYPE, ONE_OF_STRING)
       .putStringArray(ONE_OF_GENERATOR, oneOfArray)
       .build()
     val oneOfDataGenerator = new RandomOneOfDataGenerator(StructField("random_one_of", StringType, false, metadata))

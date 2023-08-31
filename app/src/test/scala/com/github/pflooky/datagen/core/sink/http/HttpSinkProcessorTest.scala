@@ -1,7 +1,8 @@
 package com.github.pflooky.datagen.core.sink.http
 
-import com.github.pflooky.datagen.core.model.Constants.{REAL_TIME_BODY_COL, REAL_TIME_CONTENT_TYPE_COL, REAL_TIME_HEADERS_COL, REAL_TIME_METHOD_COL, REAL_TIME_URL_COL, URL}
-import com.github.pflooky.datagen.core.model.{Count, Schema, Step}
+import com.github.pflooky.datacaterer.api.model.{Count, Schema, Step}
+import com.github.pflooky.datagen.core.model.Constants.{REAL_TIME_BODY_COL, REAL_TIME_CONTENT_TYPE_COL, REAL_TIME_HEADERS_COL, REAL_TIME_METHOD_COL, REAL_TIME_URL_COL}
+import com.github.pflooky.datacaterer.api.model.Constants.URL
 import dispatch.{Future, Http, Req}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
@@ -56,7 +57,7 @@ class HttpSinkProcessorTest extends AnyFunSuite with MockFactory {
   test("Can push data to HTTP endpoint using defaults") {
     val mockHttp = mock[Http]
     val mockRow = mock[Row]
-    val step = Step("step1", "json", Count(), Map(), Schema("manual", None))
+    val step = Step("step1", "json", Count(), Map(), Schema(None))
     val httpSinkProcessor = HttpSinkProcessor.createConnections(Map(), step, mockHttp)
     val mockResp = mock[Response]
     val futureResp = Future.successful(mockResp)
@@ -71,7 +72,7 @@ class HttpSinkProcessorTest extends AnyFunSuite with MockFactory {
     val mockHttp = mock[Http]
     val mockRow = mock[Row]
     val connectionConfig = Map(URL -> "http://localhost:8080/help")
-    val step = Step("step1", "json", Count(), Map(), Schema("manual", None))
+    val step = Step("step1", "json", Count(), Map(), Schema(None))
     val httpSinkProcessor = HttpSinkProcessor.createConnections(connectionConfig, step, mockHttp)
     val futureResp = Future.failed(new Throwable())
 

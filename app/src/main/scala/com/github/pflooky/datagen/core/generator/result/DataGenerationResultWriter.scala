@@ -1,7 +1,9 @@
 package com.github.pflooky.datagen.core.generator.result
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include
-import com.github.pflooky.datagen.core.model.{DataSourceResult, DataSourceResultSummary, Field, FlagsConfig, FoldersConfig, MetadataConfig, Plan, Step, StepResultSummary, Task, TaskResultSummary, ValidationConfigResult}
+import com.github.pflooky.datacaterer.api.model.{Field, FlagsConfig, FoldersConfig, MetadataConfig, Plan, Step, Task, ValidationConfigResult}
+import com.github.pflooky.datagen.core.listener.SparkRecordListener
+import com.github.pflooky.datagen.core.model.{DataSourceResult, DataSourceResultSummary, StepResultSummary, TaskResultSummary}
 import com.github.pflooky.datagen.core.util.FileUtil.writeStringToFile
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import org.apache.hadoop.fs.FileSystem
@@ -15,24 +17,31 @@ class DataGenerationResultWriter(metadataConfig: MetadataConfig, foldersConfig: 
   private lazy val LOGGER = Logger.getLogger(getClass.getName)
   private lazy val OBJECT_MAPPER = ObjectMapperUtil.jsonObjectMapper
 
-  def writeResult(plan: Plan, generationResult: List[DataSourceResult], optValidationResults: Option[List[ValidationConfigResult]]): Unit = {
+  def writeResult(plan: Plan, generationResult: List[DataSourceResult],
+                  optValidationResults: Option[List[ValidationConfigResult]], sparkRecordListener: SparkRecordListener): Unit = {
     OBJECT_MAPPER.setSerializationInclusion(Include.NON_ABSENT)
     val (stepSummary, taskSummary, dataSourceSummary) = getSummaries(generationResult)
     val fileSystem = FileSystem.get(sparkSession.sparkContext.hadoopConfiguration)
     fileSystem.setWriteChecksum(false)
 
-    LOGGER.info(s"Writing data generation summary to html files, folder-path=${foldersConfig.generatedDataResultsFolderPath}")
+    LOGGER.info(s"Writing data generation summary to HTML files, folder-path=${foldersConfig.generatedDataResultsFolderPath}")
     val htmlWriter = new ResultHtmlWriter()
     val fileWriter = writeToFile(fileSystem, foldersConfig.generatedDataResultsFolderPath) _
 
-    fileWriter("index.html", htmlWriter.index)
-    fileWriter("overview.html", htmlWriter.overview(plan, stepSummary, taskSummary, dataSourceSummary, optValidationResults, flagsConfig))
-    fileWriter("navbar.html", htmlWriter.navBarDetails)
+    try {
+      fileWriter("index.html", htmlWriter.index)
+      fileWriter("overview.html", htmlWriter.overview(plan, stepSummary, taskSummary, dataSourceSummary,
+        optValidationResults, flagsConfig, sparkRecordListener))
+      fileWriter("navbar.html", htmlWriter.navBarDetails)
 
-    fileWriter("tasks.html", htmlWriter.taskDetails(taskSummary))
-    fileWriter("steps.html", htmlWriter.stepDetails(stepSummary))
-    fileWriter("data-sources.html", htmlWriter.dataSourceDetails(stepSummary.flatMap(_.dataSourceResults)))
-    fileWriter("validations.html", htmlWriter.validations(optValidationResults))
+      fileWriter("tasks.html", htmlWriter.taskDetails(taskSummary))
+      fileWriter("steps.html", htmlWriter.stepDetails(stepSummary))
+      fileWriter("data-sources.html", htmlWriter.dataSourceDetails(stepSummary.flatMap(_.dataSourceResults)))
+      fileWriter("validations.html", htmlWriter.validations(optValidationResults))
+    } catch {
+      case ex: Exception =>
+        LOGGER.error("Failed to write data generation summary to HTML files", ex)
+    }
   }
 
   private def writeToFile(fileSystem: FileSystem, folderPath: String)(fileName: String, content: Node): Unit = {
@@ -65,7 +74,7 @@ class DataGenerationResultWriter(metadataConfig: MetadataConfig, foldersConfig: 
   private def summariseDataSourceResult(dataSourceResults: List[DataSourceResult]): (Long, Boolean, List[String], List[Field]) = {
     val totalRecords = dataSourceResults.map(_.sinkResult.count).sum
     val isSuccess = dataSourceResults.forall(_.sinkResult.isSuccess)
-    val sample = dataSourceResults.flatMap(_.sinkResult.sample).take(metadataConfig.numSinkSamples)
+    val sample = dataSourceResults.flatMap(_.sinkResult.sample).take(metadataConfig.numGeneratedSamples)
     val fieldMetadata = dataSourceResults.flatMap(_.sinkResult.generatedMetadata)
       .groupBy(_.name)
       .map(field => {

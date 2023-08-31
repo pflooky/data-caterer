@@ -1,8 +1,11 @@
 package com.github.pflooky.datagen.core.generator
 
+import com.github.pflooky.datacaterer.api.model.Constants.FORMAT
+import com.github.pflooky.datacaterer.api.model.{FlagsConfig, FoldersConfig, GenerationConfig, MetadataConfig, Plan, Task, TaskSummary}
 import com.github.pflooky.datagen.core.generator.track.RecordTrackingProcessor
-import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING, FORMAT}
-import com.github.pflooky.datagen.core.model.{DataSourceResult, FlagsConfig, FoldersConfig, GenerationConfig, MetadataConfig, Plan, Task, TaskSummary}
+import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING}
+import com.github.pflooky.datagen.core.model.DataSourceResult
+import com.github.pflooky.datagen.core.model.PlanImplicits.StepOps
 import com.github.pflooky.datagen.core.sink.SinkFactory
 import com.github.pflooky.datagen.core.util.GeneratorUtil.getDataSourceName
 import com.github.pflooky.datagen.core.util.RecordCountUtil.calculateNumBatches
@@ -72,7 +75,7 @@ class BatchDataProcessor(connectionConfigsByName: Map[String, Map[String, String
       val sinkResult = sinkFactory.pushToSink(df._2, dataSourceName, step, flagsConfig, startTime)
 
       if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION) && flagsConfig.enableRecordTracking) {
-        val format = connectionConfigsByName(dataSourceName)(FORMAT)
+        val format = connectionConfigsByName.get(dataSourceName).map(_(FORMAT)).getOrElse(step.`type`)
         recordTrackingProcessor.trackRecords(df._2, dataSourceName, format, step)
       } else if (applicationType.equalsIgnoreCase(BASIC_APPLICATION) && flagsConfig.enableRecordTracking) {
         LOGGER.warn(s"Please upgrade from the free plan to paid plan to enable record tracking. More details here: $DATA_CATERER_SITE_PRICING")

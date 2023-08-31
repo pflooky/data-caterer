@@ -1,8 +1,8 @@
 package com.github.pflooky.datagen.core.generator.provider
 
+import com.github.pflooky.datacaterer.api.model.Constants.REGEX_GENERATOR
 import com.github.pflooky.datagen.core.exception.InvalidDataGeneratorConfigurationException
 import com.github.pflooky.datagen.core.generator.provider.RegexDataGenerator.RandomRegexDataGenerator
-import com.github.pflooky.datagen.core.model.Constants.REGEX_GENERATOR
 import org.apache.spark.sql.types.{MetadataBuilder, StringType, StructField}
 import org.junit.runner.RunWith
 import org.scalatest.funsuite.AnyFunSuite

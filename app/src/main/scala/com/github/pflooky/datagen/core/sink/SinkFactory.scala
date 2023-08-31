@@ -1,8 +1,9 @@
 package com.github.pflooky.datagen.core.sink
 
-import com.github.pflooky.datagen.core.exception.UnsupportedRealTimeDataSourceFormat
-import com.github.pflooky.datagen.core.model.Constants._
-import com.github.pflooky.datagen.core.model.{FlagsConfig, MetadataConfig, SinkResult, Step}
+import com.github.pflooky.datacaterer.api.model.Constants.{DRIVER, FORMAT, HTTP, JDBC, JMS, PARTITIONS, PARTITION_BY, POSTGRES_DRIVER, RATE, ROWS_PER_SECOND, SAVE_MODE}
+import com.github.pflooky.datacaterer.api.model.{FlagsConfig, MetadataConfig, Step}
+import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS, BATCH, DATA_CATERER_SITE_PRICING, DEFAULT_ROWS_PER_SECOND, FAILED, FINISHED, PER_COLUMN_INDEX_COL, REAL_TIME, STARTED}
+import com.github.pflooky.datagen.core.model.SinkResult
 import com.github.pflooky.datagen.core.util.MetadataUtil.getFieldMetadata
 import com.google.common.util.concurrent.RateLimiter
 import org.apache.log4j.Logger
@@ -24,9 +25,9 @@ class SinkFactory(
 
   def pushToSink(df: DataFrame, dataSourceName: String, step: Step, flagsConfig: FlagsConfig, startTime: LocalDateTime): SinkResult = {
     if (!connectionConfigs.contains(dataSourceName)) {
-      throw new RuntimeException(s"Cannot find sink connection details in application config for data source, data-source-name=$dataSourceName, step-name=${step.name}")
+      //throw new RuntimeException(s"Cannot find sink connection details in application config for data source, data-source-name=$dataSourceName, step-name=${step.name}")
     }
-    val connectionConfig = connectionConfigs(dataSourceName)
+    val connectionConfig = connectionConfigs.getOrElse(dataSourceName, Map(FORMAT -> step.`type`))
     val saveMode = connectionConfig.get(SAVE_MODE).map(_.toLowerCase.capitalize).map(SaveMode.valueOf).getOrElse(SaveMode.Append)
     val saveModeName = saveMode.name()
     val format = connectionConfig(FORMAT)
@@ -199,7 +200,7 @@ class SinkFactory(
   private def mapToSinkResult(dataSourceName: String, df: DataFrame, saveMode: SaveMode, connectionConfig: Map[String, String],
                               stepOptions: Map[String, String], count: String, format: String, isSuccess: Boolean, startTime: LocalDateTime,
                               optException: Option[Throwable]): SinkResult = {
-    val sample = df.take(metadataConfig.numSinkSamples).map(_.json)
+    val sample = df.take(metadataConfig.numGeneratedSamples).map(_.json)
     val sinkResult = SinkResult(dataSourceName, format, saveMode.name(), stepOptions, count.toLong, isSuccess, sample, startTime, exception = optException)
 
     if (flagsConfig.enableSinkMetadata) {

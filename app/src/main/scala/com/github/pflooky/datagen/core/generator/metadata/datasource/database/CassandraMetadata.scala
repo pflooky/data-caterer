@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.database
 
-import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CLUSTERING_ORDER, IS_NULLABLE, IS_PRIMARY_KEY, PRIMARY_KEY_POSITION, SOURCE_COLUMN_DATA_TYPE}
+import com.github.pflooky.datacaterer.api.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CLUSTERING_POSITION, IS_NULLABLE, IS_PRIMARY_KEY, PRIMARY_KEY_POSITION, SOURCE_COLUMN_DATA_TYPE}
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions.{asc, col, desc, row_number}
 import org.apache.spark.sql.{Dataset, SparkSession}
@@ -54,7 +54,7 @@ case class CassandraMetadata(name: String, connectionConfig: Map[String, String]
           PRIMARY_KEY_POSITION -> r.getAs[String]("primary_key_position"),
           IS_NULLABLE -> isNullable,
         )
-        val metadataWithClusterOrder = if (clusteringOrder != "none") metadata ++ Map(CLUSTERING_ORDER -> clusteringOrder) else metadata
+        val metadataWithClusterOrder = if (clusteringOrder != "none") metadata ++ Map(CLUSTERING_POSITION -> clusteringOrder) else metadata
 
         val dataSourceReadOptions = Map(CASSANDRA_KEYSPACE -> r.getAs[String]("schema"), CASSANDRA_TABLE -> r.getAs[String]("table"))
         ColumnMetadata(r.getAs[String]("column"), dataSourceReadOptions, metadataWithClusterOrder)

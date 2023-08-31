@@ -1,20 +1,14 @@
 package com.github.pflooky.datagen.core.util
 
-import com.github.pflooky.datagen.core.config.ConfigParser
-import com.solacesystems.jms.SolMessageProducer
-import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 
-trait SparkProvider extends ConfigParser {
-
-  lazy implicit val sparkSession: SparkSession = getSparkSession
+class SparkProvider(master: String, config: Map[String, String]) {
 
   def getSparkSession: SparkSession = {
     SparkSession.builder()
-      .master(sparkMaster)
+      .master(master)
       .appName("data-caterer")
-      .config(baseSparkConfig)
-      .config(sparkConnectionConfig)
+      .config(config)
       .getOrCreate()
   }
 

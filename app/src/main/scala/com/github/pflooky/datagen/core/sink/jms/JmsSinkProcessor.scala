@@ -1,7 +1,8 @@
 package com.github.pflooky.datagen.core.sink.jms
 
-import com.github.pflooky.datagen.core.model.Constants.{JMS_CONNECTION_FACTORY, JMS_DESTINATION_NAME, JMS_INITIAL_CONTEXT_FACTORY, JMS_VPN_NAME, PASSWORD, REAL_TIME_BODY_COL, REAL_TIME_HEADERS_COL, REAL_TIME_PARTITION_COL, URL, USERNAME}
-import com.github.pflooky.datagen.core.model.Step
+import com.github.pflooky.datacaterer.api.model.Constants.{JMS_CONNECTION_FACTORY, JMS_DESTINATION_NAME, JMS_INITIAL_CONTEXT_FACTORY, JMS_VPN_NAME, PASSWORD, URL, USERNAME}
+import com.github.pflooky.datacaterer.api.model.Step
+import com.github.pflooky.datagen.core.model.Constants.{REAL_TIME_BODY_COL, REAL_TIME_HEADERS_COL, REAL_TIME_PARTITION_COL}
 import com.github.pflooky.datagen.core.sink.{RealTimeSinkProcessor, SinkProcessor}
 import com.github.pflooky.datagen.core.util.RowUtil.getRowValue
 import org.apache.hadoop.shaded.com.nimbusds.jose.util.StandardCharset
@@ -45,6 +46,7 @@ object JmsSinkProcessor extends RealTimeSinkProcessor[(MessageProducer, Session,
     this.step = step
     this
   }
+
   def createConnection(connectionConfig: Map[String, String], step: Step): (MessageProducer, Session, Connection) = {
     val (connection, context) = createInitialConnection(connectionConfig)
     val session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)

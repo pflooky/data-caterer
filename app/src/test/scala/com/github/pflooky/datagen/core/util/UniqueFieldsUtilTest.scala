@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.util
 
-import com.github.pflooky.datagen.core.model.Constants.IS_UNIQUE
-import com.github.pflooky.datagen.core.model.{Count, Field, Generator, Schema, Step, Task, TaskSummary}
+import com.github.pflooky.datacaterer.api.model.Constants.IS_UNIQUE
+import com.github.pflooky.datacaterer.api.model.{Count, Field, Generator, Schema, Step, Task, TaskSummary}
 
 class UniqueFieldsUtilTest extends SparkSuite {
 
@@ -12,8 +12,8 @@ class UniqueFieldsUtilTest extends SparkSuite {
         Step("accounts", "postgres", Count(), Map(), Schema(fields = Some(List(
           Field("account_id", Some("string"), generator = Some(Generator("random", Map(IS_UNIQUE -> "true")))),
           Field("name", Some("string"), generator = Some(Generator("random", Map(IS_UNIQUE -> "true")))),
-          Field("open_date", Some("date"), generator = Some(Generator("random"))),
-          Field("age", Some("int"), generator = Some(Generator("random"))),
+          Field("open_date", Some("date"), generator = Some(Generator())),
+          Field("age", Some("int"), generator = Some(Generator())),
         ))))
       ))
     ))

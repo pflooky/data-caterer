@@ -1,8 +1,8 @@
 package com.github.pflooky.datagen.core.sink
 
+import com.github.pflooky.datacaterer.api.model.Constants.{HTTP, JMS}
+import com.github.pflooky.datacaterer.api.model.Step
 import com.github.pflooky.datagen.core.exception.UnsupportedRealTimeDataSourceFormat
-import com.github.pflooky.datagen.core.model.Constants.{HTTP, JMS}
-import com.github.pflooky.datagen.core.model.Step
 import com.github.pflooky.datagen.core.sink.http.HttpSinkProcessor
 import com.github.pflooky.datagen.core.sink.jms.JmsSinkProcessor
 import org.apache.spark.sql.Row

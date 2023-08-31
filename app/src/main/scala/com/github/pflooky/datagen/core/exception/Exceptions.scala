@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.exception
 
-import com.github.pflooky.datagen.core.model.{Count, Field, Step}
+import com.github.pflooky.datacaterer.api.model.{Count, Field, Step}
 import org.apache.spark.sql.types.{DataType, StructField}
 
 class PlanFileNotFoundException(filePath: String) extends RuntimeException {
@@ -54,4 +54,8 @@ class InvalidFieldConfigurationException(field: Field) extends RuntimeException 
 
 class InvalidDataSourceOptions(dataSourceName: String, missingConfig: String) extends RuntimeException {
   override def getMessage: String = s"Missing config for data source connection, data-source-name=$dataSourceName, missing-config=$missingConfig"
+}
+
+class InvalidWaitConditionException(waitCondition: String) extends RuntimeException {
+  override def getMessage: String = s"Invalid wait condition for validation, "
 }

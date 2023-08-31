@@ -1,7 +1,9 @@
 package com.github.pflooky.datagen.core.generator.delete
 
-import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CSV, DELTA, FORMAT, JDBC, JSON, ORC, PARQUET, PATH}
-import com.github.pflooky.datagen.core.model.{ForeignKeyRelation, Plan, Step, Task, TaskSummary}
+import com.github.pflooky.datacaterer.api.model.Constants.{CASSANDRA, CSV, DELTA, FORMAT, JDBC, JSON, ORC, PARQUET, PATH}
+import com.github.pflooky.datacaterer.api.model.{Plan, Step, Task, TaskSummary}
+import com.github.pflooky.datagen.core.model.ForeignKeyRelationHelper
+import com.github.pflooky.datagen.core.model.PlanImplicits.SinkOptionsOps
 import com.github.pflooky.datagen.core.util.ForeignKeyUtil
 import com.github.pflooky.datagen.core.util.MetadataUtil.getSubDataSourcePath
 import org.apache.log4j.Logger
@@ -19,7 +21,7 @@ class DeleteRecordProcessor(connectionConfigsByName: Map[String, Map[String, Str
     if (plan.sinkOptions.isDefined && plan.sinkOptions.get.foreignKeys.nonEmpty) {
       val deleteOrder = ForeignKeyUtil.getDeleteOrder(plan.sinkOptions.get.foreignKeysWithoutColumnNames)
       deleteOrder.foreach(foreignKeyName => {
-        val foreignKeyRelation = ForeignKeyRelation.fromString(foreignKeyName)
+        val foreignKeyRelation = ForeignKeyRelationHelper.fromString(foreignKeyName)
         val connectionConfig = connectionConfigsByName(foreignKeyRelation.dataSource)
         val format = connectionConfig(FORMAT)
         val step = stepsByName(foreignKeyRelation.step)

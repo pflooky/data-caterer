@@ -1,13 +1,13 @@
 package com.github.pflooky.datagen.core.util
 
+import com.github.pflooky.datacaterer.api.model.{ForeignKeyRelation, Plan}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ForeignKeyRelationship
-import com.github.pflooky.datagen.core.model.{ForeignKeyRelation, Plan}
+import com.github.pflooky.datagen.core.model.PlanImplicits.{ForeignKeyRelationOps, SinkOptionsOps}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types.{LongType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 
-import scala.collection.immutable.Queue
 import scala.collection.mutable
 
 object ForeignKeyUtil {

@@ -1,13 +1,14 @@
 package com.github.pflooky.datagen.core.util
 
+import com.github.pflooky.datacaterer.api.model.Constants._
+import com.github.pflooky.datacaterer.api.model.{Field, MetadataConfig}
 import com.github.pflooky.datagen.core.generator.metadata.ExpressionPredictor
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.{CassandraMetadata, ColumnMetadata, MysqlMetadata, PostgresMetadata}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.file.FileMetadata
 import com.github.pflooky.datagen.core.generator.metadata.datasource.http.HttpMetadata
 import com.github.pflooky.datagen.core.generator.metadata.datasource.jms.JmsMetadata
-import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA, CASSANDRA_KEYSPACE, CASSANDRA_TABLE, CSV, DELTA, DISTINCT_COUNT, DRIVER, EXPRESSION, FORMAT, HISTOGRAM, HTTP, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_TABLE, JMS, JMS_DESTINATION_NAME, JSON, MYSQL_DRIVER, ONE_OF_GENERATOR, ORC, PARQUET, PATH, POSTGRES_DRIVER, ROW_COUNT}
-import com.github.pflooky.datagen.core.model.{Field, MetadataConfig}
+import com.github.pflooky.datagen.core.model.FieldHelper
 import org.apache.log4j.Logger
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.CatalogColumnStat
@@ -202,7 +203,7 @@ object MetadataUtil {
     val dataSourceMetadata = getMetadataFromConnectionConfig((dataSourceName, connectionConfig)).get
     val fieldMetadata = getFieldDataProfilingMetadata(df, connectionConfig, dataSourceMetadata, metadataConfig)
     val structFields = mapToStructFields(df, connectionConfig, fieldMetadata)
-    structFields.map(Field.fromStructField)
+    structFields.map(FieldHelper.fromStructField)
   }
 }
 

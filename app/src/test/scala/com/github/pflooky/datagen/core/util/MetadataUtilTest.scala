@@ -1,8 +1,8 @@
 package com.github.pflooky.datagen.core.util
 
+import com.github.pflooky.datacaterer.api.model.Constants.ONE_OF_GENERATOR
+import com.github.pflooky.datacaterer.api.model.MetadataConfig
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.{ColumnMetadata, PostgresMetadata}
-import com.github.pflooky.datagen.core.model.Constants.ONE_OF_GENERATOR
-import com.github.pflooky.datagen.core.model.MetadataConfig
 import org.apache.spark.sql.types.MetadataBuilder
 import org.apache.spark.sql.{Encoder, Encoders}
 

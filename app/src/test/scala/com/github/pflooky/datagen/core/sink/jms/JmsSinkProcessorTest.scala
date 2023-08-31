@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.sink.jms
 
+import com.github.pflooky.datacaterer.api.model.{Count, Field, Schema, Step}
 import com.github.pflooky.datagen.core.model.Constants.{REAL_TIME_BODY_COL, REAL_TIME_HEADERS_COL, REAL_TIME_PARTITION_COL, REAL_TIME_URL_COL}
-import com.github.pflooky.datagen.core.model.{Count, Field, Schema, Step}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.{ArrayType, StringType, StructField, StructType}
 import org.scalamock.scalatest.MockFactory
@@ -15,7 +15,7 @@ class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
 
   private val mockConnection = mock[Connection]
   private val basicFields = List(Field(REAL_TIME_BODY_COL))
-  private val step = Step("step1", "json", Count(), Map(), Schema("manual", Some(basicFields)))
+  private val step = Step("step1", "json", Count(), Map(), Schema(Some(basicFields)))
   implicit val d = new Defaultable[java.util.Enumeration[_]] {
     override val default = null
   }
@@ -37,7 +37,7 @@ class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
 
   test("Given a partition field defined, set the message priority based on the partition field value") {
     val fields = basicFields ++ List(Field(REAL_TIME_PARTITION_COL))
-    val schema = Schema("manual", Some(fields))
+    val schema = Schema(Some(fields))
     val mockSession = mock[Session]
     val mockMessageProducer = mock[MessageProducer]
     val jmsSinkProcessor = JmsSinkProcessor.createConnections(mockMessageProducer, mockSession, mockConnection, step.copy(schema = schema))
@@ -55,7 +55,7 @@ class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
 
   test("Given a headers field defined, set the message properties") {
     val fields = basicFields ++ List(Field(REAL_TIME_HEADERS_COL))
-    val schema = Schema("manual", Some(fields))
+    val schema = Schema(Some(fields))
     val mockSession = mock[Session]
     val mockMessageProducer = mock[MessageProducer]
     val jmsSinkProcessor = JmsSinkProcessor.createConnections(mockMessageProducer, mockSession, mockConnection, step.copy(schema = schema))

@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.provider
 
-import com.github.pflooky.datagen.core.model.Constants.{ENABLED_EDGE_CASES, ENABLED_NULL, IS_UNIQUE, LIST_MAXIMUM_LENGTH, LIST_MINIMUM_LENGTH, PROBABILITY_OF_EDGE_CASES, PROBABILITY_OF_NULLS, RANDOM_SEED, SQL_GENERATOR, STATIC}
+import com.github.pflooky.datacaterer.api.model.Constants.{ENABLED_EDGE_CASE, ENABLED_NULL, IS_UNIQUE, LIST_MAXIMUM_LENGTH, LIST_MINIMUM_LENGTH, PROBABILITY_OF_EDGE_CASE, PROBABILITY_OF_NULL, RANDOM_SEED, STATIC}
 import net.datafaker.Faker
 import org.apache.spark.sql.functions.{expr, rand, when}
 import org.apache.spark.sql.types.StructField
@@ -18,16 +18,17 @@ trait DataGenerator[T] extends Serializable {
   val edgeCases: List[T] = List()
 
   def generate: T
+
   def generateSqlExpression: String
 
   lazy val optRandomSeed: Option[Long] = if (structField.metadata.contains(RANDOM_SEED)) Some(structField.metadata.getString(RANDOM_SEED).toLong) else None
   lazy val sqlRandom: String = optRandomSeed.map(seed => s"RAND($seed)").getOrElse("RAND()")
   lazy val random: Random = if (structField.metadata.contains(RANDOM_SEED)) new Random(structField.metadata.getString(RANDOM_SEED).toLong) else new Random()
   lazy val enabledNull: Boolean = if (structField.metadata.contains(ENABLED_NULL)) structField.metadata.getString(ENABLED_NULL).toBoolean else false
-  lazy val enabledEdgeCases: Boolean = if (structField.metadata.contains(ENABLED_EDGE_CASES)) structField.metadata.getString(ENABLED_EDGE_CASES).toBoolean else false
+  lazy val enabledEdgeCases: Boolean = if (structField.metadata.contains(ENABLED_EDGE_CASE)) structField.metadata.getString(ENABLED_EDGE_CASE).toBoolean else false
   lazy val isUnique: Boolean = if (structField.metadata.contains(IS_UNIQUE)) structField.metadata.getString(IS_UNIQUE).toBoolean else false
-  lazy val probabilityOfNull: Double = if (structField.metadata.contains(PROBABILITY_OF_NULLS)) structField.metadata.getString(PROBABILITY_OF_NULLS).toDouble else 0.1
-  lazy val probabilityOfEdgeCases: Double = if (structField.metadata.contains(PROBABILITY_OF_EDGE_CASES)) structField.metadata.getString(PROBABILITY_OF_EDGE_CASES).toDouble else 0.5
+  lazy val probabilityOfNull: Double = if (structField.metadata.contains(PROBABILITY_OF_NULL)) structField.metadata.getString(PROBABILITY_OF_NULL).toDouble else 0.1
+  lazy val probabilityOfEdgeCases: Double = if (structField.metadata.contains(PROBABILITY_OF_EDGE_CASE)) structField.metadata.getString(PROBABILITY_OF_EDGE_CASE).toDouble else 0.5
   lazy val prevGenerated: mutable.Set[T] = mutable.Set[T]()
   lazy val optStatic: Option[String] = if (structField.metadata.contains(STATIC)) Some(structField.metadata.getString(STATIC)) else None
 

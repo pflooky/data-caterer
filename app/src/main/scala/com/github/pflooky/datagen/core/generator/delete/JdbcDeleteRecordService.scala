@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.delete
 
+import com.github.pflooky.datacaterer.api.model.Constants.{JDBC_TABLE, PASSWORD, URL, USERNAME}
 import com.github.pflooky.datagen.core.exception.{InvalidDataSourceOptions, UnsupportedJdbcDeleteDataType}
-import com.github.pflooky.datagen.core.model.Constants.{JDBC_TABLE, PASSWORD, URL, USERNAME}
 import org.apache.spark.sql.types.{BooleanType, ByteType, DateType, DecimalType, DoubleType, FloatType, IntegerType, LongType, ShortType, StringType, TimestampType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 

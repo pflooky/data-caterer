@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.file
 
+import com.github.pflooky.datacaterer.api.model.Constants.{DELTA, PARQUET, PATH}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.{DataSourceMetadata, MetadataProcessor}
-import com.github.pflooky.datagen.core.model.Constants.{DELTA, PARQUET, PATH}
 import org.apache.spark.sql.SparkSession
 
 class FileMetadataProcessor(override val dataSourceMetadata: DataSourceMetadata)(implicit sparkSession: SparkSession) extends MetadataProcessor {

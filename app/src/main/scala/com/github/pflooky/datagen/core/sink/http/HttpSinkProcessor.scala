@@ -1,8 +1,9 @@
 package com.github.pflooky.datagen.core.sink.http
 
-import com.github.pflooky.datagen.core.model.Constants.{PASSWORD, REAL_TIME_BODY_COL, REAL_TIME_CONTENT_TYPE_COL, REAL_TIME_HEADERS_COL, REAL_TIME_METHOD_COL, REAL_TIME_URL_COL, USERNAME}
-import com.github.pflooky.datagen.core.model.Step
+import com.github.pflooky.datacaterer.api.model.Step
+import com.github.pflooky.datagen.core.model.Constants.{DEFAULT_HTTP_CONTENT_TYPE, DEFAULT_HTTP_METHOD, REAL_TIME_BODY_COL, REAL_TIME_CONTENT_TYPE_COL, REAL_TIME_HEADERS_COL, REAL_TIME_METHOD_COL, REAL_TIME_URL_COL}
 import com.github.pflooky.datagen.core.sink.{RealTimeSinkProcessor, SinkProcessor}
+import com.github.pflooky.datagen.core.util.HttpUtil.getAuthHeader
 import com.github.pflooky.datagen.core.util.RowUtil.getRowValue
 import dispatch.Defaults._
 import dispatch._
@@ -10,7 +11,6 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.Row
 
 import java.nio.charset.Charset
-import java.util.Base64
 import scala.collection.mutable
 import scala.util.{Failure, Success}
 
@@ -51,10 +51,10 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] {
 
   def createHttpRequest(row: Row): Req = {
     val httpUrl = getRowValue[String](row, REAL_TIME_URL_COL)
-    val method = getRowValue[String](row, REAL_TIME_METHOD_COL, "GET")
+    val method = getRowValue[String](row, REAL_TIME_METHOD_COL, DEFAULT_HTTP_METHOD)
     val body = getRowValue[String](row, REAL_TIME_BODY_COL, "")
     val headers = getRowValue[mutable.WrappedArray[Row]](row, REAL_TIME_HEADERS_COL, mutable.WrappedArray.empty[Row])
-    val contentType = getRowValue[String](row, REAL_TIME_CONTENT_TYPE_COL, "application/json")
+    val contentType = getRowValue[String](row, REAL_TIME_CONTENT_TYPE_COL, DEFAULT_HTTP_CONTENT_TYPE)
 
     url(httpUrl)
       .setMethod(method)
@@ -65,13 +65,6 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] {
 
   private def getHeaders(rowHeaders: mutable.WrappedArray[Row]): Map[String, Seq[String]] = {
     val baseHeaders = rowHeaders.map(r => (r.getAs[String]("key"), Seq(r.getAs[String]("value")))).toMap
-    if (connectionConfig.contains(USERNAME) && connectionConfig.contains(PASSWORD)) {
-      val user = connectionConfig(USERNAME)
-      val password = connectionConfig(PASSWORD)
-      val encodedUserPassword = Base64.getEncoder.encodeToString(s"$user:$password".getBytes)
-      baseHeaders ++ Map("Authorization" -> Seq(s"Basic $encodedUserPassword"))
-    } else {
-      baseHeaders
-    }
+    baseHeaders ++ getAuthHeader(connectionConfig)
   }
 }

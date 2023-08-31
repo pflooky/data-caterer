@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.metadata
 
-import com.github.pflooky.datagen.core.model.{Plan, SinkOptions, Task, TaskSummary}
+import com.github.pflooky.datacaterer.api.model.{Plan, SinkOptions, Task, TaskSummary}
 import com.github.pflooky.datagen.core.util.FileUtil.writeStringToFile
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import org.apache.hadoop.fs.{FileSystem, Path}

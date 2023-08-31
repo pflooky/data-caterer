@@ -1,7 +1,8 @@
 package com.github.pflooky.datagen.core.generator.track
 
-import com.github.pflooky.datagen.core.model.Constants.{PARQUET, PATH}
-import com.github.pflooky.datagen.core.model.Step
+import com.github.pflooky.datacaterer.api.model.Constants.{PARQUET, PATH}
+import com.github.pflooky.datacaterer.api.model.Step
+import com.github.pflooky.datagen.core.model.PlanImplicits.StepOps
 import com.github.pflooky.datagen.core.util.MetadataUtil.getSubDataSourcePath
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SaveMode}

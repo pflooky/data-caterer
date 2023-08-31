@@ -1,9 +1,10 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.database
 
+import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_VALUE, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_QUERY, JDBC_TABLE, MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE, PRIMARY_KEY_POSITION, SOURCE_COLUMN_DATA_TYPE}
+import com.github.pflooky.datacaterer.api.model.ForeignKeyRelation
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
-import com.github.pflooky.datagen.core.model.Constants.{DEFAULT_VALUE, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_QUERY, JDBC_TABLE, MAXIMUM_LENGTH, METADATA_FILTER_SCHEMA, METADATA_FILTER_TABLE, NUMERIC_PRECISION, NUMERIC_SCALE, PRIMARY_KEY_POSITION, SOURCE_COLUMN_DATA_TYPE}
-import com.github.pflooky.datagen.core.model.ForeignKeyRelation
-import org.apache.spark.sql.{DataFrame, Dataset, Encoder, Encoders, Row, SparkSession}
+import com.github.pflooky.datagen.core.model.Constants.{METADATA_FILTER_SCHEMA, METADATA_FILTER_TABLE}
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
 trait DatabaseMetadata extends DataSourceMetadata {
   val metadataTable: Map[String, String]

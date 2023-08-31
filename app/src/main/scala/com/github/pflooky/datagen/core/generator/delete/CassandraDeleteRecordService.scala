@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.delete
 
 import com.datastax.spark.connector.toRDDFunctions
-import com.github.pflooky.datagen.core.model.Constants.{CASSANDRA_KEYSPACE, CASSANDRA_TABLE}
+import com.github.pflooky.datacaterer.api.model.Constants.{CASSANDRA_KEYSPACE, CASSANDRA_TABLE}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
 

@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.metadata
 
-import com.github.pflooky.datagen.core.model.{Count, Field, Generator, Schema, Step, Task}
+import com.github.pflooky.datacaterer.api.model.{Count, Field, Generator, Schema, Step, Task}
 import com.github.pflooky.datagen.core.util.SparkSuite
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
@@ -15,7 +15,7 @@ class PlanGeneratorTest extends SparkSuite {
     val folderPath = "src/test/resources/sample/plan-gen"
     val task = Task("basic_account", List(
       Step("account_json", "json", Count(), Map(),
-        Schema("generated", Some(List(
+        Schema(Some(List(
           Field("id", Some("string"), Some(Generator("random", Map("unique" -> "true")))),
           Field("name", Some("string"), Some(Generator("random", Map("expression" -> "#{Name.name}")))),
           Field("amount", Some("double"), Some(Generator("random", Map("min" -> "10.0")))),

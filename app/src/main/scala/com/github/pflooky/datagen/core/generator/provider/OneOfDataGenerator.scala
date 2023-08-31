@@ -1,10 +1,8 @@
 package com.github.pflooky.datagen.core.generator.provider
 
-import com.github.pflooky.datagen.core.model.Constants._
+import com.github.pflooky.datacaterer.api.model.Constants.ONE_OF_GENERATOR
 import net.datafaker.Faker
 import org.apache.spark.sql.types.StructField
-
-import scala.util.Try
 
 object OneOfDataGenerator {
 
@@ -27,16 +25,8 @@ object OneOfDataGenerator {
       s"CAST(SPLIT('$oneOfValuesString', '\\\\|\\\\|')[CAST(RAND() * $oneOfArrayLength AS INT)] AS ${structField.dataType.sql})"
     }
 
-    private def getOneOfList: Array[Any] = {
-      lazy val arrayType = Try(structField.metadata.getString(ARRAY_TYPE)).getOrElse(ONE_OF_STRING)
-      val x = arrayType.toLowerCase match {
-        case ONE_OF_STRING => structField.metadata.getStringArray(ONE_OF_GENERATOR)
-        case ONE_OF_LONG => structField.metadata.getLongArray(ONE_OF_GENERATOR)
-        case ONE_OF_DOUBLE => structField.metadata.getDoubleArray(ONE_OF_GENERATOR)
-        case ONE_OF_BOOLEAN => structField.metadata.getBooleanArray(ONE_OF_GENERATOR)
-        case _ => Array()
-      }
-      x.asInstanceOf[Array[Any]]
+    private def getOneOfList: Array[String] = {
+      structField.metadata.getStringArray(ONE_OF_GENERATOR)
     }
   }
 

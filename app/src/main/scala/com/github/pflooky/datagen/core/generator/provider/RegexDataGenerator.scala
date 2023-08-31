@@ -1,7 +1,8 @@
 package com.github.pflooky.datagen.core.generator.provider
 
+import com.github.pflooky.datacaterer.api.model.Constants.REGEX_GENERATOR
 import com.github.pflooky.datagen.core.exception.InvalidDataGeneratorConfigurationException
-import com.github.pflooky.datagen.core.model.Constants.{GENERATE_REGEX_UDF, REGEX_GENERATOR}
+import com.github.pflooky.datagen.core.model.Constants.GENERATE_REGEX_UDF
 import net.datafaker.Faker
 import org.apache.spark.sql.types.StructField
 

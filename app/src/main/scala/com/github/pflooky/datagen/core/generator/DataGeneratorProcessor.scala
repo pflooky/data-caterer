@@ -1,26 +1,37 @@
 package com.github.pflooky.datagen.core.generator
 
+import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, Plan, Task, TaskSummary}
+import com.github.pflooky.datagen.core.config.ConfigParser
 import com.github.pflooky.datagen.core.generator.delete.DeleteRecordProcessor
 import com.github.pflooky.datagen.core.generator.result.DataGenerationResultWriter
+import com.github.pflooky.datagen.core.listener.SparkRecordListener
 import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING}
-import com.github.pflooky.datagen.core.model.{Plan, Task, TaskSummary}
+import com.github.pflooky.datagen.core.model.PlanImplicits.TaskOps
 import com.github.pflooky.datagen.core.parser.PlanParser
-import com.github.pflooky.datagen.core.util.SparkProvider
 import com.github.pflooky.datagen.core.validator.ValidationProcessor
 import net.datafaker.Faker
 import org.apache.log4j.Logger
+import org.apache.spark.sql.SparkSession
 
 import java.io.Serializable
 import java.util.{Locale, Random}
 import scala.util.{Failure, Success, Try}
 
-class DataGeneratorProcessor extends SparkProvider {
+class DataGeneratorProcessor(dataCatererConfiguration: DataCatererConfiguration)(implicit sparkSession: SparkSession) {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
+  private val connectionConfigsByName = dataCatererConfiguration.connectionConfigByName
+  private val foldersConfig = dataCatererConfiguration.foldersConfig
+  private val metadataConfig = dataCatererConfiguration.metadataConfig
+  private val flagsConfig = dataCatererConfiguration.flagsConfig
+  private val generationConfig = dataCatererConfiguration.generationConfig
   private lazy val deleteRecordProcessor = new DeleteRecordProcessor(connectionConfigsByName, foldersConfig.recordTrackingFolderPath)
   private lazy val dataGenerationResultWriter = new DataGenerationResultWriter(metadataConfig, foldersConfig, flagsConfig)
   private lazy val validationProcessor = new ValidationProcessor(connectionConfigsByName, foldersConfig.validationFolderPath)
   private lazy val batchDataProcessor = new BatchDataProcessor(connectionConfigsByName, foldersConfig, metadataConfig, flagsConfig, generationConfig, applicationType)
+  private lazy val sparkRecordListener = new SparkRecordListener(flagsConfig.enableCount)
+  val applicationType: String = ConfigParser.applicationType
+  sparkSession.sparkContext.addSparkListener(sparkRecordListener)
 
   def generateData(): Unit = {
     val plan = PlanParser.parsePlan(foldersConfig.planFilePath)
@@ -64,8 +75,8 @@ class DataGeneratorProcessor extends SparkProvider {
 
     val optValidationResults = if (flagsConfig.enableValidation) Some(validationProcessor.executeValidations) else None
 
-    if (flagsConfig.enableSaveSinkMetadata) {
-      dataGenerationResultWriter.writeResult(plan, generationResult, optValidationResults)
+    if (flagsConfig.enableSaveReports) {
+      dataGenerationResultWriter.writeResult(plan, generationResult, optValidationResults, sparkRecordListener)
     }
   }
 

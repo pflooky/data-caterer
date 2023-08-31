@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.util
 
-import com.github.pflooky.datagen.core.model.{Plan, SinkOptions}
+import com.github.pflooky.datacaterer.api.model.{Plan, SinkOptions}
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
 

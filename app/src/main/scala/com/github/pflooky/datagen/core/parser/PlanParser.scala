@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.parser
 
-import com.github.pflooky.datagen.core.model.Constants.ONE_OF_GENERATOR
-import com.github.pflooky.datagen.core.model.{Plan, Schema, Task}
+import com.github.pflooky.datacaterer.api.model.Constants.ONE_OF_GENERATOR
+import com.github.pflooky.datacaterer.api.model.{Plan, Schema, Task}
 import com.github.pflooky.datagen.core.util.FileUtil.{getFileContentFromFileSystem, isCloudStoragePath}
 import com.github.pflooky.datagen.core.util.{FileUtil, ObjectMapperUtil}
 import org.apache.hadoop.fs.FileSystem

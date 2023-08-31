@@ -1,9 +1,11 @@
 package com.github.pflooky.datagen.core.generator
 
+import com.github.pflooky.datacaterer.api.model.Constants.{OMIT, SQL_GENERATOR}
+import com.github.pflooky.datacaterer.api.model.{Field, PerColumnCount, Step}
 import com.github.pflooky.datagen.core.exception.InvalidStepCountGeneratorConfigurationException
 import com.github.pflooky.datagen.core.generator.provider.DataGenerator
 import com.github.pflooky.datagen.core.model.Constants._
-import com.github.pflooky.datagen.core.model._
+import com.github.pflooky.datagen.core.model.PlanImplicits.{CountOps, FieldOps, PerColumnCountOps}
 import com.github.pflooky.datagen.core.util.GeneratorUtil.getDataGenerator
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import net.datafaker.Faker

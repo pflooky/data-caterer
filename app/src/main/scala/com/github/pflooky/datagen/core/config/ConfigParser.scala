@@ -1,16 +1,17 @@
 package com.github.pflooky.datagen.core.config
 
-import com.github.pflooky.datagen.core.model.Constants.{APPLICATION_CONFIG_PATH, FORMAT, SPARK_MASTER, SUPPORTED_CONNECTION_FORMATS}
-import com.github.pflooky.datagen.core.model.{FlagsConfig, FoldersConfig, GenerationConfig, MetadataConfig}
+import com.github.pflooky.datacaterer.api.model.Constants.FORMAT
+import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, FlagsConfig, FoldersConfig, GenerationConfig, MetadataConfig}
+import com.github.pflooky.datagen.core.model.Constants.{APPLICATION_CONFIG_PATH, SPARK_MASTER, SUPPORTED_CONNECTION_FORMATS}
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
 import org.apache.log4j.Logger
 
 import java.io.File
-import scala.collection.JavaConverters.{collectionAsScalaIterableConverter, mapAsScalaMapConverter}
+import scala.collection.JavaConverters.collectionAsScalaIterableConverter
 import scala.util.Try
 
-trait ConfigParser {
+object ConfigParser {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
 
@@ -66,6 +67,18 @@ trait ConfigParser {
 
   def getSparkConnectionConfig: Map[String, String] = {
     connectionConfigsByName.flatMap(connectionConf => connectionConf._2.filter(_._1.startsWith("spark")))
+  }
+
+  def toDataCatererConfiguration: DataCatererConfiguration = {
+    DataCatererConfiguration(
+      flagsConfig,
+      foldersConfig,
+      metadataConfig,
+      generationConfig,
+      connectionConfigsByName,
+      baseSparkConfig ++ sparkConnectionConfig,
+      sparkMaster
+    )
   }
 
 }

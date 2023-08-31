@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.delete
 
-import com.github.pflooky.datagen.core.model.Constants.{FORMAT, PATH}
+import com.github.pflooky.datacaterer.api.model.Constants.{FORMAT, PATH}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 

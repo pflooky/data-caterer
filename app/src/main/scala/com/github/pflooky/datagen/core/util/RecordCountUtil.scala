@@ -1,6 +1,7 @@
 package com.github.pflooky.datagen.core.util
 
-import com.github.pflooky.datagen.core.model.{GenerationConfig, Task}
+import com.github.pflooky.datacaterer.api.model.{GenerationConfig, Task}
+import com.github.pflooky.datagen.core.model.PlanImplicits.{CountOps, PerColumnCountOps}
 import org.apache.log4j.Logger
 
 object RecordCountUtil {
@@ -25,7 +26,7 @@ object RecordCountUtil {
       task.steps
         .map(step => {
           val stepRecords = step.count.numRecords
-          val averagePerCol = step.count.perColumn.map(perCol => perCol.averageCountPerColumn).getOrElse(1L)
+          val averagePerCol = step.count.perColumn.map(_.averageCountPerColumn).getOrElse(1L)
           (
             s"${task.name}_${step.name}",
             StepRecordCount(0L, (stepRecords / averagePerCol) / numBatches, stepRecords)

@@ -1,7 +1,10 @@
 package com.github.pflooky.datagen.core.generator.result
 
-import com.github.pflooky.datagen.core.model.Constants.HISTOGRAM
-import com.github.pflooky.datagen.core.model.{DataSourceResult, DataSourceResultSummary, DataSourceValidationResult, ExpressionValidation, FlagsConfig, Generator, Plan, Step, StepResultSummary, TaskResultSummary, ValidationConfigResult}
+import com.github.pflooky.datacaterer.api.model.Constants.HISTOGRAM
+import com.github.pflooky.datacaterer.api.model.{ExpressionValidation, FlagsConfig, Generator, Plan, Step, ValidationConfigResult}
+import com.github.pflooky.datagen.core.listener.{SparkRecordListener, SparkTaskRecordSummary}
+import com.github.pflooky.datagen.core.model.PlanImplicits.CountOps
+import com.github.pflooky.datagen.core.model.{DataSourceResult, DataSourceResultSummary, StepResultSummary, TaskResultSummary}
 import org.joda.time.DateTime
 
 import scala.xml.{Node, NodeBuffer, NodeSeq}
@@ -28,7 +31,8 @@ class ResultHtmlWriter {
   }
 
   def overview(plan: Plan, stepResultSummary: List[StepResultSummary], taskResultSummary: List[TaskResultSummary],
-               dataSourceResultSummary: List[DataSourceResultSummary], optValidationResults: Option[List[ValidationConfigResult]], flagsConfig: FlagsConfig): Node = {
+               dataSourceResultSummary: List[DataSourceResultSummary], optValidationResults: Option[List[ValidationConfigResult]],
+               flagsConfig: FlagsConfig, sparkRecordListener: SparkRecordListener): Node = {
     <html>
       <head>
         <title>
@@ -42,7 +46,11 @@ class ResultHtmlWriter {
           {DateTime.now()}
         </div>
         <h1>Data Caterer Summary</h1>
-        <h2>Flags</h2>{flagsSummary(flagsConfig)}<h2>Plan</h2>{planSummary(plan, stepResultSummary, taskResultSummary, dataSourceResultSummary)}<h2>Tasks</h2>{tasksSummary(taskResultSummary)}<h2>Validations</h2>{validationSummary(optValidationResults)}
+        <h2>Flags</h2>{flagsSummary(flagsConfig)}
+        <h2>Plan</h2>{planSummary(plan, stepResultSummary, taskResultSummary, dataSourceResultSummary)}
+        <h2>Tasks</h2>{tasksSummary(taskResultSummary)}
+        <h2>Validations</h2>{validationSummary(optValidationResults)}
+        <h2>Output Rows Per Second</h2>{createLineGraph("outputRowsPerSecond", sparkRecordListener.outputRows.toList)}
       </body>
     </html>
   }
@@ -351,8 +359,8 @@ class ResultHtmlWriter {
     val originalFields = step.schema.fields.getOrElse(List())
     val generatedFields = dataSourceResults.head.sinkResult.generatedMetadata
     val metadataMatch = originalFields.map(field => {
-      val genField = generatedFields.filter(f => f.name == field.name).head
-      val genMetadata = genField.generator.getOrElse(Generator()).options
+      val optGenField = generatedFields.find(f => f.name == field.name)
+      val genMetadata = optGenField.map(_.generator.getOrElse(Generator()).options).getOrElse(Map())
       val originalMetadata = field.generator.getOrElse(Generator()).options
       val metadataCompare = (originalMetadata.keys ++ genMetadata.keys).filter(_ != HISTOGRAM).toList.distinct
         .map(key => s"$key: ${originalMetadata.getOrElse(key, "")} -> ${genMetadata.getOrElse(key, "")}")
@@ -553,6 +561,59 @@ class ResultHtmlWriter {
     </table>
   }
 
+  def createLineGraph(name: String, recordSummary: List[SparkTaskRecordSummary]): NodeBuffer = {
+    if (recordSummary.nonEmpty) {
+      val sumRowsPerFinishTime = recordSummary
+        .map(x => {
+          val roundFinishTimeToSecond = x.finishTime - (x.finishTime % 1000) + 1000
+          (roundFinishTimeToSecond, x.numRecords)
+        })
+        .groupBy(_._1)
+        .map(t => (t._1, t._2.map(_._2).sum))
+      val sortedSumRows = sumRowsPerFinishTime.toList.sortBy(_._1)
+      val timeSeriesValues = (sortedSumRows.head._1 to sortedSumRows.last._1 by 1000)
+        .map(t => (t, sumRowsPerFinishTime.getOrElse(t, 0L)))
+        .toList
+
+      val xValues = timeSeriesValues.map(x => new DateTime(x._1).toString("HH:mm:ss")).map(s => "\"" + s + "\"")
+      val yValues = timeSeriesValues.map(_._2)
+      val (yMin, yMax) = if (yValues.nonEmpty) (Math.max(0, yValues.min - 2), yValues.max + 2) else (0, 0)
+      createChart(name, xValues, yValues, yMin, yMax)
+    } else {
+      <div>
+        <p>No data found</p>
+      </div>
+      <p></p>
+    }
+  }
+
+  private def createChart[T, K](name: String, xValues: List[T], yValues: List[K], minY: K, maxY: K): NodeBuffer = {
+    val xValuesStr = s"[${xValues.mkString(",")}]"
+    val yValuesStr = s"[${yValues.mkString(",")}]"
+    <canvas id={name} style="width:100%;max-width:700px"></canvas>
+    <script type="text/javascript">
+      {xml.Unparsed(
+      s"""new Chart($name, {
+         |    type: "line",
+         |    data: {
+         |      labels: $xValuesStr,
+         |      datasets: [{
+         |        backgroundColor: "rgba(0,0,255,1.0)",
+         |        borderColor: "rgba(0,0,255,0.1)",
+         |        data: $yValuesStr
+         |      }]
+         |    },
+         |    options: {
+         |      legend: {display: false},
+         |      scales: {
+         |        yAxes: [{ticks: {min: $minY, max: $maxY}}],
+         |      }
+         |    }
+         |  });
+         |""".stripMargin)}
+    </script>
+  }
+
   private def checkMark(isSuccess: Boolean): NodeSeq = if (isSuccess) xml.EntityRef("#9989") else xml.EntityRef("#10060")
 
   private def optionsString(res: StepResultSummary) = res.step.options.map(s => s"${s._1} -> ${s._2}").mkString("\n")
@@ -585,6 +646,7 @@ class ResultHtmlWriter {
       <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.20.1/js/jquery.tablesorter.min.js"></script>
         <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" type="text/css"/>
       <script src="https://netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
       <script type="text/javascript">
         {xml.Unparsed(
         """$(document).ready(function() {$(".tablesorter").tablesorter();});"""

@@ -1,5 +1,6 @@
 package com.github.pflooky.datagen.core.generator
 
+import com.github.pflooky.datacaterer.api.model.{Count, Field, Generator, PerColumnCount, Schema, Step}
 import com.github.pflooky.datagen.core.model._
 import com.github.pflooky.datagen.core.util.{Account, SparkSuite}
 import net.datafaker.Faker
@@ -14,7 +15,7 @@ import scala.util.Random
 class DataGeneratorFactoryTest extends SparkSuite {
 
   private val dataGeneratorFactory = new DataGeneratorFactory(new Faker() with Serializable)
-  private val schema = Schema("manual", Some(
+  private val schema = Schema(Some(
     List(
       Field("id"),
       Field("amount", Some("double")),
@@ -23,7 +24,7 @@ class DataGeneratorFactoryTest extends SparkSuite {
       Field("code", Some("int"), Some(Generator("sql", Map("sql" -> "CASE WHEN debit_credit == 'D' THEN 1 ELSE 0 END")))),
     )
   ))
-  private val simpleSchema = Schema("manual", Some(List(Field("id"))))
+  private val simpleSchema = Schema(Some(List(Field("id"))))
 
   test("Can generate data for basic step") {
     val step = Step("transaction", "parquet", Count(total = Some(10)), Map("path" -> "sample/output/parquet/transactions"), schema)

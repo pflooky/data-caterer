@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.jms
 
+import com.github.pflooky.datacaterer.api.model.Constants.SCHEMA_LOCATION
 import com.github.pflooky.datagen.core.generator.metadata.datasource.{DataSourceMetadata, MetadataProcessor}
-import com.github.pflooky.datagen.core.model.Constants.SCHEMA_LOCATION
 import org.apache.spark.sql.SparkSession
 
 class JmsMetadataProcessor(override val dataSourceMetadata: DataSourceMetadata)(implicit sparkSession: SparkSession) extends MetadataProcessor {
