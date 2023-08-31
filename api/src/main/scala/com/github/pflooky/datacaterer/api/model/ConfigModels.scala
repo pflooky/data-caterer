@@ -17,7 +17,7 @@ case class FoldersConfig(
                           planFilePath: String = "/tmp/plan/simple-plan.yaml",
                           taskFolderPath: String = "/tmp/task",
                           generatedPlanAndTaskFolderPath: String = "/tmp",
-                          generatedDataResultsFolderPath: String = "/tmp",
+                          generatedReportsFolderPath: String = "/tmp",
                           recordTrackingFolderPath: String = "/tmp",
                           validationFolderPath: String = "/tmp/validation",
                         )

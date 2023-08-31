@@ -16,11 +16,17 @@ trait PlanRun {
 
   def tasks: TasksBuilder = TasksBuilder()
 
+  def task: TaskBuilder = TaskBuilder()
+
   def step: StepBuilder = StepBuilder()
 
   def schema: SchemaBuilder = SchemaBuilder()
 
   def field: FieldBuilder = FieldBuilder()
+
+  def generator: GeneratorBuilder = GeneratorBuilder()
+
+  def count: CountBuilder = CountBuilder()
 
   def configuration: DataCatererConfigurationBuilder = DataCatererConfigurationBuilder()
 

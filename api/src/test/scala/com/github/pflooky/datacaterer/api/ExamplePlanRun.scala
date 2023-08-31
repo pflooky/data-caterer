@@ -34,3 +34,34 @@ class MinimalPlanWithManualTaskRun extends PlanRun {
   )
   execute(tasksBuilder)
 }
+
+class DocsPlanRun extends PlanRun {
+
+  validationConfig
+    .name("account_checks")
+    .description("Check account related fields have gone through system correctly")
+    .addValidations(
+      "accountJson",
+      Map("path" -> "sample/json/txn-gen"),
+      validation.expr("amount < 100"),
+      validation.expr("year == 2021").errorThreshold(0.1),
+      validation.expr("regexp_like(name, 'Peter .*')").errorThreshold(200).description("Should be lots of Peters")
+    )
+  val t = task
+    .name("csv_file")
+    .step(
+      step
+        .name("transactions")
+        .`type`("csv")
+        .option("path", "app/src/test/resources/sample/csv/transactions")
+        .count(
+          count
+            .total(1000)
+            .perColumnGenerator(
+              generator
+                .min(1)
+                .max(2)
+            )
+        )
+    )
+}

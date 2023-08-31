@@ -156,7 +156,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
       .taskFolderPath("/my_task")
       .recordTrackingFolderPath("/my_record_tracking")
       .validationFolderPath("/my_validation")
-      .generatedDataResultsFolderPath("/my_generation_results")
+      .generatedReportsFolderPath("/my_generation_results")
       .generatedPlanAndTaskFolderPath("/my_generated_plan_tasks")
       .dataCatererConfiguration
       .foldersConfig
@@ -165,7 +165,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
     assert(result.taskFolderPath == "/my_task")
     assert(result.recordTrackingFolderPath == "/my_record_tracking")
     assert(result.validationFolderPath == "/my_validation")
-    assert(result.generatedDataResultsFolderPath == "/my_generation_results")
+    assert(result.generatedReportsFolderPath == "/my_generation_results")
     assert(result.generatedPlanAndTaskFolderPath == "/my_generated_plan_tasks")
   }
 

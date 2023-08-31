@@ -1,6 +1,6 @@
 package com.github.pflooky.datacaterer.api
 
-import com.github.pflooky.datacaterer.api.model.Constants.{CASSANDRA, CSV, DRIVER, FORMAT, HTTP, JDBC, JMS, JMS_CONNECTION_FACTORY, JMS_INITIAL_CONTEXT_FACTORY, JMS_VPN_NAME, JSON, KAFKA, MYSQL_DRIVER, ORC, PARQUET, PASSWORD, POSTGRES_DRIVER, URL, USERNAME}
+import com.github.pflooky.datacaterer.api.model.Constants._
 import com.github.pflooky.datacaterer.api.model.DataCatererConfiguration
 import com.softwaremill.quicklens.ModifyPimp
 
@@ -10,29 +10,34 @@ case class DataCatererConfigurationBuilder(dataCatererConfiguration: DataCaterer
     this.modify(_.dataCatererConfiguration.sparkMaster).setTo(master)
 
   def sparkConfig(conf: Map[String, String]): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.sparkConfig).setTo(conf)
+    this.modify(_.dataCatererConfiguration.sparkConfig)(_ ++ conf)
 
   def addSparkConfig(conf: (String, String)): DataCatererConfigurationBuilder =
     this.modify(_.dataCatererConfiguration.sparkConfig)(_ ++ Map(conf))
 
 
   def connectionConfig(connectionConfigByName: Map[String, Map[String, String]]): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.connectionConfigByName).setTo(connectionConfigByName)
+    this.modify(_.dataCatererConfiguration.connectionConfigByName)(_ ++ connectionConfigByName)
 
   def addConnectionConfig(name: String, format: String, connectionConfig: Map[String, String]): DataCatererConfigurationBuilder =
     this.modify(_.dataCatererConfiguration.connectionConfigByName)(_ ++ Map(name -> (connectionConfig ++ Map(FORMAT -> format))))
 
-  def csv(name: String, options: Map[String, String] = Map()): DataCatererConfigurationBuilder =
-    addConnectionConfig(name, CSV, options)
+  def addConnectionConfig(name: String, format: String, path: String, connectionConfig: Map[String, String]): DataCatererConfigurationBuilder = {
+    val pathConf = if (path.nonEmpty) Map(PATH -> path) else Map()
+    this.modify(_.dataCatererConfiguration.connectionConfigByName)(_ ++ Map(name -> (connectionConfig ++ Map(FORMAT -> format) ++ pathConf)))
+  }
 
-  def parquet(name: String, options: Map[String, String] = Map()): DataCatererConfigurationBuilder =
-    addConnectionConfig(name, PARQUET, options)
+  def csv(name: String, path: String = "", options: Map[String, String] = Map()): DataCatererConfigurationBuilder =
+    addConnectionConfig(name, CSV, path, options)
 
-  def orc(name: String, options: Map[String, String] = Map()): DataCatererConfigurationBuilder =
-    addConnectionConfig(name, ORC, options)
+  def parquet(name: String, path: String = "", options: Map[String, String] = Map()): DataCatererConfigurationBuilder =
+    addConnectionConfig(name, PARQUET, path, options)
 
-  def json(name: String, options: Map[String, String] = Map()): DataCatererConfigurationBuilder =
-    addConnectionConfig(name, JSON, options)
+  def orc(name: String, path: String = "", options: Map[String, String] = Map()): DataCatererConfigurationBuilder =
+    addConnectionConfig(name, ORC, path, options)
+
+  def json(name: String, path: String = "", options: Map[String, String] = Map()): DataCatererConfigurationBuilder =
+    addConnectionConfig(name, JSON, path, options)
 
   def postgres(
                 name: String,
@@ -152,8 +157,8 @@ case class DataCatererConfigurationBuilder(dataCatererConfiguration: DataCaterer
   def validationFolderPath(path: String): DataCatererConfigurationBuilder =
     this.modify(_.dataCatererConfiguration.foldersConfig.validationFolderPath).setTo(path)
 
-  def generatedDataResultsFolderPath(path: String): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.foldersConfig.generatedDataResultsFolderPath).setTo(path)
+  def generatedReportsFolderPath(path: String): DataCatererConfigurationBuilder =
+    this.modify(_.dataCatererConfiguration.foldersConfig.generatedReportsFolderPath).setTo(path)
 
   def generatedPlanAndTaskFolderPath(path: String): DataCatererConfigurationBuilder =
     this.modify(_.dataCatererConfiguration.foldersConfig.generatedPlanAndTaskFolderPath).setTo(path)

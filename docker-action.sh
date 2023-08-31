@@ -4,6 +4,9 @@ version=$(grep version gradle.properties | cut -d= -f2)
 sparkVersion=$(grep spark gradle.properties | cut -d= -f2)
 platforms="linux/amd64,linux/arm64"
 
+echo "Creating API jar and uploading to Github packages"
+gradle clean :api:build :api:publish
+
 echo "Creating data caterer basic jar, version=$version"
 gradle clean -PapplicationType=basic build basicJar -x shadowJar
 echo "Creating advanced jar"

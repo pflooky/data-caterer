@@ -35,43 +35,77 @@ case class TaskBuilder(task: Task = Task(), dataSourceName: String = "json") {
 
   def name(name: String): TaskBuilder = this.modify(_.task.name).setTo(name)
 
-  def step(step: Step): TaskBuilder = this.modify(_.task.steps)(_ ++ List(step))
+  def step(step: StepBuilder): TaskBuilder = this.modify(_.task.steps)(_ ++ List(step.step))
 
-  def steps(steps: List[Step]): TaskBuilder = this.modify(_.task.steps).setTo(steps)
+  def steps(steps: List[StepBuilder]): TaskBuilder = this.modify(_.task.steps)(_ ++ steps.map(_.step))
 }
 
 case class StepBuilder(step: Step = Step()) {
 
-  def name(name: String): StepBuilder = this.modify(_.step.name).setTo(name)
+  def name(name: String): StepBuilder =
+    this.modify(_.step.name).setTo(name)
 
-  def `type`(`type`: String): StepBuilder = this.modify(_.step.`type`).setTo(`type`)
+  def `type`(`type`: String): StepBuilder =
+    this.modify(_.step.`type`).setTo(`type`)
 
-  def enabled(enabled: Boolean): StepBuilder = this.modify(_.step.enabled).setTo(enabled)
+  def enabled(enabled: Boolean): StepBuilder =
+    this.modify(_.step.enabled).setTo(enabled)
 
-  def option(option: (String, String)): StepBuilder = this.modify(_.step.options)(_ ++ Map(option))
+  def option(option: (String, String)): StepBuilder =
+    this.modify(_.step.options)(_ ++ Map(option))
 
-  def options(options: Map[String, String]): StepBuilder = this.modify(_.step.options)(_ ++ options)
+  def options(options: Map[String, String]): StepBuilder =
+    this.modify(_.step.options)(_ ++ options)
 
-  def count(countBuilder: CountBuilder): StepBuilder = this.modify(_.step.count).setTo(countBuilder.count)
+  def count(countBuilder: CountBuilder): StepBuilder =
+    this.modify(_.step.count).setTo(countBuilder.count)
 
-  def schema(schemaBuilder: SchemaBuilder): StepBuilder = this.modify(_.step.schema).setTo(schemaBuilder.schema)
+  def count(total: Long): StepBuilder =
+    this.modify(_.step.count).setTo(CountBuilder().total(total).count)
+
+  def count(generator: GeneratorBuilder): StepBuilder =
+    this.modify(_.step.count).setTo(CountBuilder().generator(generator).count)
+
+  def schema(schemaBuilder: SchemaBuilder): StepBuilder =
+    this.modify(_.step.schema).setTo(schemaBuilder.schema)
 }
 
 case class CountBuilder(count: Count = Count()) {
-  def total(total: Long): CountBuilder = this.modify(_.count.total).setTo(Some(total))
+  def total(total: Long): CountBuilder =
+    this.modify(_.count.total).setTo(Some(total))
 
-  def generator(generator: Generator): CountBuilder = this.modify(_.count.generator).setTo(Some(generator))
+  def generator(generator: GeneratorBuilder): CountBuilder =
+    this.modify(_.count.generator).setTo(Some(generator.generator))
 
   def perColumn(perColumnCountBuilder: PerColumnCountBuilder): CountBuilder =
     this.modify(_.count.perColumn).setTo(Some(perColumnCountBuilder.perColumnCount))
+
+  def columns(cols: List[String]): CountBuilder =
+    this.modify(_.count.perColumn).setTo(Some(perColCount.columns(cols).perColumnCount))
+
+  def columns(cols: String*): CountBuilder =
+    this.modify(_.count.perColumn).setTo(Some(perColCount.columns(cols.toList).perColumnCount))
+
+  def perColumnTotal(total: Long): CountBuilder =
+    this.modify(_.count.perColumn).setTo(Some(perColCount.total(total).perColumnCount))
+
+  def perColumnGenerator(generator: GeneratorBuilder): CountBuilder =
+    this.modify(_.count.perColumn).setTo(Some(perColCount.generator(generator).perColumnCount))
+
+  private def perColCount: PerColumnCountBuilder = {
+    count.perColumn match {
+      case Some(value) => PerColumnCountBuilder(value)
+      case None => PerColumnCountBuilder()
+    }
+  }
 }
 
 case class PerColumnCountBuilder(perColumnCount: PerColumnCount = PerColumnCount()) {
   def total(total: Long): PerColumnCountBuilder =
     this.modify(_.perColumnCount.count).setTo(Some(total))
 
-  def generator(generator: Generator): PerColumnCountBuilder =
-    this.modify(_.perColumnCount.generator).setTo(Some(generator))
+  def generator(generator: GeneratorBuilder): PerColumnCountBuilder =
+    this.modify(_.perColumnCount.generator).setTo(Some(generator.generator))
 
   def columns(columns: List[String]): PerColumnCountBuilder =
     this.modify(_.perColumnCount.columnNames).setTo(columns)

@@ -24,9 +24,9 @@ class DataGenerationResultWriter(metadataConfig: MetadataConfig, foldersConfig: 
     val fileSystem = FileSystem.get(sparkSession.sparkContext.hadoopConfiguration)
     fileSystem.setWriteChecksum(false)
 
-    LOGGER.info(s"Writing data generation summary to HTML files, folder-path=${foldersConfig.generatedDataResultsFolderPath}")
+    LOGGER.info(s"Writing data generation summary to HTML files, folder-path=${foldersConfig.generatedReportsFolderPath}")
     val htmlWriter = new ResultHtmlWriter()
-    val fileWriter = writeToFile(fileSystem, foldersConfig.generatedDataResultsFolderPath) _
+    val fileWriter = writeToFile(fileSystem, foldersConfig.generatedReportsFolderPath) _
 
     try {
       fileWriter("index.html", htmlWriter.index)

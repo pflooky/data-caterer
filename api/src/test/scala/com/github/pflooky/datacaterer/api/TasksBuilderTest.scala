@@ -76,7 +76,7 @@ class TasksBuilderTest extends AnyFunSuite {
     val result = CountBuilder()
       .perColumn(PerColumnCountBuilder()
         .columns(List("account_id"))
-        .generator(GeneratorBuilder().min(5).generator)
+        .generator(GeneratorBuilder().min(5))
       ).count
 
     assert(result.total.contains(1000))
