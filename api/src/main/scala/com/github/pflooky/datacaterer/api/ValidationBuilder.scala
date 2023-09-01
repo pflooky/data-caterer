@@ -20,22 +20,17 @@ case class ValidationConfigurationBuilder(validationConfiguration: ValidationCon
   def addValidations(dataSourceName: String, options: Map[String, String], waitCondition: WaitConditionBuilder, validations: ValidationBuilder*): ValidationConfigurationBuilder =
     this.modify(_.validationConfiguration.dataSources)(_ ++ Map(dataSourceName -> addValidationsToDataSource(dataSourceName, options, waitCondition, validations)))
 
-  def addDataSourceValidation(dataSourceName: String, validation: ValidationBuilder): ValidationConfigurationBuilder =
-    this.modify(_.validationConfiguration.dataSources)(_ ++ Map(
-      dataSourceName -> validationConfiguration.dataSources.getOrElse(dataSourceName, DataSourceValidation())
-    ))
-
   private def addValidationsToDataSource(
-                                         dataSourceName: String,
-                                         options: Map[String, String],
-                                         waitCondition: WaitConditionBuilder,
-                                         validations: Seq[ValidationBuilder]
-                                       ): DataSourceValidation = {
+                                          dataSourceName: String,
+                                          options: Map[String, String],
+                                          waitCondition: WaitConditionBuilder,
+                                          validations: Seq[ValidationBuilder]
+                                        ): DataSourceValidation = {
     val dsValidBuilder = validationConfiguration.dataSources.get(dataSourceName) match {
       case Some(value) => DataSourceValidationBuilder(value)
       case None => DataSourceValidationBuilder()
     }
-    dsValidBuilder.options(options).wait(waitCondition).validations(validations.toList).dataSourceValidation
+    dsValidBuilder.options(options).wait(waitCondition).validations(validations: _*).dataSourceValidation
   }
 
   private def addValidationToDataSource(
@@ -63,7 +58,7 @@ case class DataSourceValidationBuilder(dataSourceValidation: DataSourceValidatio
   def addValidation(validation: ValidationBuilder): DataSourceValidationBuilder =
     this.modify(_.dataSourceValidation.validations)(_ ++ List(validation.validation))
 
-  def validations(validations: List[ValidationBuilder]): DataSourceValidationBuilder =
+  def validations(validations: ValidationBuilder*): DataSourceValidationBuilder =
     this.modify(_.dataSourceValidation.validations)(_ ++ validations.map(_.validation))
 
   def wait(waitCondition: WaitConditionBuilder): DataSourceValidationBuilder =

@@ -8,11 +8,11 @@ class ExamplePlanRun extends PlanRun {
     addTask("account_json", "fs_json",
       step.name("account")
         .option(("path", "app/src/test/resources/sample/json/account"))
-        .schema(schema.addFields(List(
+        .schema(schema.addFields(
           field.name("account_id"),
           field.name("year").`type`("int").min(2022),
           field.name("name").static("peter")
-        )))
+        ))
     )
 
   execute(tasksBuilder, planBuilder)

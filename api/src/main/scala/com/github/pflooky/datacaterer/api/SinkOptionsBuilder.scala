@@ -8,6 +8,9 @@ case class SinkOptionsBuilder(sinkOptions: SinkOptions = SinkOptions()) {
 
   def locale(locale: String): SinkOptionsBuilder = this.modify(_.sinkOptions.locale).setTo(Some(locale))
 
+  def foreignKey(foreignKey: ForeignKeyRelation, relations: ForeignKeyRelation*): SinkOptionsBuilder =
+    this.modify(_.sinkOptions.foreignKeys)(_ ++ Map(foreignKey.toString -> relations.map(_.toString).toList))
+
   def foreignKey(foreignKey: ForeignKeyRelation, relations: List[ForeignKeyRelation]): SinkOptionsBuilder =
-    this.modify(_.sinkOptions.foreignKeys)(_ ++ Map(foreignKey.toString -> relations.map(_.toString)))
+    this.foreignKey(foreignKey, relations: _*)
 }

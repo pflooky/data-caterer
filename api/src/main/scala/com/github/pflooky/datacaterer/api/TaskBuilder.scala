@@ -22,13 +22,13 @@ case class TaskSummaryBuilder(taskSummary: TaskSummary = TaskSummary("default ta
 
 case class TasksBuilder(tasks: List[TaskBuilder] = List()) {
   def addTask(stepBuilder: StepBuilder): TasksBuilder =
-    addTask("default_task", "json", List(stepBuilder))
+    addTask("default_task", "json", stepBuilder)
 
   def addTask(name: String, dataSourceName: String, stepBuilder: StepBuilder): TasksBuilder =
-    addTask(name, dataSourceName, List(stepBuilder))
+    addTask(name, dataSourceName, stepBuilder)
 
-  def addTask(name: String, dataSourceName: String, steps: List[StepBuilder]): TasksBuilder =
-    this.modify(_.tasks)(_ ++ List(TaskBuilder(Task(name, steps.map(_.step)), dataSourceName)))
+  def addTask(name: String, dataSourceName: String, steps: StepBuilder*): TasksBuilder =
+    this.modify(_.tasks)(_ ++ List(TaskBuilder(Task(name, steps.map(_.step).toList), dataSourceName)))
 }
 
 case class TaskBuilder(task: Task = Task(), dataSourceName: String = "json") {
@@ -37,7 +37,7 @@ case class TaskBuilder(task: Task = Task(), dataSourceName: String = "json") {
 
   def step(step: StepBuilder): TaskBuilder = this.modify(_.task.steps)(_ ++ List(step.step))
 
-  def steps(steps: List[StepBuilder]): TaskBuilder = this.modify(_.task.steps)(_ ++ steps.map(_.step))
+  def steps(steps: StepBuilder*): TaskBuilder = this.modify(_.task.steps)(_ ++ steps.map(_.step))
 }
 
 case class StepBuilder(step: Step = Step()) {
@@ -80,11 +80,8 @@ case class CountBuilder(count: Count = Count()) {
   def perColumn(perColumnCountBuilder: PerColumnCountBuilder): CountBuilder =
     this.modify(_.count.perColumn).setTo(Some(perColumnCountBuilder.perColumnCount))
 
-  def columns(cols: List[String]): CountBuilder =
-    this.modify(_.count.perColumn).setTo(Some(perColCount.columns(cols).perColumnCount))
-
   def columns(cols: String*): CountBuilder =
-    this.modify(_.count.perColumn).setTo(Some(perColCount.columns(cols.toList).perColumnCount))
+    this.modify(_.count.perColumn).setTo(Some(perColCount.columns(cols: _*).perColumnCount))
 
   def perColumnTotal(total: Long): CountBuilder =
     this.modify(_.count.perColumn).setTo(Some(perColCount.total(total).perColumnCount))
@@ -107,25 +104,22 @@ case class PerColumnCountBuilder(perColumnCount: PerColumnCount = PerColumnCount
   def generator(generator: GeneratorBuilder): PerColumnCountBuilder =
     this.modify(_.perColumnCount.generator).setTo(Some(generator.generator))
 
-  def columns(columns: List[String]): PerColumnCountBuilder =
-    this.modify(_.perColumnCount.columnNames).setTo(columns)
+  def columns(columns: String*): PerColumnCountBuilder =
+    this.modify(_.perColumnCount.columnNames).setTo(columns.toList)
 }
 
 case class SchemaBuilder(schema: Schema = Schema()) {
   def addField(name: String, `type`: String): SchemaBuilder =
-    addFields(List(FieldBuilder().name(name).`type`(`type`)))
+    addFields(FieldBuilder().name(name).`type`(`type`))
 
   def addField(field: FieldBuilder): SchemaBuilder =
-    addFields(List(field))
+    addFields(field)
 
-  def addFields(fields: List[FieldBuilder]): SchemaBuilder =
+  def addFields(fields: FieldBuilder*): SchemaBuilder =
     this.modify(_.schema.fields).setTo(schema.fields match {
       case Some(value) => Some(value ++ fields.map(_.field))
-      case None => Some(fields.map(_.field))
+      case None => Some(fields.map(_.field).toList)
     })
-
-  def fields(fields: List[FieldBuilder]): SchemaBuilder =
-    this.modify(_.schema.fields).setTo(Some(fields.map(_.field)))
 }
 
 case class FieldBuilder(field: Field = Field()) {
@@ -150,7 +144,7 @@ case class FieldBuilder(field: Field = Field()) {
   def regex(regex: String): FieldBuilder =
     this.modify(_.field.generator).setTo(Some(getGenBuilder.regex(regex).generator))
 
-  def oneOf(values: List[Any]): FieldBuilder =
+  def oneOf(values: Any*): FieldBuilder =
     this.modify(_.field.generator).setTo(Some(getGenBuilder.oneOf(values).generator))
       .modify(_.field.`type`)
       .setTo(
@@ -251,7 +245,7 @@ case class GeneratorBuilder(generator: Generator = Generator()) {
   def regex(regex: String): GeneratorBuilder = this.modify(_.generator.`type`).setTo(REGEX_GENERATOR)
     .modify(_.generator.options)(_ ++ Map(REGEX_GENERATOR -> regex))
 
-  def oneOf(values: List[Any]): GeneratorBuilder =
+  def oneOf(values: Any*): GeneratorBuilder =
     this.modify(_.generator.`type`).setTo(ONE_OF_GENERATOR)
       .modify(_.generator.options)(_ ++ Map(ONE_OF_GENERATOR -> values))
 

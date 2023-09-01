@@ -60,7 +60,7 @@ class TasksBuilderTest extends AnyFunSuite {
     val result = CountBuilder()
       .perColumn(PerColumnCountBuilder()
         .total(20)
-        .columns(List("account_id"))
+        .columns("account_id")
       )
       .count
 
@@ -75,7 +75,7 @@ class TasksBuilderTest extends AnyFunSuite {
   test("Can create per column count with generator") {
     val result = CountBuilder()
       .perColumn(PerColumnCountBuilder()
-        .columns(List("account_id"))
+        .columns("account_id")
         .generator(GeneratorBuilder().min(5))
       ).count
 
@@ -93,25 +93,12 @@ class TasksBuilderTest extends AnyFunSuite {
     val result = SchemaBuilder()
       .addField("account_id", "string")
       .addField("year", "int")
-      .addFields(List(FieldBuilder().name("name").`type`("string")))
+      .addFields(FieldBuilder().name("name").`type`("string"))
       .schema
 
     assert(result.fields.isDefined)
     assert(result.fields.get.size == 3)
     assert(result.fields.get.contains(Field("account_id", Some("string"))))
-    assert(result.fields.get.contains(Field("year", Some("int"))))
-    assert(result.fields.get.contains(Field("name", Some("string"))))
-  }
-
-  test("Can create schema with fields") {
-    val result = SchemaBuilder()
-      .addField("account_id", "string")
-      .fields(List(FieldBuilder().name("name").`type`("string")))
-      .addField("year", "int")
-      .schema
-
-    assert(result.fields.isDefined)
-    assert(result.fields.get.size == 2)
     assert(result.fields.get.contains(Field("year", Some("int"))))
     assert(result.fields.get.contains(Field("name", Some("string"))))
   }
@@ -147,7 +134,7 @@ class TasksBuilderTest extends AnyFunSuite {
   test("Can create field generated from one of list") {
     val result = FieldBuilder()
       .name("account_id")
-      .oneOf(List(123.1, 789.2))
+      .oneOf(123.1, 789.2)
       .field
 
     assert(result.name == "account_id")

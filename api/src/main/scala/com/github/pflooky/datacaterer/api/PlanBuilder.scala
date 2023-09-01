@@ -43,7 +43,7 @@ trait PlanRun {
                validations: List[ValidationConfigurationBuilder] = List()
              ): Unit = {
     val taskToDataSource = tasks.tasks.map(t => (t.task.name, t.dataSourceName, t.task))
-    val planWithTaskToDataSource = plan.taskSummaries(taskToDataSource.map(t => taskSummary.name(t._1).dataSourceName(t._2)))
+    val planWithTaskToDataSource = plan.taskSummaries(taskToDataSource.map(t => taskSummary.name(t._1).dataSourceName(t._2)): _*)
 
     _plan = planWithTaskToDataSource.plan
     _tasks = tasks.tasks.map(_.task)
@@ -61,8 +61,8 @@ case class PlanBuilder(plan: Plan = Plan()) {
   def taskSummary(taskSummaryBuilder: TaskSummaryBuilder): PlanBuilder =
     this.modify(_.plan.tasks)(_ ++ List(taskSummaryBuilder.taskSummary))
 
-  def taskSummaries(tasks: List[TaskSummaryBuilder]): PlanBuilder =
-    this.modify(_.plan.tasks).setTo(tasks.map(_.taskSummary))
+  def taskSummaries(tasks: TaskSummaryBuilder*): PlanBuilder =
+    this.modify(_.plan.tasks)(_ ++ tasks.map(_.taskSummary))
 
   def sinkOptions(sinkOptionsBuilder: SinkOptionsBuilder): PlanBuilder = this.modify(_.plan.sinkOptions).setTo(Some(sinkOptionsBuilder.sinkOptions))
 
@@ -70,9 +70,11 @@ case class PlanBuilder(plan: Plan = Plan()) {
 
   def locale(locale: String): PlanBuilder =
     this.modify(_.plan.sinkOptions).setTo(Some(getSinkOpt.locale(locale).sinkOptions))
+  def addForeignKeyRelationship(foreignKey: ForeignKeyRelation, relations: ForeignKeyRelation*): PlanBuilder =
+    addForeignKeyRelationship(foreignKey, relations.toList)
 
   def addForeignKeyRelationship(foreignKey: ForeignKeyRelation, relations: List[ForeignKeyRelation]): PlanBuilder =
-    this.modify(_.plan.sinkOptions).setTo(Some(getSinkOpt.foreignKey(foreignKey, relations).sinkOptions))
+    this.modify(_.plan.sinkOptions).setTo(Some(getSinkOpt.foreignKey(foreignKey, relations: _*).sinkOptions))
 
   private def getSinkOpt: SinkOptionsBuilder = {
     plan.sinkOptions match {
