@@ -90,7 +90,7 @@ publishing {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/pflooky/data-caterer-api")
             credentials {
-                username = System.getenv("GITHUB_ACTOR")
+                username = "pflooky"
                 password = System.getenv("GITHUB_TOKEN")
             }
         }
