@@ -5,17 +5,17 @@ sparkVersion=$(grep spark gradle.properties | cut -d= -f2)
 platforms="linux/amd64,linux/arm64"
 
 echo "Creating API jar and uploading to Github packages"
-publish_res=$(gradle clean :api:build :api:publish)
-
-if [ "$publish_res" -ne 0 ]; then
+gradle clean :api:build :api:publish
+publish_res=$?
+if [[ "$publish_res" -ne 0 ]] ; then
   echo "Publish API failed, exiting"
   exit 1
 fi
 
 echo "Creating data caterer basic jar, version=$version"
-build_app=$(gradle clean -PapplicationType=basic build basicJar -x shadowJar)
-
-if [ "$build_app" -ne 0 ]; then
+gradle clean -PapplicationType=basic build basicJar -x shadowJar
+build_app=$?
+if [[ "$build_app" -ne 0 ]] ; then
   echo "Failed to build app, exiting"
   exit 1
 fi

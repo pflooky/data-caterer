@@ -96,7 +96,9 @@ publishing {
         }
     }
     publications {
-        create<MavenPublication>("mavenJava") {
+        create<MavenPublication>("mavenScala") {
+            from(components["scala"])
+            groupId = "org.data-catering"
             artifactId = "data-caterer-api"
             pom {
                 name.set("Data Caterer API")
