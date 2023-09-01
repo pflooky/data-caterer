@@ -67,7 +67,7 @@ class ValidationProcessor(connectionConfigsByName: Map[String, Map[String, Strin
           case ExpressionValidation(expr) => ("expression", expr)
           case _ => ("Unknown", "")
         }
-        val sampleErrors = validationRes.sampleErrorValues.get.take(5).map(_.json).mkString(",")
+        val sampleErrors = validationRes.sampleErrorValues.get.mkString(",\n")
         LOGGER.error(s"Failed validation: validation-name=${vcr.name}, description=${vcr.description}, data-source-name=${dsr.dataSourceName}, " +
           s"data-source-options=${dsr.options}, is-success=${validationRes.isSuccess}, validation-type=$validationType, check=$validationCheck, sample-errors=$sampleErrors")
       })

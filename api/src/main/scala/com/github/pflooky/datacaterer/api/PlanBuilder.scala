@@ -1,6 +1,6 @@
 package com.github.pflooky.datacaterer.api
 
-import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, ForeignKeyRelation, Plan, SinkOptions, Task, ValidationConfiguration}
+import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, ForeignKeyRelation, Plan, Task, ValidationConfiguration}
 import com.softwaremill.quicklens.ModifyPimp
 
 

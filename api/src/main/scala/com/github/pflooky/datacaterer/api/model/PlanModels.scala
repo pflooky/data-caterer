@@ -1,7 +1,6 @@
 package com.github.pflooky.datacaterer.api.model
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import org.apache.spark.sql.types.{ArrayType, DataType, Metadata, MetadataBuilder, StructField, StructType}
 
 import scala.language.implicitConversions
 

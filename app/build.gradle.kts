@@ -57,7 +57,7 @@ dependencies {
     // cassandra
     advancedImpl("com.datastax.spark:spark-cassandra-connector_$scalaVersion:3.3.0")
     // http
-    advancedImpl("org.dispatchhttp:dispatch-core_$scalaVersion:1.2.0")
+    advancedImpl("org.dispatchhttp:dispatch-core_$scalaVersion:1.2.0")  //TODO switch to https://github.com/AsyncHttpClient/async-http-client
     advancedImpl("io.swagger.parser.v3:swagger-parser-v3:2.1.16")
     // kafka
     advancedImpl("org.apache.spark:spark-sql-kafka-0-10_$scalaVersion:$sparkVersion")

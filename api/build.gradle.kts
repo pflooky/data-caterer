@@ -40,10 +40,8 @@ configurations {
 
 dependencies {
     compileOnly("org.scala-lang:scala-library:$scalaSpecificVersion")
-    compileOnly("org.apache.spark:spark-sql_$scalaVersion:$sparkVersion")
     compileOnly("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.2")
     compileOnly("com.fasterxml.jackson.module:jackson-module-scala_$scalaVersion:2.15.2")
-    compileOnly("org.dispatchhttp:dispatch-core_$scalaVersion:1.2.0")
 
     implementation("com.softwaremill.quicklens:quicklens_$scalaVersion:1.9.6")
 }

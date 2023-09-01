@@ -1,5 +1,7 @@
 package com.github.pflooky.datacaterer.api
 
+import com.github.pflooky.datacaterer.api.model.IntegerType
+
 class ExamplePlanRun extends PlanRun {
 
   val planBuilder = plan.name("sample plan")
@@ -10,7 +12,7 @@ class ExamplePlanRun extends PlanRun {
         .option(("path", "app/src/test/resources/sample/json/account"))
         .schema(schema.addFields(
           field.name("account_id"),
-          field.name("year").`type`("int").min(2022),
+          field.name("year").`type`(IntegerType).min(2022),
           field.name("name").static("peter")
         ))
     )

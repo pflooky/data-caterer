@@ -1,6 +1,6 @@
 package com.github.pflooky.datacaterer.api
 
-import com.github.pflooky.datacaterer.api.model.{Count, Field, Generator, Step, Task}
+import com.github.pflooky.datacaterer.api.model.{ArrayType, Count, DateType, Field, Generator, IntegerType, Step, StringType, Task}
 import org.scalatest.funsuite.AnyFunSuite
 
 class TasksBuilderTest extends AnyFunSuite {
@@ -91,9 +91,9 @@ class TasksBuilderTest extends AnyFunSuite {
 
   test("Can create schema with add fields") {
     val result = SchemaBuilder()
-      .addField("account_id", "string")
-      .addField("year", "int")
-      .addFields(FieldBuilder().name("name").`type`("string"))
+      .addField("account_id")
+      .addField("year", IntegerType)
+      .addFields(FieldBuilder().name("name"))
       .schema
 
     assert(result.fields.isDefined)
@@ -106,7 +106,7 @@ class TasksBuilderTest extends AnyFunSuite {
   test("Can create field") {
     val result = FieldBuilder()
       .name("account_id")
-      .`type`("string")
+      .`type`(StringType)
       .nullable(false)
       .generator(GeneratorBuilder())
       .field
@@ -135,6 +135,21 @@ class TasksBuilderTest extends AnyFunSuite {
     val result = FieldBuilder()
       .name("account_id")
       .oneOf(123.1, 789.2)
+      .field
+
+    assert(result.name == "account_id")
+    assert(result.`type`.contains("double"))
+    assert(result.generator.isDefined)
+    assert(result.generator.get.options("oneOf") == List(123.1, 789.2))
+  }
+
+  test("Can create field with nested schema") {
+    val result = FieldBuilder()
+      .name("txn_list")
+      .`type`(new ArrayType(DateType))
+      .schema(SchemaBuilder().addFields(
+        FieldBuilder().name("date").`type`(DateType)
+      ))
       .field
 
     assert(result.name == "account_id")

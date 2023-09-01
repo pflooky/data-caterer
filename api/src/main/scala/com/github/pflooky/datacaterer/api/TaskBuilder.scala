@@ -1,7 +1,7 @@
 package com.github.pflooky.datacaterer.api
 
 import com.github.pflooky.datacaterer.api.model.Constants._
-import com.github.pflooky.datacaterer.api.model.{Count, Field, Generator, PerColumnCount, Schema, Step, Task, TaskSummary}
+import com.github.pflooky.datacaterer.api.model.{Count, DataType, Field, Generator, PerColumnCount, Schema, Step, StringType, Task, TaskSummary}
 import com.softwaremill.quicklens.ModifyPimp
 
 case class TaskSummaryBuilder(taskSummary: TaskSummary = TaskSummary("default task summary", "myDefaultDataSource")) {
@@ -109,7 +109,7 @@ case class PerColumnCountBuilder(perColumnCount: PerColumnCount = PerColumnCount
 }
 
 case class SchemaBuilder(schema: Schema = Schema()) {
-  def addField(name: String, `type`: String): SchemaBuilder =
+  def addField(name: String, `type`: DataType = StringType): SchemaBuilder =
     addFields(FieldBuilder().name(name).`type`(`type`))
 
   def addField(field: FieldBuilder): SchemaBuilder =
@@ -126,8 +126,11 @@ case class FieldBuilder(field: Field = Field()) {
   def name(name: String): FieldBuilder =
     this.modify(_.field.name).setTo(name)
 
-  def `type`(`type`: String): FieldBuilder =
-    this.modify(_.field.`type`).setTo(Some(`type`))
+  def `type`(`type`: DataType): FieldBuilder =
+    this.modify(_.field.`type`).setTo(Some(`type`.toString))
+
+  def schema(schema: SchemaBuilder): FieldBuilder =
+    this.modify(_.field.schema).setTo(Some(schema.schema))
 
   def nullable(nullable: Boolean): FieldBuilder =
     this.modify(_.field.nullable).setTo(nullable)

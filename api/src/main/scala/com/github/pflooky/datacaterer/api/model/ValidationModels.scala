@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonTypeInfo}
 import com.fasterxml.jackson.databind.annotation.{JsonDeserialize, JsonTypeIdResolver}
 import com.github.pflooky.datacaterer.api.parser.ValidationIdResolver
-import org.apache.spark.sql.DataFrame
 
 
 @JsonTypeInfo(use = Id.CUSTOM, defaultImpl = classOf[ExpressionValidation])
@@ -34,7 +33,7 @@ case class DataSourceValidationResult(
 case class ValidationResult(
                              validation: Validation = ExpressionValidation(),
                              isSuccess: Boolean = true,
-                             sampleErrorValues: Option[DataFrame] = None
+                             sampleErrorValues: Option[Array[String]] = None
                            )
 
 case class ValidationConfiguration(

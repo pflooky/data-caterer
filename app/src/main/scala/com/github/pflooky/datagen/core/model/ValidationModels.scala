@@ -35,7 +35,7 @@ object ValidationImplicits {
     def validate(df: DataFrame, dfCount: Long): ValidationResult = {
       val notEqualDf = df.where(s"!(${expressionValidation.expr})")
       val (isSuccess, sampleErrors) = ValidationOps(expressionValidation).getIsSuccessAndSampleErrors(notEqualDf, dfCount)
-      ValidationResult(expressionValidation, isSuccess, sampleErrors)
+      ValidationResult(expressionValidation, isSuccess, sampleErrors.map(_.take(5).map(_.json)))
     }
   }
 
