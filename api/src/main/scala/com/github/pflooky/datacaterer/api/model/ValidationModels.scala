@@ -18,24 +18,6 @@ case class ExpressionValidation(
                                  expr: String = "true"
                                ) extends Validation
 
-case class ValidationConfigResult(
-                                   name: String = "default_validation_result",
-                                   description: String = "Validation result for data sources",
-                                   dataSourceValidationResults: List[DataSourceValidationResult] = List()
-                                 )
-
-case class DataSourceValidationResult(
-                                       dataSourceName: String = "default_data_source",
-                                       options: Map[String, String] = Map(),
-                                       validationResults: List[ValidationResult] = List()
-                                     )
-
-case class ValidationResult(
-                             validation: Validation = ExpressionValidation(),
-                             isSuccess: Boolean = true,
-                             sampleErrorValues: Option[Array[String]] = None
-                           )
-
 case class ValidationConfiguration(
                                     name: String = "default_validation",
                                     description: String = "Validation of data sources after generating data",

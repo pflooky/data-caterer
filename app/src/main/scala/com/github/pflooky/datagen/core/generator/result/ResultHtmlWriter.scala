@@ -1,10 +1,10 @@
 package com.github.pflooky.datagen.core.generator.result
 
 import com.github.pflooky.datacaterer.api.model.Constants.HISTOGRAM
-import com.github.pflooky.datacaterer.api.model.{ExpressionValidation, FlagsConfig, Generator, Plan, Step, ValidationConfigResult}
+import com.github.pflooky.datacaterer.api.model.{ExpressionValidation, FlagsConfig, Generator, Plan, Step}
 import com.github.pflooky.datagen.core.listener.{SparkRecordListener, SparkTaskRecordSummary}
 import com.github.pflooky.datagen.core.model.PlanImplicits.CountOps
-import com.github.pflooky.datagen.core.model.{DataSourceResult, DataSourceResultSummary, StepResultSummary, TaskResultSummary}
+import com.github.pflooky.datagen.core.model.{DataSourceResult, DataSourceResultSummary, StepResultSummary, TaskResultSummary, ValidationConfigResult}
 import org.joda.time.DateTime
 
 import scala.xml.{Node, NodeBuffer, NodeSeq}

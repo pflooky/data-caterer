@@ -1,8 +1,9 @@
 package com.github.pflooky.datagen.core.validator
 
 import com.github.pflooky.datacaterer.api.model.Constants.FORMAT
-import com.github.pflooky.datacaterer.api.model.{DataSourceValidation, DataSourceValidationResult, ExpressionValidation, ValidationConfigResult}
+import com.github.pflooky.datacaterer.api.model.{DataSourceValidation, ExpressionValidation}
 import com.github.pflooky.datagen.core.model.ValidationImplicits.{ValidationOps, WaitConditionOps}
+import com.github.pflooky.datagen.core.model.{DataSourceValidationResult, ValidationConfigResult}
 import com.github.pflooky.datagen.core.parser.ValidationParser
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
@@ -67,7 +68,7 @@ class ValidationProcessor(connectionConfigsByName: Map[String, Map[String, Strin
           case ExpressionValidation(expr) => ("expression", expr)
           case _ => ("Unknown", "")
         }
-        val sampleErrors = validationRes.sampleErrorValues.get.mkString(",\n")
+        val sampleErrors = validationRes.sampleErrorValues.get.take(5).map(_.json).mkString(",")
         LOGGER.error(s"Failed validation: validation-name=${vcr.name}, description=${vcr.description}, data-source-name=${dsr.dataSourceName}, " +
           s"data-source-options=${dsr.options}, is-success=${validationRes.isSuccess}, validation-type=$validationType, check=$validationCheck, sample-errors=$sampleErrors")
       })

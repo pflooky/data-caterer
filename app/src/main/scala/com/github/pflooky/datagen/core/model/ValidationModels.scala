@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.model
 
 import com.github.pflooky.datacaterer.api.model.Constants.FORMAT
-import com.github.pflooky.datacaterer.api.model.{DataExistsWaitCondition, ExpressionValidation, FileExistsWaitCondition, PauseWaitCondition, Validation, ValidationResult, WaitCondition, WebhookWaitCondition}
+import com.github.pflooky.datacaterer.api.model.{DataExistsWaitCondition, ExpressionValidation, FileExistsWaitCondition, PauseWaitCondition, Validation, WaitCondition, WebhookWaitCondition}
 import com.github.pflooky.datagen.core.exception.InvalidWaitConditionException
 import com.github.pflooky.datagen.core.util.HttpUtil.getAuthHeader
 import dispatch.Defaults.executor
@@ -10,6 +10,23 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
+case class ValidationConfigResult(
+                                   name: String = "default_validation_result",
+                                   description: String = "Validation result for data sources",
+                                   dataSourceValidationResults: List[DataSourceValidationResult] = List()
+                                 )
+
+case class DataSourceValidationResult(
+                                       dataSourceName: String = "default_data_source",
+                                       options: Map[String, String] = Map(),
+                                       validationResults: List[ValidationResult] = List()
+                                     )
+
+case class ValidationResult(
+                             validation: Validation = ExpressionValidation(),
+                             isSuccess: Boolean = true,
+                             sampleErrorValues: Option[DataFrame] = None
+                           )
 
 object ValidationImplicits {
 
@@ -35,7 +52,7 @@ object ValidationImplicits {
     def validate(df: DataFrame, dfCount: Long): ValidationResult = {
       val notEqualDf = df.where(s"!(${expressionValidation.expr})")
       val (isSuccess, sampleErrors) = ValidationOps(expressionValidation).getIsSuccessAndSampleErrors(notEqualDf, dfCount)
-      ValidationResult(expressionValidation, isSuccess, sampleErrors.map(_.take(5).map(_.json)))
+      ValidationResult(expressionValidation, isSuccess, sampleErrors)
     }
   }
 

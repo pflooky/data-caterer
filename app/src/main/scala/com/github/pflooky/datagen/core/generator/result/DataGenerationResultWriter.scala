@@ -1,9 +1,9 @@
 package com.github.pflooky.datagen.core.generator.result
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include
-import com.github.pflooky.datacaterer.api.model.{Field, FlagsConfig, FoldersConfig, MetadataConfig, Plan, Step, Task, ValidationConfigResult}
+import com.github.pflooky.datacaterer.api.model.{Field, FlagsConfig, FoldersConfig, MetadataConfig, Plan, Step, Task}
 import com.github.pflooky.datagen.core.listener.SparkRecordListener
-import com.github.pflooky.datagen.core.model.{DataSourceResult, DataSourceResultSummary, StepResultSummary, TaskResultSummary}
+import com.github.pflooky.datagen.core.model.{DataSourceResult, DataSourceResultSummary, StepResultSummary, TaskResultSummary, ValidationConfigResult}
 import com.github.pflooky.datagen.core.util.FileUtil.writeStringToFile
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import org.apache.hadoop.fs.FileSystem
