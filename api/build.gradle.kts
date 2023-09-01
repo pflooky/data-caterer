@@ -88,7 +88,7 @@ publishing {
     repositories {
         maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/pflooky/data-caterer-api")
+            url = uri("https://maven.pkg.github.com/pflooky/data-caterer")
             credentials {
                 username = "pflooky"
                 password = System.getenv("GITHUB_TOKEN")
@@ -97,6 +97,7 @@ publishing {
     }
     publications {
         create<MavenPublication>("mavenJava") {
+            artifactId = "data-caterer-api"
             pom {
                 name.set("Data Caterer API")
                 description.set("API for discovering, generating and validating data using Data Caterer")
