@@ -2,7 +2,7 @@ package com.github.pflooky.datagen.core.util
 
 import com.google.protobuf.DescriptorProtos
 import com.google.protobuf.DescriptorProtos.FieldDescriptorProto
-import com.google.protobuf.Descriptors.{Descriptor, FieldDescriptor}
+import com.google.protobuf.Descriptors.FieldDescriptor
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType
 import org.apache.spark.sql.types.{DataType, DataTypes, StructField, StructType}
 

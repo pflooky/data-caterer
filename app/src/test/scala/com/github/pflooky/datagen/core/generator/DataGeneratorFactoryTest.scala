@@ -1,15 +1,12 @@
 package com.github.pflooky.datagen.core.generator
 
 import com.github.pflooky.datacaterer.api.model.{Count, Field, Generator, PerColumnCount, Schema, Step}
-import com.github.pflooky.datagen.core.model._
 import com.github.pflooky.datagen.core.util.{Account, SparkSuite}
 import net.datafaker.Faker
 import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType}
 import org.apache.spark.sql.{Dataset, Encoder, Encoders}
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
-
-import scala.util.Random
 
 @RunWith(classOf[JUnitRunner])
 class DataGeneratorFactoryTest extends SparkSuite {

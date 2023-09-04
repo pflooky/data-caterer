@@ -1,8 +1,8 @@
 package com.github.pflooky.datagen.core.sink.http
 
+import com.github.pflooky.datacaterer.api.model.Constants.URL
 import com.github.pflooky.datacaterer.api.model.{Count, Schema, Step}
 import com.github.pflooky.datagen.core.model.Constants.{REAL_TIME_BODY_COL, REAL_TIME_CONTENT_TYPE_COL, REAL_TIME_HEADERS_COL, REAL_TIME_METHOD_COL, REAL_TIME_URL_COL}
-import com.github.pflooky.datacaterer.api.model.Constants.URL
 import dispatch.{Future, Http, Req}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema

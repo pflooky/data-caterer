@@ -51,9 +51,16 @@ class LargeCountRun extends PlanRun {
         field.name("amount").`type`(DoubleType).max(1000.0),
         field.name("date").`type`(DateType).min(Date.valueOf("2022-01-01")),
         field.name("status").oneOf("open", "closed"),
+        field.name("txn_list")
+          .`type`(ArrayType)
+          .schema(schema.addFields(
+            field.name("id"),
+            field.name("date").`type`(DateType).min(Date.valueOf("2022-01-01")),
+            field.name("amount").`type`(DoubleType),
+          ))
       ))
       .count(count
-        .total(100000)
+        .total(1000)
         .columns("account_id")
         .perColumnTotal(100)
       )

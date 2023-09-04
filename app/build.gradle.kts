@@ -43,7 +43,7 @@ configurations {
 dependencies {
     compileOnly("org.scala-lang:scala-library:$scalaSpecificVersion")
     compileOnly("org.apache.spark:spark-sql_$scalaVersion:$sparkVersion")
-    basicImpl(project(":api"))
+    compileOnly(project(":api"))
 
     // additional spark
     basicImpl("org.apache.spark:spark-avro_$scalaVersion:$sparkVersion")
@@ -94,6 +94,7 @@ testing {
                 implementation("org.apache.spark:spark-sql_$scalaVersion:$sparkVersion")
                 implementation("org.apache.spark:spark-avro_$scalaVersion:$sparkVersion")
                 implementation("org.apache.spark:spark-protobuf_$scalaVersion:$sparkVersion")
+                implementation(project(":api"))
 
                 // Need scala-xml at test runtime
                 runtimeOnly("org.scala-lang.modules:scala-xml_$scalaVersion:1.2.0")

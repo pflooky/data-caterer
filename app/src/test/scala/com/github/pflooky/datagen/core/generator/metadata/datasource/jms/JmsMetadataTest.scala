@@ -8,7 +8,6 @@ import org.apache.spark.sql.protobuf.functions.from_protobuf
 import org.apache.spark.sql.{Encoder, Encoders}
 
 import java.io.File
-import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 class JmsMetadataTest extends SparkSuite {
 

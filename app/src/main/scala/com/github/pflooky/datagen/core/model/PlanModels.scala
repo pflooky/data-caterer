@@ -2,7 +2,7 @@ package com.github.pflooky.datagen.core.model
 
 import com.github.pflooky.datacaterer.api.model.Constants.{IS_PRIMARY_KEY, IS_UNIQUE, MAXIMUM, MINIMUM, ONE_OF_GENERATOR, PRIMARY_KEY_POSITION, RANDOM_GENERATOR, STATIC}
 import com.github.pflooky.datacaterer.api.model.{Count, Field, ForeignKeyRelation, Generator, PerColumnCount, Schema, SinkOptions, Step, Task}
-import com.github.pflooky.datagen.core.exception.{ForeignKeyFormatException, InvalidFieldConfigurationException}
+import com.github.pflooky.datagen.core.exception.InvalidFieldConfigurationException
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceDetail
 import com.github.pflooky.datagen.core.util.{MetadataUtil, ObjectMapperUtil}
 import org.apache.spark.sql.types.{ArrayType, DataType, Metadata, MetadataBuilder, StructField, StructType}

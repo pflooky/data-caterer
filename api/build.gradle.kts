@@ -18,6 +18,7 @@ plugins {
     `maven-publish`
 
     id("org.scoverage") version "8.0.3"
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 repositories {
@@ -43,7 +44,9 @@ dependencies {
     compileOnly("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.2")
     compileOnly("com.fasterxml.jackson.module:jackson-module-scala_$scalaVersion:2.15.2")
 
-    implementation("com.softwaremill.quicklens:quicklens_$scalaVersion:1.9.6")
+    implementation("com.softwaremill.quicklens:quicklens_$scalaVersion:1.9.6") {
+        exclude(group = "org.scala-lang")
+    }
 }
 
 testing {

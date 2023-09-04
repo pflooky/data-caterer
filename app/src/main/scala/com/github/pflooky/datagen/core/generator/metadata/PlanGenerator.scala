@@ -3,13 +3,11 @@ package com.github.pflooky.datagen.core.generator.metadata
 import com.github.pflooky.datacaterer.api.model.{Plan, SinkOptions, Task, TaskSummary}
 import com.github.pflooky.datagen.core.util.FileUtil.writeStringToFile
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
-import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.fs.FileSystem
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
-
-import java.io.File
 
 object PlanGenerator {
 
