@@ -5,13 +5,12 @@ sparkVersion=$(grep spark gradle.properties | cut -d= -f2)
 platforms="linux/amd64,linux/arm64"
 
 echo "Creating API jar and uploading to Github packages"
-gradle clean :api:build :api:publish
+gradle clean :api:build :api:shadowJar  #:api:publish
 publish_res=$?
 if [[ "$publish_res" -ne 0 ]] ; then
   echo "Publish API failed, exiting"
   exit 1
 fi
-gradle :api:shadowJar
 
 echo "Creating data caterer basic jar, version=$version"
 gradle clean -PapplicationType=basic build basicJar -x shadowJar
