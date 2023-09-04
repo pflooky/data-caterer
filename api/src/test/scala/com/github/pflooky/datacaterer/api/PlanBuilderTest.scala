@@ -15,7 +15,7 @@ class PlanBuilderTest extends AnyFunSuite {
 
     val result = planBuilder.name(name)
       .description(desc)
-      .taskSummary(taskSummaries)
+      .taskSummaries(taskSummaries)
 
     assert(result.plan.name == name)
     assert(result.plan.description == desc)
@@ -65,7 +65,7 @@ class PlanBuilderTest extends AnyFunSuite {
             ).option(("path", "test/path/json"))
         )
 
-      execute(t, p, c, List(v))
+      execute(List(t), p, c, List(v))
     }
 
     assert(result._tasks.size == 1)

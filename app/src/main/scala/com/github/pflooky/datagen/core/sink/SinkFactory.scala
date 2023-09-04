@@ -200,12 +200,12 @@ class SinkFactory(
   private def mapToSinkResult(dataSourceName: String, df: DataFrame, saveMode: SaveMode, connectionConfig: Map[String, String],
                               stepOptions: Map[String, String], count: String, format: String, isSuccess: Boolean, startTime: LocalDateTime,
                               optException: Option[Throwable]): SinkResult = {
-    val sample = df.take(metadataConfig.numGeneratedSamples).map(_.json)
-    val sinkResult = SinkResult(dataSourceName, format, saveMode.name(), stepOptions, count.toLong, isSuccess, sample, startTime, exception = optException)
+    val sinkResult = SinkResult(dataSourceName, format, saveMode.name(), stepOptions, count.toLong, isSuccess, Array(), startTime, exception = optException)
 
     if (flagsConfig.enableSinkMetadata) {
+      val sample = df.take(metadataConfig.numGeneratedSamples).map(_.json)
       val fields = getFieldMetadata(dataSourceName, df, connectionConfig, metadataConfig)
-      sinkResult.copy(generatedMetadata = fields)
+      sinkResult.copy(generatedMetadata = fields, sample = sample)
     } else {
       sinkResult
     }

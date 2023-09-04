@@ -12,11 +12,9 @@ import scala.language.implicitConversions
 
 object ForeignKeyRelationHelper {
   def fromString(str: String): ForeignKeyRelation = {
-    val strSpt = str.split("\\.")
+    val strSpt = str.split("\\.", 3)
     if (strSpt.length == 2) {
       ForeignKeyRelation(strSpt.head, strSpt.last, "")
-    } else if (strSpt.length != 3) {
-      throw new ForeignKeyFormatException(str)
     } else ForeignKeyRelation(strSpt.head, strSpt(1), strSpt.last)
   }
 }

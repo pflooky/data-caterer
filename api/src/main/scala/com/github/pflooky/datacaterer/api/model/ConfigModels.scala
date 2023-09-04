@@ -14,12 +14,12 @@ case class FlagsConfig(
                       )
 
 case class FoldersConfig(
-                          planFilePath: String = "/tmp/plan/simple-plan.yaml",
-                          taskFolderPath: String = "/tmp/task",
+                          planFilePath: String = "/opt/app/plan/customer-create-plan.yaml",
+                          taskFolderPath: String = "/opt/app/task",
                           generatedPlanAndTaskFolderPath: String = "/tmp",
-                          generatedReportsFolderPath: String = "/tmp",
-                          recordTrackingFolderPath: String = "/tmp",
-                          validationFolderPath: String = "/tmp/validation",
+                          generatedReportsFolderPath: String = "/opt/app/report",
+                          recordTrackingFolderPath: String = "/opt/app/record-tracking",
+                          validationFolderPath: String = "/opt/app/validation",
                         )
 
 case class MetadataConfig(

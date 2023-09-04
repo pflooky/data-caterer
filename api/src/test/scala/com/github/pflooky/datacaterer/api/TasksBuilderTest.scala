@@ -17,15 +17,6 @@ class TasksBuilderTest extends AnyFunSuite {
     assert(!result.enabled)
   }
 
-  test("Can create a task with defaults when given a step") {
-    val result = TasksBuilder().addTask(StepBuilder().name("my step").`type`("postgres")).tasks
-
-    assert(result.size == 1)
-    assert(result.head.task.name == Task().name)
-    assert(result.head.task.steps.size == 1)
-    assert(result.head.task.steps.head == Step("my step", "postgres"))
-  }
-
   test("Can create a step with details") {
     val result = StepBuilder()
       .name("my step")
@@ -99,7 +90,7 @@ class TasksBuilderTest extends AnyFunSuite {
     assert(result.fields.isDefined)
     assert(result.fields.get.size == 3)
     assert(result.fields.get.contains(Field("account_id", Some("string"))))
-    assert(result.fields.get.contains(Field("year", Some("int"))))
+    assert(result.fields.get.contains(Field("year", Some("integer"))))
     assert(result.fields.get.contains(Field("name", Some("string"))))
   }
 
@@ -131,16 +122,45 @@ class TasksBuilderTest extends AnyFunSuite {
     assert(result.generator.get.options("sql") == "SUBSTRING(account, 1, 5)")
   }
 
-  test("Can create field generated from one of list") {
-    val result = FieldBuilder()
-      .name("account_id")
-      .oneOf(123.1, 789.2)
-      .field
+  test("Can create field generated from one of list of doubles") {
+    val result = FieldBuilder().name("account_id").oneOf(123.1, 789.2).field
 
     assert(result.name == "account_id")
     assert(result.`type`.contains("double"))
     assert(result.generator.isDefined)
     assert(result.generator.get.options("oneOf") == List(123.1, 789.2))
+  }
+
+  test("Can create field generated from one of list of strings") {
+    val result = FieldBuilder().name("status").oneOf("open", "closed").field
+
+    assert(result.name == "status")
+    assert(result.`type`.contains("string"))
+    assert(result.generator.get.options("oneOf") == List("open", "closed"))
+  }
+
+  test("Can create field generated from one of list of long") {
+    val result = FieldBuilder().name("amount").oneOf(100L, 200L).field
+
+    assert(result.name == "amount")
+    assert(result.`type`.contains("long"))
+    assert(result.generator.get.options("oneOf") == List(100L, 200L))
+  }
+
+  test("Can create field generated from one of list of int") {
+    val result = FieldBuilder().name("amount").oneOf(100, 200).field
+
+    assert(result.name == "amount")
+    assert(result.`type`.contains("integer"))
+    assert(result.generator.get.options("oneOf") == List(100, 200))
+  }
+
+  test("Can create field generated from one of list of boolean") {
+    val result = FieldBuilder().name("is_open").oneOf(true, false).field
+
+    assert(result.name == "is_open")
+    assert(result.`type`.contains("boolean"))
+    assert(result.generator.get.options("oneOf") == List(true, false))
   }
 
   test("Can create field with nested schema") {
@@ -152,10 +172,8 @@ class TasksBuilderTest extends AnyFunSuite {
       ))
       .field
 
-    assert(result.name == "account_id")
-    assert(result.`type`.contains("double"))
-    assert(result.generator.isDefined)
-    assert(result.generator.get.options("oneOf") == List(123.1, 789.2))
+    assert(result.name == "txn_list")
+    assert(result.`type`.contains("array<date>"))
   }
 
   test("Can create field with metadata") {
@@ -208,7 +226,7 @@ class TasksBuilderTest extends AnyFunSuite {
     assert(gen("arrayType") == "boolean")
     assert(gen("precision") == "10")
     assert(gen("scale") == "1")
-    assert(gen("enableEdgeCases") == "true")
+    assert(gen("enableEdgeCase") == "true")
     assert(gen("edgeCaseProb") == "0.5")
     assert(gen("enableNull") == "true")
     assert(gen("nullProb") == "0.1")

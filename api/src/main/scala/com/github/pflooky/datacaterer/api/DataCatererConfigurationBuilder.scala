@@ -41,7 +41,7 @@ case class DataCatererConfigurationBuilder(dataCatererConfiguration: DataCaterer
 
   def postgres(
                 name: String,
-                url: String = "jdbc:postgresql://localhost:5432",
+                url: String = "jdbc:postgresql://postgresserver:5432/customer",
                 username: String = "postgres",
                 password: String = "postgres",
                 options: Map[String, String] = Map()
@@ -50,7 +50,7 @@ case class DataCatererConfigurationBuilder(dataCatererConfiguration: DataCaterer
 
   def mysql(
              name: String,
-             url: String = "jdbc:mysql://localhost:3306",
+             url: String = "jdbc:mysql://mysqlserver:3306/customer",
              username: String = "root",
              password: String = "root",
              options: Map[String, String] = Map()
@@ -59,7 +59,7 @@ case class DataCatererConfigurationBuilder(dataCatererConfiguration: DataCaterer
 
   def cassandra(
                  name: String,
-                 url: String = "localhost:9042",
+                 url: String = "cassandraserver:9042",
                  username: String = "cassandra",
                  password: String = "cassandra",
                  options: Map[String, String] = Map()
@@ -79,7 +79,7 @@ case class DataCatererConfigurationBuilder(dataCatererConfiguration: DataCaterer
 
   def solace(
               name: String,
-              url: String = "smf://localhost:55554",
+              url: String = "smf://solaceserver:55554",
               username: String = "admin",
               password: String = "admin",
               vpnName: String = "default",
@@ -93,7 +93,7 @@ case class DataCatererConfigurationBuilder(dataCatererConfiguration: DataCaterer
       JMS_INITIAL_CONTEXT_FACTORY -> initialContextFactory,
     ) ++ options)
 
-  def kafka(name: String, url: String = "localhost:9092", options: Map[String, String] = Map()): DataCatererConfigurationBuilder = {
+  def kafka(name: String, url: String = "kafkaserver:9092", options: Map[String, String] = Map()): DataCatererConfigurationBuilder = {
     addConnectionConfig(name, KAFKA, Map(
       "kafka.bootstrap.servers" -> url,
     ) ++ options)

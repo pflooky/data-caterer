@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.provider
 
-import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_VALUE, DISTINCT_COUNT, EXPRESSION, LIST_MAXIMUM_LENGTH, LIST_MINIMUM_LENGTH, MAXIMUM, MAXIMUM_LENGTH, MINIMUM, MINIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE, ROW_COUNT, SOURCE_COLUMN_DATA_TYPE}
+import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_VALUE, DISTINCT_COUNT, EXPRESSION, LIST_MAXIMUM_LENGTH, LIST_MINIMUM_LENGTH, MAXIMUM, MAXIMUM_LENGTH, MINIMUM, MINIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE, ROW_COUNT}
 import com.github.pflooky.datagen.core.exception.UnsupportedDataGeneratorType
 import com.github.pflooky.datagen.core.model.Constants._
 import net.datafaker.Faker
@@ -57,14 +57,11 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
+      val randLength = s"CAST(ROUND($sqlRandom * ${maxLength - minLength} + $minLength, 0) AS INT)"
       if (tryExpression.isSuccess) {
-        s"SUBSTRING($GENERATE_FAKER_EXPRESSION_UDF('${tryExpression.get}'), $minLength, $maxLength)"
+        s"SUBSTRING($GENERATE_FAKER_EXPRESSION_UDF('${tryExpression.get}'), 0, $randLength)"
       } else {
-        val baseSql = s"SUBSTRING(ARRAY_JOIN(SHUFFLE(SPLIT(REGEXP_REPLACE(BASE64(MD5(CONCAT($sqlRandom, CURRENT_TIMESTAMP()))), '\\\\+|/|=', ' '), '[.]')), ''), $minLength, $maxLength)"
-        baseSql
-        //        if (!sourceDataType.equalsIgnoreCase("string") && !sourceDataType.equalsIgnoreCase("character varying")) {
-        //          s"CONCAT($baseSql, '::$sourceDataType')"
-        //        } else baseSql
+        s"SUBSTRING(ARRAY_JOIN(SHUFFLE(SPLIT(REGEXP_REPLACE(BASE64(MD5(CONCAT($sqlRandom, CURRENT_TIMESTAMP()))), '\\\\+|/|=', ' '), '[.]')), ''), 0, $randLength)"
       }
     }
   }

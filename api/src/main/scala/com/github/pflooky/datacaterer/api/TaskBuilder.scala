@@ -4,13 +4,18 @@ import com.github.pflooky.datacaterer.api.model.Constants._
 import com.github.pflooky.datacaterer.api.model.{Count, DataType, Field, Generator, PerColumnCount, Schema, Step, StringType, Task, TaskSummary}
 import com.softwaremill.quicklens.ModifyPimp
 
-case class TaskSummaryBuilder(taskSummary: TaskSummary = TaskSummary("default task summary", "myDefaultDataSource")) {
+case class TaskSummaryBuilder(
+                               taskSummary: TaskSummary = TaskSummary("default task summary", "myDefaultDataSource"),
+                               task: Option[TaskBuilder] = None
+                             ) {
 
   def name(name: String): TaskSummaryBuilder =
     this.modify(_.taskSummary.name).setTo(name)
 
-  def task(taskBuilder: TaskBuilder): TaskSummaryBuilder =
+  def task(taskBuilder: TaskBuilder): TaskSummaryBuilder = {
     this.modify(_.taskSummary.name).setTo(taskBuilder.task.name)
+      .modify(_.task).setTo(Some(taskBuilder))
+  }
 
   def dataSourceName(dataSourceName: String): TaskSummaryBuilder =
     this.modify(_.taskSummary.dataSourceName).setTo(dataSourceName)
@@ -20,15 +25,17 @@ case class TaskSummaryBuilder(taskSummary: TaskSummary = TaskSummary("default ta
 
 }
 
-case class TasksBuilder(tasks: List[TaskBuilder] = List()) {
-  def addTask(stepBuilder: StepBuilder): TasksBuilder =
-    addTask("default_task", "json", stepBuilder)
+case class TasksBuilder(tasks: List[TaskBuilder] = List(), dataSourceName: String = "json") {
 
-  def addTask(name: String, dataSourceName: String, stepBuilder: StepBuilder): TasksBuilder =
-    addTask(name, dataSourceName, stepBuilder)
+  def addTasks(dataSourceName: String, taskBuilder: TaskBuilder*): TasksBuilder = {
+    this.modify(_.tasks)(_ ++ taskBuilder)
+      .modify(_.dataSourceName).setTo(dataSourceName)
+  }
 
-  def addTask(name: String, dataSourceName: String, steps: StepBuilder*): TasksBuilder =
+  def addTask(name: String, dataSourceName: String, steps: StepBuilder*): TasksBuilder = {
     this.modify(_.tasks)(_ ++ List(TaskBuilder(Task(name, steps.map(_.step).toList), dataSourceName)))
+      .modify(_.dataSourceName).setTo(dataSourceName)
+  }
 }
 
 case class TaskBuilder(task: Task = Task(), dataSourceName: String = "json") {
@@ -56,6 +63,12 @@ case class StepBuilder(step: Step = Step()) {
 
   def options(options: Map[String, String]): StepBuilder =
     this.modify(_.step.options)(_ ++ options)
+
+  def jdbcTable(table: String): StepBuilder =
+    this.modify(_.step.options)(_ ++ Map(JDBC_TABLE -> table))
+
+  def path(path: String): StepBuilder =
+    this.modify(_.step.options)(_ ++ Map(PATH -> path))
 
   def count(countBuilder: CountBuilder): StepBuilder =
     this.modify(_.step.count).setTo(countBuilder.count)
@@ -148,14 +161,15 @@ case class FieldBuilder(field: Field = Field()) {
     this.modify(_.field.generator).setTo(Some(getGenBuilder.regex(regex).generator))
 
   def oneOf(values: Any*): FieldBuilder =
-    this.modify(_.field.generator).setTo(Some(getGenBuilder.oneOf(values).generator))
+    this.modify(_.field.generator).setTo(Some(getGenBuilder.oneOf(values: _*).generator))
       .modify(_.field.`type`)
       .setTo(
-        values.head match {
-          case _: Double => Some("double")
-          case _: String => Some("string")
-          case _: Long | Int => Some("long")
-          case _: Boolean => Some("boolean")
+        values match {
+          case Seq(_ :Double, _*) => Some("double")
+          case Seq(_: String, _*) => Some("string")
+          case Seq(_: Int, _*) => Some("integer")
+          case Seq(_: Long, _*) => Some("long")
+          case Seq(_: Boolean, _*) => Some("boolean")
           case _ => None
         }
       )
@@ -248,9 +262,10 @@ case class GeneratorBuilder(generator: Generator = Generator()) {
   def regex(regex: String): GeneratorBuilder = this.modify(_.generator.`type`).setTo(REGEX_GENERATOR)
     .modify(_.generator.options)(_ ++ Map(REGEX_GENERATOR -> regex))
 
-  def oneOf(values: Any*): GeneratorBuilder =
-    this.modify(_.generator.`type`).setTo(ONE_OF_GENERATOR)
-      .modify(_.generator.options)(_ ++ Map(ONE_OF_GENERATOR -> values))
+  def oneOf(values: Any*): GeneratorBuilder = {
+    this.modify(_.generator.options)(_ ++ Map(ONE_OF_GENERATOR -> values))
+      .modify(_.generator.`type`).setTo(ONE_OF_GENERATOR)
+  }
 
   def options(options: Map[String, Any]): GeneratorBuilder =
     this.modify(_.generator.options)(_ ++ options)

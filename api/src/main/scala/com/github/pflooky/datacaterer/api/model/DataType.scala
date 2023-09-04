@@ -1,7 +1,7 @@
 package com.github.pflooky.datacaterer.api.model
 
 trait DataType {
-  override def toString: String = super.toString.toLowerCase.stripSuffix("type")
+  override def toString: String = getClass.getSimpleName.toLowerCase.stripSuffix("type$")
 }
 
 class StringType extends DataType

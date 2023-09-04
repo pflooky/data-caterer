@@ -23,23 +23,24 @@ object PlanProcessor {
     val dataCatererConfiguration = planRun._configuration
     implicit val sparkSession: SparkSession = new SparkProvider(dataCatererConfiguration.sparkMaster, dataCatererConfiguration.sparkConfig).getSparkSession
 
-    val dataGeneratorProcessor = new DataGeneratorProcessor(dataCatererConfiguration)
-    dataGeneratorProcessor.generateData(planRun._plan, planRun._tasks)
+    executePlanWithConfig(dataCatererConfiguration, Some(planRun))
   }
 
   private def executePlan: Unit = {
     val dataCatererConfiguration = ConfigParser.toDataCatererConfiguration
-    executePlanWithConfig(dataCatererConfiguration)
+    executePlanWithConfig(dataCatererConfiguration, None)
   }
 
-  private def executePlanWithConfig(dataCatererConfiguration: DataCatererConfiguration): Unit = {
+  private def executePlanWithConfig(dataCatererConfiguration: DataCatererConfiguration, optPlan: Option[PlanRun]): Unit = {
     implicit val sparkSession: SparkSession = new SparkProvider(dataCatererConfiguration.sparkMaster, dataCatererConfiguration.sparkConfig).getSparkSession
 
     val optPlanWithTasks = new DataSourceMetadataFactory(dataCatererConfiguration).extractAllDataSourceMetadata()
     val dataGeneratorProcessor = new DataGeneratorProcessor(dataCatererConfiguration)
-    optPlanWithTasks
-      .map(x => dataGeneratorProcessor.generateData(x._1, x._2))
-      .getOrElse(dataGeneratorProcessor.generateData())
+    (optPlanWithTasks, optPlan) match {
+      case (Some((genPlan, genTasks)), _) => dataGeneratorProcessor.generateData(genPlan, genTasks)
+      case (_, Some(plan)) => dataGeneratorProcessor.generateData(plan._plan, plan._tasks)
+      case _ => dataGeneratorProcessor.generateData()
+    }
   }
 
   private def getPlanClass: Option[String] = {

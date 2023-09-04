@@ -36,40 +36,55 @@ trait PlanRun {
 
   def validationConfig: ValidationConfigurationBuilder = ValidationConfigurationBuilder()
 
+  def foreignField(dataSource: String, step: String, column: String): ForeignKeyRelation = ForeignKeyRelation(dataSource, step, column)
+
+  def execute(tasks: TasksBuilder): Unit = execute(List(tasks))
+
+  def execute(planBuilder: PlanBuilder, configuration: DataCatererConfigurationBuilder): Unit = {
+    execute(planBuilder.tasks, planBuilder, configuration)
+  }
+
   def execute(
-               tasks: TasksBuilder = TasksBuilder(),
+               tasks: List[TasksBuilder] = List(),
                plan: PlanBuilder = PlanBuilder(),
                configuration: DataCatererConfigurationBuilder = DataCatererConfigurationBuilder(),
                validations: List[ValidationConfigurationBuilder] = List()
              ): Unit = {
-    val taskToDataSource = tasks.tasks.map(t => (t.task.name, t.dataSourceName, t.task))
+    val taskToDataSource = tasks.flatMap(_.tasks.map(t => (t.task.name, t.dataSourceName, t.task)))
     val planWithTaskToDataSource = plan.taskSummaries(taskToDataSource.map(t => taskSummary.name(t._1).dataSourceName(t._2)): _*)
 
     _plan = planWithTaskToDataSource.plan
-    _tasks = tasks.tasks.map(_.task)
+    _tasks = taskToDataSource.map(_._3)
     _configuration = configuration.dataCatererConfiguration
     _validations = validations.map(_.validationConfiguration)
   }
 }
 
-case class PlanBuilder(plan: Plan = Plan()) {
+case class PlanBuilder(plan: Plan = Plan(), tasks: List[TasksBuilder] = List()) {
 
-  def name(name: String): PlanBuilder = this.modify(_.plan.name).setTo(name)
+  def name(name: String): PlanBuilder =
+    this.modify(_.plan.name).setTo(name)
 
-  def description(desc: String): PlanBuilder = this.modify(_.plan.description).setTo(desc)
+  def description(desc: String): PlanBuilder =
+    this.modify(_.plan.description).setTo(desc)
 
-  def taskSummary(taskSummaryBuilder: TaskSummaryBuilder): PlanBuilder =
-    this.modify(_.plan.tasks)(_ ++ List(taskSummaryBuilder.taskSummary))
+  def taskSummaries(taskSummaries: TaskSummaryBuilder*): PlanBuilder = {
+    val tasksToAdd = taskSummaries.filter(_.task.isDefined)
+      .map(x => TasksBuilder(List(x.task.get), x.taskSummary.dataSourceName))
+      .toList
+    this.modify(_.plan.tasks)(_ ++ taskSummaries.map(_.taskSummary))
+      .modify(_.tasks)(_ ++ tasksToAdd)
+  }
 
-  def taskSummaries(tasks: TaskSummaryBuilder*): PlanBuilder =
-    this.modify(_.plan.tasks)(_ ++ tasks.map(_.taskSummary))
+  def sinkOptions(sinkOptionsBuilder: SinkOptionsBuilder): PlanBuilder =
+    this.modify(_.plan.sinkOptions).setTo(Some(sinkOptionsBuilder.sinkOptions))
 
-  def sinkOptions(sinkOptionsBuilder: SinkOptionsBuilder): PlanBuilder = this.modify(_.plan.sinkOptions).setTo(Some(sinkOptionsBuilder.sinkOptions))
-
-  def seed(seed: String): PlanBuilder = this.modify(_.plan.sinkOptions).setTo(Some(getSinkOpt.seed(seed).sinkOptions))
+  def seed(seed: String): PlanBuilder =
+    this.modify(_.plan.sinkOptions).setTo(Some(getSinkOpt.seed(seed).sinkOptions))
 
   def locale(locale: String): PlanBuilder =
     this.modify(_.plan.sinkOptions).setTo(Some(getSinkOpt.locale(locale).sinkOptions))
+
   def addForeignKeyRelationship(foreignKey: ForeignKeyRelation, relations: ForeignKeyRelation*): PlanBuilder =
     addForeignKeyRelationship(foreignKey, relations.toList)
 
