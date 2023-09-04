@@ -77,6 +77,14 @@ sourceSets {
     }
 }
 
+tasks.shadowJar {
+    archiveBaseName.set("datacaterer")
+    archiveAppendix.set("api")
+    archiveVersion.set(project.version.toString())
+    archiveClassifier.set("")
+    isZip64 = true
+}
+
 tasks.test {
     finalizedBy(tasks.reportScoverage)
 }
