@@ -11,7 +11,7 @@ class PlanBuilderTest extends AnyFunSuite {
     val desc = "basic desc"
     val taskSummaries = TaskSummaryBuilder()
       .name("account_json_task")
-      .dataSourceName("account_json")
+      .dataSource("account_json")
 
     val result = planBuilder.name(name)
       .description(desc)
@@ -33,7 +33,7 @@ class PlanBuilderTest extends AnyFunSuite {
       )
 
       val p = plan.name("my plan")
-        .seed("1")
+        .seed(1)
         .locale("en")
         .addForeignKeyRelationship(
           ForeignKeyRelation("account_json", "default_step", "account_id"),

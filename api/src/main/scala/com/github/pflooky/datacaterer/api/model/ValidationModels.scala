@@ -3,6 +3,7 @@ package com.github.pflooky.datacaterer.api.model
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonTypeInfo}
 import com.fasterxml.jackson.databind.annotation.{JsonDeserialize, JsonTypeIdResolver}
+import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_VALIDATION_CONFIG_NAME, DEFAULT_VALIDATION_DESCRIPTION}
 import com.github.pflooky.datacaterer.api.parser.ValidationIdResolver
 
 
@@ -19,8 +20,8 @@ case class ExpressionValidation(
                                ) extends Validation
 
 case class ValidationConfiguration(
-                                    name: String = "default_validation",
-                                    description: String = "Validation of data sources after generating data",
+                                    name: String = DEFAULT_VALIDATION_CONFIG_NAME,
+                                    description: String = DEFAULT_VALIDATION_DESCRIPTION,
                                     dataSources: Map[String, DataSourceValidation] = Map()
                                   )
 
@@ -31,26 +32,25 @@ case class DataSourceValidation(
                                )
 
 trait WaitCondition {
-  val isRetryable: Boolean
+  val isRetryable: Boolean = true
   val maxRetries: Int = 10
   val waitBeforeRetrySeconds: Int = 2
 }
 
 case class PauseWaitCondition(
                                pauseInSeconds: Int = 0,
-                               override val isRetryable: Boolean = false
-                             ) extends WaitCondition
+                             ) extends WaitCondition {
+  override val isRetryable: Boolean = false
+}
 
 case class FileExistsWaitCondition(
                                     path: String,
-                                    override val isRetryable: Boolean = true
                                   ) extends WaitCondition
 
 case class DataExistsWaitCondition(
                                     dataSourceName: String,
                                     options: Map[String, String],
                                     expr: String,
-                                    override val isRetryable: Boolean = true
                                   ) extends WaitCondition
 
 case class WebhookWaitCondition(
@@ -58,5 +58,4 @@ case class WebhookWaitCondition(
                                  url: String,
                                  method: String = "GET",
                                  statusCode: Int = 200,
-                                 override val isRetryable: Boolean = true
                                ) extends WaitCondition

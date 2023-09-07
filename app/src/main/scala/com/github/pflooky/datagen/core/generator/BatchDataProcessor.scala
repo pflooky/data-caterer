@@ -42,6 +42,7 @@ class BatchDataProcessor(connectionConfigsByName: Map[String, Map[String, String
           val endIndex = stepRecords.currentNumRecords + stepRecords.numRecordsPerBatch
 
           val genDf = dataGeneratorFactory.generateDataForStep(s, task._1.dataSourceName, startIndex, endIndex)
+          genDf.select()
           val dfRecordCount = if (flagsConfig.enableCount) genDf.count() else stepRecords.numRecordsPerBatch
           LOGGER.debug(s"Step record count for batch, batch=$batch, step-name=${s.name}, target-num-records=${stepRecords.numRecordsPerBatch}, actual-num-records=$dfRecordCount")
           trackRecordsPerStep = trackRecordsPerStep ++ Map(recordStepName -> stepRecords.copy(currentNumRecords = dfRecordCount))

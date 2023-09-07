@@ -1,5 +1,6 @@
 package com.github.pflooky.datagen.core.generator.metadata
 
+import com.github.pflooky.datacaterer.api.model.generator.BaseGenerator
 import com.github.pflooky.datacaterer.api.model.{Field, Generator, Schema}
 import net.datafaker.Faker
 import org.scalatest.funsuite.AnyFunSuite

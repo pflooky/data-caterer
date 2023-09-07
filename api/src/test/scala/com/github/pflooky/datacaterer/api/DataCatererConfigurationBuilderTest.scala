@@ -6,7 +6,7 @@ import org.scalatest.funsuite.AnyFunSuite
 class DataCatererConfigurationBuilderTest extends AnyFunSuite {
 
   test("Can create basic configuration with defaults") {
-    val result = DataCatererConfigurationBuilder().dataCatererConfiguration
+    val result = DataCatererConfigurationBuilder().build
 
     assert(result.flagsConfig == FlagsConfig())
     assert(result.foldersConfig == FoldersConfig())
@@ -20,7 +20,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
   test("Can create postgres connection configuration") {
     val result = DataCatererConfigurationBuilder()
       .postgres("my_postgres")
-      .dataCatererConfiguration
+      .build
       .connectionConfigByName
 
     assert(result.size == 1)
@@ -36,7 +36,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
   test("Can create postgres connection with custom configuration") {
     val result = DataCatererConfigurationBuilder()
       .postgres("my_postgres", "jdbc:postgresql://localhost:5432/customer", options = Map("stringtype" -> "undefined"))
-      .dataCatererConfiguration
+      .build
       .connectionConfigByName
 
     assert(result.size == 1)
@@ -50,7 +50,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
   test("Can create mysql connection configuration") {
     val result = DataCatererConfigurationBuilder()
       .mysql("my_mysql")
-      .dataCatererConfiguration
+      .build
       .connectionConfigByName
 
     assert(result.size == 1)
@@ -66,7 +66,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
   test("Can create cassandra connection configuration") {
     val result = DataCatererConfigurationBuilder()
       .cassandra("my_cassandra")
-      .dataCatererConfiguration
+      .build
       .connectionConfigByName
 
     assert(result.size == 1)
@@ -82,7 +82,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
   test("Can create solace connection configuration") {
     val result = DataCatererConfigurationBuilder()
       .solace("my_solace")
-      .dataCatererConfiguration
+      .build
       .connectionConfigByName
 
     assert(result.size == 1)
@@ -100,7 +100,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
   test("Can create kafka connection configuration") {
     val result = DataCatererConfigurationBuilder()
       .kafka("my_kafka")
-      .dataCatererConfiguration
+      .build
       .connectionConfigByName
 
     assert(result.size == 1)
@@ -113,7 +113,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
   test("Can create http connection configuration") {
     val result = DataCatererConfigurationBuilder()
       .http("my_http", "user", "pw")
-      .dataCatererConfiguration
+      .build
       .connectionConfigByName
 
     assert(result.size == 1)
@@ -135,7 +135,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
       .enableSaveReports(true)
       .enableSinkMetadata(true)
       .enableValidation(true)
-      .dataCatererConfiguration
+      .build
       .flagsConfig
 
     assert(!result.enableCount)
@@ -158,7 +158,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
       .validationFolderPath("/my_validation")
       .generatedReportsFolderPath("/my_generation_results")
       .generatedPlanAndTaskFolderPath("/my_generated_plan_tasks")
-      .dataCatererConfiguration
+      .build
       .foldersConfig
 
     assert(result.planFilePath == "/my_plan")
@@ -176,7 +176,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
       .numGeneratedSamples(3)
       .oneOfMinCount(100)
       .oneOfDistinctCountVsCountThreshold(0.3)
-      .dataCatererConfiguration
+      .build
       .metadataConfig
 
     assert(result.numRecordsFromDataSource == 1)
@@ -190,7 +190,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
     val result = DataCatererConfigurationBuilder()
       .numRecordsPerBatch(100)
       .numRecordsPerStep(10)
-      .dataCatererConfiguration
+      .build
       .generationConfig
 
     assert(result.numRecordsPerBatch == 100)

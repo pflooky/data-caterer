@@ -1,6 +1,7 @@
 package com.github.pflooky.datagen.core.generator.provider
 
 import com.github.pflooky.datacaterer.api.model.Constants.{ENABLED_EDGE_CASE, ENABLED_NULL, IS_UNIQUE, LIST_MAXIMUM_LENGTH, LIST_MINIMUM_LENGTH, PROBABILITY_OF_EDGE_CASE, PROBABILITY_OF_NULL, RANDOM_SEED, STATIC}
+import com.github.pflooky.datacaterer.api.model.generator.BaseGenerator
 import net.datafaker.Faker
 import org.apache.spark.sql.functions.{expr, rand, when}
 import org.apache.spark.sql.types.StructField
@@ -9,17 +10,10 @@ import scala.collection.mutable
 import scala.language.higherKinds
 import scala.util.Random
 
-trait DataGenerator[T] extends Serializable {
+trait DataGenerator[T] extends BaseGenerator[T] with Serializable {
 
   val structField: StructField
   val faker: Faker
-
-
-  val edgeCases: List[T] = List()
-
-  def generate: T
-
-  def generateSqlExpression: String
 
   lazy val optRandomSeed: Option[Long] = if (structField.metadata.contains(RANDOM_SEED)) Some(structField.metadata.getString(RANDOM_SEED).toLong) else None
   lazy val sqlRandom: String = optRandomSeed.map(seed => s"RAND($seed)").getOrElse("RAND()")

@@ -5,46 +5,62 @@ import com.github.pflooky.datacaterer.api.model.{Count, DataType, Field, Generat
 import com.softwaremill.quicklens.ModifyPimp
 
 case class TaskSummaryBuilder(
-                               taskSummary: TaskSummary = TaskSummary("default task summary", "myDefaultDataSource"),
-                               task: Option[TaskBuilder] = None
+                               taskSummary: TaskSummary = TaskSummary(DEFAULT_TASK_NAME, "myDefaultDataSource"),
+                               task: Option[Task] = None
                              ) {
 
-  def name(name: String): TaskSummaryBuilder =
-    this.modify(_.taskSummary.name).setTo(name)
+  def name(name: String): TaskSummaryBuilder = {
+    if (task.isEmpty) this.modify(_.taskSummary.name).setTo(name) else this
+  }
 
   def task(taskBuilder: TaskBuilder): TaskSummaryBuilder = {
     this.modify(_.taskSummary.name).setTo(taskBuilder.task.name)
-      .modify(_.task).setTo(Some(taskBuilder))
+      .modify(_.task).setTo(Some(taskBuilder.task))
   }
 
-  def dataSourceName(dataSourceName: String): TaskSummaryBuilder =
-    this.modify(_.taskSummary.dataSourceName).setTo(dataSourceName)
+  def task(task: Task): TaskSummaryBuilder = {
+    this.modify(_.taskSummary.name).setTo(task.name)
+      .modify(_.task).setTo(Some(task))
+  }
+
+  def dataSource(name: String): TaskSummaryBuilder =
+    this.modify(_.taskSummary.dataSourceName).setTo(name)
 
   def enabled(enabled: Boolean): TaskSummaryBuilder =
     this.modify(_.taskSummary.enabled).setTo(enabled)
 
 }
 
-case class TasksBuilder(tasks: List[TaskBuilder] = List(), dataSourceName: String = "json") {
+case class TasksBuilder(tasks: List[Task] = List(), dataSourceName: String = DEFAULT_DATA_SOURCE_NAME) {
 
-  def addTasks(dataSourceName: String, taskBuilder: TaskBuilder*): TasksBuilder = {
-    this.modify(_.tasks)(_ ++ taskBuilder)
+  def addTasksWithBuilders(dataSourceName: String, taskBuilder: TaskBuilder*): TasksBuilder =
+    this.modify(_.tasks)(_ ++ taskBuilder.map(_.task))
       .modify(_.dataSourceName).setTo(dataSourceName)
-  }
 
-  def addTask(name: String, dataSourceName: String, steps: StepBuilder*): TasksBuilder = {
-    this.modify(_.tasks)(_ ++ List(TaskBuilder(Task(name, steps.map(_.step).toList), dataSourceName)))
+  def addTasks(dataSourceName: String, tasks: Task*): TasksBuilder =
+    this.modify(_.tasks)(_ ++ tasks)
       .modify(_.dataSourceName).setTo(dataSourceName)
-  }
+
+  def addTask(name: String, dataSourceName: String, stepBuilders: StepBuilder*): TasksBuilder =
+    this.modify(_.tasks)(_ ++ List(TaskBuilder(Task(name, stepBuilders.map(_.step).toList)).task))
+      .modify(_.dataSourceName).setTo(dataSourceName)
+
+  def addTask(name: String, dataSourceName: String, steps: List[Step]): TasksBuilder =
+    this.modify(_.tasks)(_ ++ List(TaskBuilder(Task(name, steps)).task))
+      .modify(_.dataSourceName).setTo(dataSourceName)
 }
 
-case class TaskBuilder(task: Task = Task(), dataSourceName: String = "json") {
+case class TaskBuilder(task: Task = Task()) {
 
   def name(name: String): TaskBuilder = this.modify(_.task.name).setTo(name)
 
   def step(step: StepBuilder): TaskBuilder = this.modify(_.task.steps)(_ ++ List(step.step))
 
-  def steps(steps: StepBuilder*): TaskBuilder = this.modify(_.task.steps)(_ ++ steps.map(_.step))
+  def step(step: Step): TaskBuilder = this.modify(_.task.steps)(_ ++ List(step))
+
+  def stepsWithBuilders(stepBuilders: StepBuilder*): TaskBuilder = this.modify(_.task.steps)(_ ++ stepBuilders.map(_.step))
+
+  def steps(steps: Step*): TaskBuilder = this.modify(_.task.steps)(_ ++ steps)
 }
 
 case class StepBuilder(step: Step = Step()) {
@@ -67,11 +83,35 @@ case class StepBuilder(step: Step = Step()) {
   def jdbcTable(table: String): StepBuilder =
     this.modify(_.step.options)(_ ++ Map(JDBC_TABLE -> table))
 
+  def jdbcTable(schema: String, table: String): StepBuilder =
+    this.modify(_.step.options)(_ ++ Map(JDBC_TABLE -> s"$schema.$table"))
+
+  def cassandraTable(keyspace: String, table: String): StepBuilder =
+    this.modify(_.step.options)(_ ++ Map(CASSANDRA_KEYSPACE -> keyspace, CASSANDRA_TABLE -> table))
+
+  def jmsDestination(destination: String): StepBuilder =
+    this.modify(_.step.options)(_ ++ Map(JMS_DESTINATION_NAME -> destination))
+
+  def kafkaTopic(topic: String): StepBuilder =
+    this.modify(_.step.options)(_ ++ Map(KAFKA_TOPIC -> topic))
+
   def path(path: String): StepBuilder =
     this.modify(_.step.options)(_ ++ Map(PATH -> path))
 
+  def partitionBy(partitionBy: String*): StepBuilder =
+    this.modify(_.step.options)(_ ++ Map(PARTITION_BY -> partitionBy.map(_.trim).mkString(",")))
+
+  def numPartitions(partitions: Int): StepBuilder =
+    this.modify(_.step.options)(_ ++ Map(PARTITIONS -> partitions.toString))
+
+  def rowsPerSecond(rowsPerSecond: Int): StepBuilder =
+    this.modify(_.step.options)(_ ++ Map(ROWS_PER_SECOND -> rowsPerSecond.toString))
+
   def count(countBuilder: CountBuilder): StepBuilder =
     this.modify(_.step.count).setTo(countBuilder.count)
+
+  def count(count: Count): StepBuilder =
+    this.modify(_.step.count).setTo(count)
 
   def count(total: Long): StepBuilder =
     this.modify(_.step.count).setTo(CountBuilder().total(total).count)
@@ -79,8 +119,20 @@ case class StepBuilder(step: Step = Step()) {
   def count(generator: GeneratorBuilder): StepBuilder =
     this.modify(_.step.count).setTo(CountBuilder().generator(generator).count)
 
+  def count(generator: Generator): StepBuilder =
+    this.modify(_.step.count).setTo(CountBuilder().generator(generator).count)
+
+  def count(perColumnCountBuilder: PerColumnCountBuilder): StepBuilder =
+    this.modify(_.step.count).setTo(CountBuilder().perColumn(perColumnCountBuilder).count)
+
+  def count(perColumnCount: PerColumnCount): StepBuilder =
+    this.modify(_.step.count).setTo(CountBuilder().perColumn(perColumnCount).count)
+
   def schema(schemaBuilder: SchemaBuilder): StepBuilder =
     this.modify(_.step.schema).setTo(schemaBuilder.schema)
+
+  def schema(schema: Schema): StepBuilder =
+    this.modify(_.step.schema).setTo(schema)
 }
 
 case class CountBuilder(count: Count = Count()) {
@@ -90,17 +142,29 @@ case class CountBuilder(count: Count = Count()) {
   def generator(generator: GeneratorBuilder): CountBuilder =
     this.modify(_.count.generator).setTo(Some(generator.generator))
 
+  def generator(generator: Generator): CountBuilder =
+    this.modify(_.count.generator).setTo(Some(generator))
+
   def perColumn(perColumnCountBuilder: PerColumnCountBuilder): CountBuilder =
     this.modify(_.count.perColumn).setTo(Some(perColumnCountBuilder.perColumnCount))
 
-  def columns(cols: String*): CountBuilder =
-    this.modify(_.count.perColumn).setTo(Some(perColCount.columns(cols: _*).perColumnCount))
+  def perColumn(perColumnCount: PerColumnCount): CountBuilder =
+    this.modify(_.count.perColumn).setTo(Some(perColumnCount))
 
-  def perColumnTotal(total: Long): CountBuilder =
-    this.modify(_.count.perColumn).setTo(Some(perColCount.total(total).perColumnCount))
+  def columns(col: String, cols: String*): CountBuilder =
+    this.modify(_.count.perColumn).setTo(Some(perColCount.columns(col, cols: _*).perColumnCount))
 
-  def perColumnGenerator(generator: GeneratorBuilder): CountBuilder =
-    this.modify(_.count.perColumn).setTo(Some(perColCount.generator(generator).perColumnCount))
+  def perColumnTotal(total: Long, col: String, cols: String*): CountBuilder =
+    this.modify(_.count.perColumn).setTo(Some(perColCount.total(total, col, cols: _*).perColumnCount))
+
+  def perColumnGenerator(generator: GeneratorBuilder, col: String, cols: String*): CountBuilder =
+    this.modify(_.count.perColumn).setTo(Some(perColCount.generator(generator, col, cols: _*).perColumnCount))
+
+  def perColumnGenerator(generator: Generator, col: String, cols: String*): CountBuilder =
+    this.modify(_.count.perColumn).setTo(Some(perColCount.generator(generator, col, cols: _*).perColumnCount))
+
+  def perColumnGenerator(total: Long, generator: Generator, col: String, cols: String*): CountBuilder =
+    this.modify(_.count.perColumn).setTo(Some(perColCount.generator(total, generator, col, cols: _*).perColumnCount))
 
   private def perColCount: PerColumnCountBuilder = {
     count.perColumn match {
@@ -111,14 +175,20 @@ case class CountBuilder(count: Count = Count()) {
 }
 
 case class PerColumnCountBuilder(perColumnCount: PerColumnCount = PerColumnCount()) {
-  def total(total: Long): PerColumnCountBuilder =
-    this.modify(_.perColumnCount.count).setTo(Some(total))
+  def columns(col: String, cols: String*): PerColumnCountBuilder =
+    this.modify(_.perColumnCount.columnNames).setTo((col +: cols).toList)
 
-  def generator(generator: GeneratorBuilder): PerColumnCountBuilder =
-    this.modify(_.perColumnCount.generator).setTo(Some(generator.generator))
+  def total(total: Long, col: String, cols: String*): PerColumnCountBuilder =
+    columns(col, cols: _*).modify(_.perColumnCount.count).setTo(Some(total))
 
-  def columns(columns: String*): PerColumnCountBuilder =
-    this.modify(_.perColumnCount.columnNames).setTo(columns.toList)
+  def generator(generator: GeneratorBuilder, col: String, cols: String*): PerColumnCountBuilder =
+    columns(col, cols: _*).modify(_.perColumnCount.generator).setTo(Some(generator.generator))
+
+  def generator(generator: Generator, col: String, cols: String*): PerColumnCountBuilder =
+    columns(col, cols: _*).modify(_.perColumnCount.generator).setTo(Some(generator))
+
+  def generator(total: Long, generator: Generator, col: String, cols: String*): PerColumnCountBuilder =
+    this.total(total, col, cols: _*).modify(_.perColumnCount.generator).setTo(Some(generator))
 }
 
 case class SchemaBuilder(schema: Schema = Schema()) {
@@ -127,6 +197,12 @@ case class SchemaBuilder(schema: Schema = Schema()) {
 
   def addField(field: FieldBuilder): SchemaBuilder =
     addFields(field)
+
+  def addFieldsJava(fields: Field*): SchemaBuilder =
+    this.modify(_.schema.fields).setTo(schema.fields match {
+      case Some(value) => Some(value ++ fields)
+      case None => Some(fields.toList)
+    })
 
   def addFields(fields: FieldBuilder*): SchemaBuilder =
     this.modify(_.schema.fields).setTo(schema.fields match {
@@ -145,11 +221,17 @@ case class FieldBuilder(field: Field = Field()) {
   def schema(schema: SchemaBuilder): FieldBuilder =
     this.modify(_.field.schema).setTo(Some(schema.schema))
 
+  def schema(schema: Schema): FieldBuilder =
+    this.modify(_.field.schema).setTo(Some(schema))
+
   def nullable(nullable: Boolean): FieldBuilder =
     this.modify(_.field.nullable).setTo(nullable)
 
   def generator(generator: GeneratorBuilder): FieldBuilder =
     this.modify(_.field.generator).setTo(Some(generator.generator))
+
+  def generator(generator: Generator): FieldBuilder =
+    this.modify(_.field.generator).setTo(Some(generator))
 
   def random: FieldBuilder =
     this.modify(_.field.generator).setTo(Some(getGenBuilder.random.generator))
@@ -165,7 +247,7 @@ case class FieldBuilder(field: Field = Field()) {
       .modify(_.field.`type`)
       .setTo(
         values match {
-          case Seq(_ :Double, _*) => Some("double")
+          case Seq(_: Double, _*) => Some("double")
           case Seq(_: String, _*) => Some("string")
           case Seq(_: Int, _*) => Some("integer")
           case Seq(_: Long, _*) => Some("long")
@@ -196,6 +278,8 @@ case class FieldBuilder(field: Field = Field()) {
 
   def static(value: Any): FieldBuilder =
     this.modify(_.field.generator).setTo(Some(getGenBuilder.static(value).generator))
+
+  def staticValue(value: Any): FieldBuilder = static(value)
 
   def unique(isUnique: Boolean): FieldBuilder =
     this.modify(_.field.generator).setTo(Some(getGenBuilder.unique(isUnique).generator))
@@ -254,17 +338,20 @@ case class FieldBuilder(field: Field = Field()) {
 }
 
 case class GeneratorBuilder(generator: Generator = Generator()) {
-  def random: GeneratorBuilder = this.modify(_.generator.`type`).setTo(RANDOM_GENERATOR)
+  def random: GeneratorBuilder =
+    this.modify(_.generator.`type`).setTo(RANDOM_GENERATOR)
 
-  def sql(sql: String): GeneratorBuilder = this.modify(_.generator.`type`).setTo(SQL_GENERATOR)
-    .modify(_.generator.options)(_ ++ Map(SQL_GENERATOR -> sql))
+  def sql(sql: String): GeneratorBuilder =
+    this.modify(_.generator.`type`).setTo(SQL_GENERATOR)
+      .modify(_.generator.options)(_ ++ Map(SQL_GENERATOR -> sql))
 
-  def regex(regex: String): GeneratorBuilder = this.modify(_.generator.`type`).setTo(REGEX_GENERATOR)
-    .modify(_.generator.options)(_ ++ Map(REGEX_GENERATOR -> regex))
+  def regex(regex: String): GeneratorBuilder =
+    this.modify(_.generator.`type`).setTo(REGEX_GENERATOR)
+      .modify(_.generator.options)(_ ++ Map(REGEX_GENERATOR -> regex))
 
   def oneOf(values: Any*): GeneratorBuilder = {
-    this.modify(_.generator.options)(_ ++ Map(ONE_OF_GENERATOR -> values))
-      .modify(_.generator.`type`).setTo(ONE_OF_GENERATOR)
+    this.modify(_.generator.`type`).setTo(ONE_OF_GENERATOR)
+      .modify(_.generator.options)(_ ++ Map(ONE_OF_GENERATOR -> values))
   }
 
   def options(options: Map[String, Any]): GeneratorBuilder =
@@ -290,6 +377,8 @@ case class GeneratorBuilder(generator: Generator = Generator()) {
 
   def static(value: Any): GeneratorBuilder =
     this.modify(_.generator.options)(_ ++ Map(STATIC -> value.toString))
+
+  def staticValue(value: Any): GeneratorBuilder = static(value)
 
   def unique(isUnique: Boolean): GeneratorBuilder =
     this.modify(_.generator.options)(_ ++ Map(IS_UNIQUE -> isUnique.toString))

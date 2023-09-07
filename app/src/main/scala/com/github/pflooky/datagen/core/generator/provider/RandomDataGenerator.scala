@@ -57,10 +57,10 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      val randLength = s"CAST(ROUND($sqlRandom * ${maxLength - minLength} + $minLength, 0) AS INT)"
       if (tryExpression.isSuccess) {
-        s"SUBSTRING($GENERATE_FAKER_EXPRESSION_UDF('${tryExpression.get}'), 0, $randLength)"
+        s"$GENERATE_FAKER_EXPRESSION_UDF('${tryExpression.get}')"
       } else {
+        val randLength = s"CAST(ROUND($sqlRandom * ${maxLength - minLength} + $minLength, 0) AS INT)"
         s"SUBSTRING(ARRAY_JOIN(SHUFFLE(SPLIT(REGEXP_REPLACE(BASE64(MD5(CONCAT($sqlRandom, CURRENT_TIMESTAMP()))), '\\\\+|/|=', ' '), '[.]')), ''), 0, $randLength)"
       }
     }

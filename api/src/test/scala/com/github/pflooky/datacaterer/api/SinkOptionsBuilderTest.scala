@@ -7,7 +7,7 @@ class SinkOptionsBuilderTest extends AnyFunSuite {
 
   test("Can create sink options with random seed, locale and foreign keys") {
     val result = SinkOptionsBuilder()
-      .seed("10")
+      .seed(10)
       .locale("id")
       .foreignKey(ForeignKeyRelation("my_postgres", "account", "account_id"),
         ForeignKeyRelation("my_json", "account", "account_id"))

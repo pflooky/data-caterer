@@ -1,5 +1,6 @@
 package com.github.pflooky.datacaterer.api
 
+import com.github.pflooky.datacaterer.api.model.generator.BaseGenerator
 import com.github.pflooky.datacaterer.api.model.{ArrayType, Count, DateType, Field, Generator, IntegerType, Step, StringType, Task}
 import org.scalatest.funsuite.AnyFunSuite
 
@@ -9,7 +10,7 @@ class TasksBuilderTest extends AnyFunSuite {
     val result = TaskSummaryBuilder()
       .task(TaskBuilder().name("my task"))
       .enabled(false)
-      .dataSourceName("account_json")
+      .dataSource("account_json")
       .taskSummary
 
     assert(result.name == "my task")
@@ -50,8 +51,7 @@ class TasksBuilderTest extends AnyFunSuite {
   test("Can create per column count") {
     val result = CountBuilder()
       .perColumn(PerColumnCountBuilder()
-        .total(20)
-        .columns("account_id")
+        .total(20, "account_id")
       )
       .count
 
@@ -66,8 +66,10 @@ class TasksBuilderTest extends AnyFunSuite {
   test("Can create per column count with generator") {
     val result = CountBuilder()
       .perColumn(PerColumnCountBuilder()
-        .columns("account_id")
-        .generator(GeneratorBuilder().min(5))
+        .generator(
+          GeneratorBuilder().min(5),
+          "account_id"
+        )
       ).count
 
     assert(result.total.contains(1000))

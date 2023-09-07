@@ -1,6 +1,7 @@
 package com.github.pflooky.datagen.core.generator.result
 
 import com.github.pflooky.datacaterer.api.model.Constants.HISTOGRAM
+import com.github.pflooky.datacaterer.api.model.generator.BaseGenerator
 import com.github.pflooky.datacaterer.api.model.{ExpressionValidation, FlagsConfig, Generator, Plan, Step}
 import com.github.pflooky.datagen.core.listener.{SparkRecordListener, SparkTaskRecordSummary}
 import com.github.pflooky.datagen.core.model.PlanImplicits.CountOps

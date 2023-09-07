@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.provider
 
-import com.github.pflooky.datacaterer.api.model.Constants.{ENABLED_EDGE_CASE, ENABLED_NULL, IS_UNIQUE, LIST_MINIMUM_LENGTH, MAXIMUM, MINIMUM, PROBABILITY_OF_EDGE_CASE, PROBABILITY_OF_NULL}
+import com.github.pflooky.datacaterer.api.model.Constants.{ENABLED_EDGE_CASE, ENABLED_NULL, EXPRESSION, IS_UNIQUE, LIST_MINIMUM_LENGTH, MAXIMUM, MINIMUM, PROBABILITY_OF_EDGE_CASE, PROBABILITY_OF_NULL}
 import com.github.pflooky.datagen.core.generator.provider.RandomDataGenerator._
 import org.apache.spark.sql.types._
 import org.junit.runner.RunWith
@@ -63,6 +63,16 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(stringGenerator.edgeCases.nonEmpty)
     assert(sampleData.nonEmpty)
     assert(sampleData.length <= 20)
+  }
+
+  test("Can create random string generator with expression that ignores minimum and maximum length") {
+    val metadata = new MetadataBuilder().putString(MINIMUM, "0").putString(MAXIMUM, "5").putString(EXPRESSION, "#{Name.name}").build()
+    val stringGenerator = new RandomStringDataGenerator(StructField("random_string", StringType, false, metadata))
+    val sampleData = stringGenerator.generate
+
+    assert(stringGenerator.edgeCases.nonEmpty)
+    assert(sampleData.nonEmpty)
+    assert(sampleData.length > 5)
   }
 
   test("Can create random int generator with custom min and max") {

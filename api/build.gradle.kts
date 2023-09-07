@@ -10,11 +10,11 @@ import org.scoverage.ScoverageExtension
  */
 val scalaVersion: String by project
 val scalaSpecificVersion: String by project
-val sparkVersion: String by project
 
 
 plugins {
     scala
+    `java-library`
     `maven-publish`
 
     id("org.scoverage") version "8.0.3"
@@ -44,7 +44,7 @@ dependencies {
     compileOnly("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.2")
     compileOnly("com.fasterxml.jackson.module:jackson-module-scala_$scalaVersion:2.15.2")
 
-    implementation("com.softwaremill.quicklens:quicklens_$scalaVersion:1.9.6") {
+    api("com.softwaremill.quicklens:quicklens_$scalaVersion:1.9.6") {
         exclude(group = "org.scala-lang")
     }
 }
@@ -110,7 +110,7 @@ publishing {
             groupId = "org.data-catering"
             artifactId = "data-caterer-api"
             pom {
-                name.set("Data Caterer API")
+                name.set("Data Caterer API - Scala")
                 description.set("API for discovering, generating and validating data using Data Caterer")
                 url.set("https://pflooky.github.io/data-caterer-docs/")
                 developers {

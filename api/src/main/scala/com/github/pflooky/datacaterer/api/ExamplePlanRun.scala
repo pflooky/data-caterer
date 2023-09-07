@@ -61,8 +61,7 @@ class LargeCountRun extends PlanRun {
       ))
       .count(count
         .total(1000)
-        .columns("account_id")
-        .perColumnTotal(100)
+        .perColumnTotal(100, "account_id")
       )
   )
 
@@ -93,11 +92,11 @@ class DocsPlanRun extends PlanRun {
           count
             .total(1000)
             .perColumnGenerator(
-              generator
-                .min(1)
-                .max(2)
+              generator.min(1).max(2),
+              "account_id"
             )
         )
+        .schema(schema.addField("account_id"))
     )
 }
 
@@ -108,7 +107,7 @@ class FullExamplePlanRun extends PlanRun {
   val nameField = field.name("name").expression("#{Name.name}")
 
   val postgresTask = task.name("postgres_account_details")
-    .steps(
+    .stepsWithBuilders(
       step
         .name("transaction")
         .jdbcTable("account.transaction")
@@ -155,8 +154,8 @@ class FullExamplePlanRun extends PlanRun {
     .json("account_json")
 
   val p = plan.taskSummaries(
-    taskSummary.dataSourceName("customer_postgres").task(postgresTask),
-    taskSummary.dataSourceName("account_json").task(jsonTask),
+    taskSummary.dataSource("customer_postgres").task(postgresTask),
+    taskSummary.dataSource("account_json").task(jsonTask),
   ).addForeignKeyRelationship(
     foreignField("customer_postgres", "account", "account_id"),
     foreignField("customer_postgres", "transaction", "account_id")

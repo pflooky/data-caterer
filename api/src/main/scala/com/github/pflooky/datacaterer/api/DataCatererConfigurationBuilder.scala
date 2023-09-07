@@ -4,27 +4,26 @@ import com.github.pflooky.datacaterer.api.model.Constants._
 import com.github.pflooky.datacaterer.api.model.DataCatererConfiguration
 import com.softwaremill.quicklens.ModifyPimp
 
-case class DataCatererConfigurationBuilder(dataCatererConfiguration: DataCatererConfiguration = DataCatererConfiguration()) {
-
+case class DataCatererConfigurationBuilder(build: DataCatererConfiguration = DataCatererConfiguration()) {
   def sparkMaster(master: String): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.sparkMaster).setTo(master)
+    this.modify(_.build.sparkMaster).setTo(master)
 
   def sparkConfig(conf: Map[String, String]): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.sparkConfig)(_ ++ conf)
+    this.modify(_.build.sparkConfig)(_ ++ conf)
 
   def addSparkConfig(conf: (String, String)): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.sparkConfig)(_ ++ Map(conf))
+    this.modify(_.build.sparkConfig)(_ ++ Map(conf))
 
 
   def connectionConfig(connectionConfigByName: Map[String, Map[String, String]]): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.connectionConfigByName)(_ ++ connectionConfigByName)
+    this.modify(_.build.connectionConfigByName)(_ ++ connectionConfigByName)
 
   def addConnectionConfig(name: String, format: String, connectionConfig: Map[String, String]): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.connectionConfigByName)(_ ++ Map(name -> (connectionConfig ++ Map(FORMAT -> format))))
+    this.modify(_.build.connectionConfigByName)(_ ++ Map(name -> (connectionConfig ++ Map(FORMAT -> format))))
 
   def addConnectionConfig(name: String, format: String, path: String, connectionConfig: Map[String, String]): DataCatererConfigurationBuilder = {
     val pathConf = if (path.nonEmpty) Map(PATH -> path) else Map()
-    this.modify(_.dataCatererConfiguration.connectionConfigByName)(_ ++ Map(name -> (connectionConfig ++ Map(FORMAT -> format) ++ pathConf)))
+    this.modify(_.build.connectionConfigByName)(_ ++ Map(name -> (connectionConfig ++ Map(FORMAT -> format) ++ pathConf)))
   }
 
   def csv(name: String, path: String = "", options: Map[String, String] = Map()): DataCatererConfigurationBuilder =
@@ -65,6 +64,7 @@ case class DataCatererConfigurationBuilder(dataCatererConfiguration: DataCaterer
                  options: Map[String, String] = Map()
                ): DataCatererConfigurationBuilder = {
     val sptUrl = url.split(":")
+    assert(sptUrl.size == 2, "url should have format '<host>:<port>'")
     val allOptions = Map(
       "spark.cassandra.connection.host" -> sptUrl.head,
       "spark.cassandra.connection.port" -> sptUrl.last,
@@ -83,8 +83,8 @@ case class DataCatererConfigurationBuilder(dataCatererConfiguration: DataCaterer
               username: String = "admin",
               password: String = "admin",
               vpnName: String = "default",
-              connectionFactory: String = "/jms/cf/default",
-              initialContextFactory: String = "com.solacesystems.jndi.SolJNDIInitialContextFactory",
+              connectionFactory: String = DEFAULT_SOLACE_CONNECTION_FACTORY,
+              initialContextFactory: String = DEFAULT_SOLACE_INITIAL_CONTEXT_FACTORY,
               options: Map[String, String] = Map()
             ): DataCatererConfigurationBuilder =
     jms(name, url, username, password, Map(
@@ -115,74 +115,74 @@ case class DataCatererConfigurationBuilder(dataCatererConfiguration: DataCaterer
 
 
   def enableGenerateData(enable: Boolean): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.flagsConfig.enableGenerateData).setTo(enable)
+    this.modify(_.build.flagsConfig.enableGenerateData).setTo(enable)
 
   def enableCount(enable: Boolean): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.flagsConfig.enableCount).setTo(enable)
+    this.modify(_.build.flagsConfig.enableCount).setTo(enable)
 
   def enableValidation(enable: Boolean): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.flagsConfig.enableValidation).setTo(enable)
+    this.modify(_.build.flagsConfig.enableValidation).setTo(enable)
 
   def enableFailOnError(enable: Boolean): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.flagsConfig.enableFailOnError).setTo(enable)
+    this.modify(_.build.flagsConfig.enableFailOnError).setTo(enable)
 
   def enableUniqueCheck(enable: Boolean): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.flagsConfig.enableUniqueCheck).setTo(enable)
+    this.modify(_.build.flagsConfig.enableUniqueCheck).setTo(enable)
 
   def enableSaveReports(enable: Boolean): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.flagsConfig.enableSaveReports).setTo(enable)
+    this.modify(_.build.flagsConfig.enableSaveReports).setTo(enable)
 
   def enableSinkMetadata(enable: Boolean): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.flagsConfig.enableSinkMetadata).setTo(enable)
+    this.modify(_.build.flagsConfig.enableSinkMetadata).setTo(enable)
 
   def enableDeleteGeneratedRecords(enable: Boolean): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.flagsConfig.enableDeleteGeneratedRecords).setTo(enable)
+    this.modify(_.build.flagsConfig.enableDeleteGeneratedRecords).setTo(enable)
 
   def enableGeneratePlanAndTasks(enable: Boolean): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.flagsConfig.enableGeneratePlanAndTasks).setTo(enable)
+    this.modify(_.build.flagsConfig.enableGeneratePlanAndTasks).setTo(enable)
 
   def enableRecordTracking(enable: Boolean): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.flagsConfig.enableRecordTracking).setTo(enable)
+    this.modify(_.build.flagsConfig.enableRecordTracking).setTo(enable)
 
 
   def planFilePath(path: String): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.foldersConfig.planFilePath).setTo(path)
+    this.modify(_.build.foldersConfig.planFilePath).setTo(path)
 
   def taskFolderPath(path: String): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.foldersConfig.taskFolderPath).setTo(path)
+    this.modify(_.build.foldersConfig.taskFolderPath).setTo(path)
 
   def recordTrackingFolderPath(path: String): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.foldersConfig.recordTrackingFolderPath).setTo(path)
+    this.modify(_.build.foldersConfig.recordTrackingFolderPath).setTo(path)
 
   def validationFolderPath(path: String): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.foldersConfig.validationFolderPath).setTo(path)
+    this.modify(_.build.foldersConfig.validationFolderPath).setTo(path)
 
   def generatedReportsFolderPath(path: String): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.foldersConfig.generatedReportsFolderPath).setTo(path)
+    this.modify(_.build.foldersConfig.generatedReportsFolderPath).setTo(path)
 
   def generatedPlanAndTaskFolderPath(path: String): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.foldersConfig.generatedPlanAndTaskFolderPath).setTo(path)
+    this.modify(_.build.foldersConfig.generatedPlanAndTaskFolderPath).setTo(path)
 
 
   def numRecordsFromDataSourceForDataProfiling(numRecords: Int): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.metadataConfig.numRecordsFromDataSource).setTo(numRecords)
+    this.modify(_.build.metadataConfig.numRecordsFromDataSource).setTo(numRecords)
 
   def numRecordsForAnalysisForDataProfiling(numRecords: Int): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.metadataConfig.numRecordsForAnalysis).setTo(numRecords)
+    this.modify(_.build.metadataConfig.numRecordsForAnalysis).setTo(numRecords)
 
   def numGeneratedSamples(numSamples: Int): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.metadataConfig.numGeneratedSamples).setTo(numSamples)
+    this.modify(_.build.metadataConfig.numGeneratedSamples).setTo(numSamples)
 
-  def oneOfMinCount(minCount: Int): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.metadataConfig.oneOfMinCount).setTo(minCount)
+  def oneOfMinCount(minCount: Long): DataCatererConfigurationBuilder =
+    this.modify(_.build.metadataConfig.oneOfMinCount).setTo(minCount)
 
   def oneOfDistinctCountVsCountThreshold(threshold: Double): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.metadataConfig.oneOfDistinctCountVsCountThreshold).setTo(threshold)
+    this.modify(_.build.metadataConfig.oneOfDistinctCountVsCountThreshold).setTo(threshold)
 
 
   def numRecordsPerBatch(numRecords: Long): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.generationConfig.numRecordsPerBatch).setTo(numRecords)
+    this.modify(_.build.generationConfig.numRecordsPerBatch).setTo(numRecords)
 
   def numRecordsPerStep(numRecords: Long): DataCatererConfigurationBuilder =
-    this.modify(_.dataCatererConfiguration.generationConfig.numRecordsPerStep).setTo(Some(numRecords))
+    this.modify(_.build.generationConfig.numRecordsPerStep).setTo(Some(numRecords))
 }

@@ -9,12 +9,22 @@ import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceM
 import com.github.pflooky.datagen.core.util.SparkProvider
 import org.apache.spark.sql.SparkSession
 
+import scala.util.{Failure, Success, Try}
+
 object PlanProcessor {
 
   def determineAndExecutePlan(): Unit = {
     val optPlanClass = getPlanClass
     optPlanClass.map(Class.forName)
-      .map(_.getDeclaredConstructor().newInstance().asInstanceOf[PlanRun])
+      .map(cls => {
+        val tryScalaPlan = Try(cls.getDeclaredConstructor().newInstance().asInstanceOf[PlanRun])
+        val tryJavaPlan = Try(cls.getDeclaredConstructor().newInstance().asInstanceOf[com.github.pflooky.datacaterer.api.java.PlanRun])
+        (tryScalaPlan, tryJavaPlan) match {
+          case (Success(value), _) => value
+          case (_, Success(value)) => value.getPlan
+          case _ => throw new RuntimeException(s"Failed to load class as either Java or Scala PlanRun, class=${optPlanClass.get}")
+        }
+      })
       .map(executePlan)
       .getOrElse(executePlan)
   }

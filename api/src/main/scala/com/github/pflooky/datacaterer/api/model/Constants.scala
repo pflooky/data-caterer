@@ -23,6 +23,9 @@ object Constants {
   //jdbc drivers
   lazy val POSTGRES_DRIVER = "org.postgresql.Driver"
   lazy val MYSQL_DRIVER = "com.mysql.cj.jdbc.Driver"
+  //solace defaults
+  lazy val DEFAULT_SOLACE_CONNECTION_FACTORY = "/jms/cf/default"
+  lazy val DEFAULT_SOLACE_INITIAL_CONTEXT_FACTORY = "com.solacesystems.jndi.SolJNDIInitialContextFactory"
 
   //spark data options
   lazy val FORMAT = "format"
@@ -40,6 +43,7 @@ object Constants {
   lazy val PARTITION_BY = "partitionBy"
   lazy val BODY_FIELD = "bodyField"
   lazy val JMS_DESTINATION_NAME = "destinationName"
+  lazy val KAFKA_TOPIC = "topic"
   lazy val JMS_INITIAL_CONTEXT_FACTORY = "initialContextFactory"
   lazy val JMS_CONNECTION_FACTORY = "connectionFactory"
   lazy val JMS_VPN_NAME = "vpnName"
@@ -85,30 +89,79 @@ object Constants {
   lazy val ONE_OF_GENERATOR = "oneOf"
   lazy val REGEX_GENERATOR = "regex"
   lazy val SQL_GENERATOR = "sql"
-}
 
-object MetadataOption extends Enumeration {
-  protected case class MetadataConfig(confValue: String, description: String) extends super.Val
+  //flags defaults
+  lazy val DEFAULT_ENABLE_COUNT = true
+  lazy val DEFAULT_ENABLE_GENERATE_DATA = true
+  lazy val DEFAULT_ENABLE_RECORD_TRACKING = false
+  lazy val DEFAULT_ENABLE_DELETE_GENERATED_RECORDS = false
+  lazy val DEFAULT_ENABLE_GENERATE_PLAN_AND_TASKS = false
+  lazy val DEFAULT_ENABLE_FAIL_ON_ERROR = true
+  lazy val DEFAULT_ENABLE_UNIQUE_CHECK = false
+  lazy val DEFAULT_ENABLE_SINK_METADATA = false
+  lazy val DEFAULT_ENABLE_SAVE_REPORTS = true
+  lazy val DEFAULT_ENABLE_VALIDATION = false
 
-  val RandomSeed = MetadataConfig("seed", "Seed used to control what random values are generated")
-  val EnableNull = MetadataConfig("enableNull", "Allow for null values to be generated")
-  val ProbabilityOfNull = MetadataConfig("nullProb", "Probability between 0.0 and 1.0 for null value to be generated")
-  val EnableEdgeCase = MetadataConfig("enableEdgeCase", "Allow for edge case values to be generated (see https://pflooky.github.io/data-caterer-docs/setup/generator/generator/#data-types to check edge cases for each data type)")
-  val ProbabilityOfEdgeCase = MetadataConfig("edgeCaseProb", "Probability between 0.0 and 1.0 for edge case calue to be generated")
-  val Minimum = MetadataConfig("min", "Minimum value to be generated")
-  val Maximum = MetadataConfig("max", "Maximum value to be generated")
-  val MinimumLength = MetadataConfig("minLen", "Minimum length of value to be generated")
-  val MaximumLength = MetadataConfig("maxLen", "Maximum length of value to be generated")
-  val AverageLength = MetadataConfig("avgLen", "Average length of value to be generated")
-  val ListMinimumLength = MetadataConfig("listMinLen", "Minimum length of list of values to be generated")
-  val ListMaximumLength = MetadataConfig("listMaxLen", "Maximum length of list of values to be generated")
-  val ArrayType = MetadataConfig("arrayType", "Data type used within array structure")
-  val Expression = MetadataConfig("expression", "Datafaker expression to be used to generate data (see https://www.datafaker.net/documentation/expressions/)")
-  val IsPrimaryKey = MetadataConfig("isPrimaryKey", "Field is part of the primary key or not")
-  val PrimaryKeyPosition = MetadataConfig("primaryKeyPos", "Position of the field within the primary key. Set to -1 if not part of the primary keys")
-  val ClusteringPosition = MetadataConfig("clusteringPos", "Position of the field within the clustering keys (if data source supports clustering keys). Set to -1 if not part of the clustering keys")
-  val IsUnique = MetadataConfig("isUnique", "Field values generated should be unique within the session of generating values. Will not check against existing data in data source for uniqueness (expensive operation, support may be added later)")
-  val NumericPrecision = MetadataConfig("precision", "Precision of numeric value")
-  val NumericScale = MetadataConfig("scale", "Scale of numeric value")
-  val Omit = MetadataConfig("omit", "Remove the field from the final output. Can be used as an intermediate step during data generation")
+  //folders defaults
+  lazy val DEFAULT_PLAN_FILE_PATH = "/opt/app/plan/customer-create-plan.yaml"
+  lazy val DEFAULT_TASK_FOLDER_PATH = "/opt/app/task"
+  lazy val DEFAULT_GENERATED_PLAN_AND_TASK_FOLDER_PATH = "/tmp"
+  lazy val DEFAULT_GENERATED_REPORTS_FOLDER_PATH = "/opt/app/report"
+  lazy val DEFAULT_RECORD_TRACKING_FOLDER_PATH = "/opt/app/record-tracking"
+  lazy val DEFAULT_VALIDATION_FOLDER_PATH = "/opt/app/validation"
+
+  //metadata defaults
+  lazy val DEFAULT_NUM_RECORD_FROM_DATA_SOURCE = 10000
+  lazy val DEFAULT_NUM_RECORD_FOR_ANALYSIS = 10000
+  lazy val DEFAULT_ONE_OF_DISTINCT_COUNT_VS_COUNT_THRESHOLD = 0.2
+  lazy val DEFAULT_ONE_OF_MIN_COUNT = 1000
+  lazy val DEFAULT_NUM_GENERATED_SAMPLES = 10
+
+  //generation defaults
+  lazy val DEFAULT_NUM_RECORDS_PER_BATCH = 100000
+
+  //spark defaults
+  lazy val DEFAULT_SPARK_MASTER = "local[*]"
+  lazy val DEFAULT_SPARK_CONFIG = java.util.Map.of(
+    "spark.sql.cbo.enabled", "true",
+    "spark.sql.adaptive.enabled", "true",
+    "spark.sql.cbo.planStats.enabled", "true",
+    "spark.sql.legacy.allowUntypedScalaUDF", "true",
+    "spark.sql.statistics.histogram.enabled", "true",
+    "spark.sql.shuffle.partitions", "10",
+    "spark.sql.catalog.postgres", "",
+    "spark.sql.catalog.cassandra", "com.datastax.spark.connector.datasource.CassandraCatalog",
+    "spark.hadoop.fs.s3a.directory.marker.retention", "keep",
+    "spark.hadoop.fs.s3a.bucket.all.committer.magic.enabled", "true"
+  )
+
+  //foreign key defaults
+  lazy val DEFAULT_FOREIGN_KEY_COLUMN = "default_column"
+
+  //task defaults
+  lazy val DEFAULT_TASK_NAME = "default_task"
+  lazy val DEFAULT_DATA_SOURCE_NAME = "json"
+  lazy val DEFAULT_TASK_SUMMARY_ENABLE = true
+
+  //step defaults
+  lazy val DEFAULT_STEP_NAME = "default_step"
+  lazy val DEFAULT_STEP_TYPE = "json"
+  lazy val DEFAULT_STEP_ENABLED = true
+
+  //field defaults
+  lazy val DEFAULT_FIELD_NAME = "default_field"
+  lazy val DEFAULT_FIELD_TYPE = "string"
+  lazy val DEFAULT_FIELD_NULLABLE = true
+
+  //generator defaults
+  lazy val DEFAULT_GENERATOR_TYPE = "random"
+
+  //count defaults
+  lazy val DEFAULT_COUNT_TOTAL = 1000L
+  lazy val DEFAULT_PER_COLUMN_COUNT_TOTAL = 10L
+
+  //validation defaults
+  lazy val DEFAULT_VALIDATION_CONFIG_NAME = "default_validation"
+  lazy val DEFAULT_VALIDATION_DESCRIPTION = "Validation of data sources after generating data"
+
 }

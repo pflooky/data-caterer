@@ -1,37 +1,41 @@
 package com.github.pflooky.datacaterer.api.model
 
+import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_ENABLE_COUNT, DEFAULT_ENABLE_DELETE_GENERATED_RECORDS, DEFAULT_ENABLE_FAIL_ON_ERROR, DEFAULT_ENABLE_GENERATE_DATA, DEFAULT_ENABLE_GENERATE_PLAN_AND_TASKS, DEFAULT_ENABLE_RECORD_TRACKING, DEFAULT_ENABLE_SAVE_REPORTS, DEFAULT_ENABLE_SINK_METADATA, DEFAULT_ENABLE_UNIQUE_CHECK, DEFAULT_ENABLE_VALIDATION, DEFAULT_GENERATED_PLAN_AND_TASK_FOLDER_PATH, DEFAULT_GENERATED_REPORTS_FOLDER_PATH, DEFAULT_NUM_GENERATED_SAMPLES, DEFAULT_NUM_RECORDS_PER_BATCH, DEFAULT_NUM_RECORD_FOR_ANALYSIS, DEFAULT_NUM_RECORD_FROM_DATA_SOURCE, DEFAULT_ONE_OF_DISTINCT_COUNT_VS_COUNT_THRESHOLD, DEFAULT_ONE_OF_MIN_COUNT, DEFAULT_PLAN_FILE_PATH, DEFAULT_RECORD_TRACKING_FOLDER_PATH, DEFAULT_SPARK_CONFIG, DEFAULT_SPARK_MASTER, DEFAULT_TASK_FOLDER_PATH, DEFAULT_VALIDATION_FOLDER_PATH}
+
+import scala.collection.JavaConverters.mapAsScalaMapConverter
+
 case class FlagsConfig(
-                        enableCount: Boolean = true,
-                        enableGenerateData: Boolean = true,
-                        enableRecordTracking: Boolean = false,
-                        enableDeleteGeneratedRecords: Boolean = false,
-                        enableGeneratePlanAndTasks: Boolean = false,
-                        enableFailOnError: Boolean = true,
-                        enableUniqueCheck: Boolean = false,
-                        enableSinkMetadata: Boolean = false,
-                        enableSaveReports: Boolean = true,
-                        enableValidation: Boolean = false,
+                        enableCount: Boolean = DEFAULT_ENABLE_COUNT,
+                        enableGenerateData: Boolean = DEFAULT_ENABLE_GENERATE_DATA,
+                        enableRecordTracking: Boolean = DEFAULT_ENABLE_RECORD_TRACKING,
+                        enableDeleteGeneratedRecords: Boolean = DEFAULT_ENABLE_DELETE_GENERATED_RECORDS,
+                        enableGeneratePlanAndTasks: Boolean = DEFAULT_ENABLE_GENERATE_PLAN_AND_TASKS,
+                        enableFailOnError: Boolean = DEFAULT_ENABLE_FAIL_ON_ERROR,
+                        enableUniqueCheck: Boolean = DEFAULT_ENABLE_UNIQUE_CHECK,
+                        enableSinkMetadata: Boolean = DEFAULT_ENABLE_SINK_METADATA,
+                        enableSaveReports: Boolean = DEFAULT_ENABLE_SAVE_REPORTS,
+                        enableValidation: Boolean = DEFAULT_ENABLE_VALIDATION,
                       )
 
 case class FoldersConfig(
-                          planFilePath: String = "/opt/app/plan/customer-create-plan.yaml",
-                          taskFolderPath: String = "/opt/app/task",
-                          generatedPlanAndTaskFolderPath: String = "/tmp",
-                          generatedReportsFolderPath: String = "/opt/app/report",
-                          recordTrackingFolderPath: String = "/opt/app/record-tracking",
-                          validationFolderPath: String = "/opt/app/validation",
+                          planFilePath: String = DEFAULT_PLAN_FILE_PATH,
+                          taskFolderPath: String = DEFAULT_TASK_FOLDER_PATH,
+                          generatedPlanAndTaskFolderPath: String = DEFAULT_GENERATED_PLAN_AND_TASK_FOLDER_PATH,
+                          generatedReportsFolderPath: String = DEFAULT_GENERATED_REPORTS_FOLDER_PATH,
+                          recordTrackingFolderPath: String = DEFAULT_RECORD_TRACKING_FOLDER_PATH,
+                          validationFolderPath: String = DEFAULT_VALIDATION_FOLDER_PATH,
                         )
 
 case class MetadataConfig(
-                           numRecordsFromDataSource: Int = 10000,
-                           numRecordsForAnalysis: Int = 10000,
-                           oneOfDistinctCountVsCountThreshold: Double = 0.2,
-                           oneOfMinCount: Int = 1000,
-                           numGeneratedSamples: Int = 10,
+                           numRecordsFromDataSource: Int = DEFAULT_NUM_RECORD_FROM_DATA_SOURCE,
+                           numRecordsForAnalysis: Int = DEFAULT_NUM_RECORD_FOR_ANALYSIS,
+                           oneOfDistinctCountVsCountThreshold: Double = DEFAULT_ONE_OF_DISTINCT_COUNT_VS_COUNT_THRESHOLD,
+                           oneOfMinCount: Long = DEFAULT_ONE_OF_MIN_COUNT,
+                           numGeneratedSamples: Int = DEFAULT_NUM_GENERATED_SAMPLES,
                          )
 
 case class GenerationConfig(
-                             numRecordsPerBatch: Long = 100000,
+                             numRecordsPerBatch: Long = DEFAULT_NUM_RECORDS_PER_BATCH,
                              numRecordsPerStep: Option[Long] = None,
                            )
 
@@ -41,17 +45,6 @@ case class DataCatererConfiguration(
                                      metadataConfig: MetadataConfig = MetadataConfig(),
                                      generationConfig: GenerationConfig = GenerationConfig(),
                                      connectionConfigByName: Map[String, Map[String, String]] = Map(),
-                                     sparkConfig: Map[String, String] = Map(
-                                       "spark.sql.cbo.enabled" -> "true",
-                                       "spark.sql.adaptive.enabled" -> "true",
-                                       "spark.sql.cbo.planStats.enabled" -> "true",
-                                       "spark.sql.legacy.allowUntypedScalaUDF" -> "true",
-                                       "spark.sql.statistics.histogram.enabled" -> "true",
-                                       "spark.sql.shuffle.partitions" -> "10",
-                                       "spark.sql.catalog.postgres" -> "",
-                                       "spark.sql.catalog.cassandra" -> "com.datastax.spark.connector.datasource.CassandraCatalog",
-                                       "spark.hadoop.fs.s3a.directory.marker.retention" -> "keep",
-                                       "spark.hadoop.fs.s3a.bucket.all.committer.magic.enabled" -> "true",
-                                     ),
-                                     sparkMaster: String = "local[*]"
+                                     sparkConfig: Map[String, String] = DEFAULT_SPARK_CONFIG.asScala.toMap,
+                                     sparkMaster: String = DEFAULT_SPARK_MASTER
                                    )

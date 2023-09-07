@@ -1,6 +1,6 @@
 package com.github.pflooky.datacaterer.api
 
-import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, ForeignKeyRelation, Plan, Task, ValidationConfiguration}
+import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, ForeignKeyRelation, Plan, SinkOptions, Task, TaskSummary, ValidationConfiguration}
 import com.softwaremill.quicklens.ModifyPimp
 
 
@@ -50,15 +50,17 @@ trait PlanRun {
                configuration: DataCatererConfigurationBuilder = DataCatererConfigurationBuilder(),
                validations: List[ValidationConfigurationBuilder] = List()
              ): Unit = {
-    val taskToDataSource = tasks.flatMap(_.tasks.map(t => (t.task.name, t.dataSourceName, t.task)))
-    val planWithTaskToDataSource = plan.taskSummaries(taskToDataSource.map(t => taskSummary.name(t._1).dataSourceName(t._2)): _*)
+    val taskToDataSource = tasks.flatMap(x => x.tasks.map(t => (t.name, x.dataSourceName, t)))
+    val planWithTaskToDataSource = plan.taskSummaries(taskToDataSource.map(t => taskSummary.name(t._1).dataSource(t._2)): _*)
 
     _plan = planWithTaskToDataSource.plan
     _tasks = taskToDataSource.map(_._3)
-    _configuration = configuration.dataCatererConfiguration
+    _configuration = configuration.build
     _validations = validations.map(_.validationConfiguration)
   }
 }
+
+class BasePlanRun extends PlanRun
 
 case class PlanBuilder(plan: Plan = Plan(), tasks: List[TasksBuilder] = List()) {
 
@@ -79,17 +81,20 @@ case class PlanBuilder(plan: Plan = Plan(), tasks: List[TasksBuilder] = List()) 
   def sinkOptions(sinkOptionsBuilder: SinkOptionsBuilder): PlanBuilder =
     this.modify(_.plan.sinkOptions).setTo(Some(sinkOptionsBuilder.sinkOptions))
 
-  def seed(seed: String): PlanBuilder =
+  def sinkOptions(sinkOptions: SinkOptions): PlanBuilder =
+    this.modify(_.plan.sinkOptions).setTo(Some(sinkOptions))
+
+  def seed(seed: Long): PlanBuilder =
     this.modify(_.plan.sinkOptions).setTo(Some(getSinkOpt.seed(seed).sinkOptions))
 
   def locale(locale: String): PlanBuilder =
     this.modify(_.plan.sinkOptions).setTo(Some(getSinkOpt.locale(locale).sinkOptions))
 
-  def addForeignKeyRelationship(foreignKey: ForeignKeyRelation, relations: ForeignKeyRelation*): PlanBuilder =
-    addForeignKeyRelationship(foreignKey, relations.toList)
+  def addForeignKeyRelationship(foreignKey: ForeignKeyRelation, relation: ForeignKeyRelation, relations: ForeignKeyRelation*): PlanBuilder =
+    addForeignKeyRelationship(foreignKey, (relation +: relations).toList)
 
   def addForeignKeyRelationship(foreignKey: ForeignKeyRelation, relations: List[ForeignKeyRelation]): PlanBuilder =
-    this.modify(_.plan.sinkOptions).setTo(Some(getSinkOpt.foreignKey(foreignKey, relations: _*).sinkOptions))
+    this.modify(_.plan.sinkOptions).setTo(Some(getSinkOpt.foreignKey(foreignKey, relations).sinkOptions))
 
   private def getSinkOpt: SinkOptionsBuilder = {
     plan.sinkOptions match {

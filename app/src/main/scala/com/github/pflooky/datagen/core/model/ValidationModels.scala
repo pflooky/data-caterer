@@ -66,8 +66,8 @@ object ValidationImplicits {
         var retries = 0
         while (retries < waitCondition.maxRetries) {
           val isDataAvailable = waitCondition match {
-            case DataExistsWaitCondition(_, _, _, _) | WebhookWaitCondition(_, _, _, _, _) => this.checkCondition(connectionConfigByName)
-            case FileExistsWaitCondition(_, _) => this.checkCondition
+            case DataExistsWaitCondition(_, _, _) | WebhookWaitCondition(_, _, _, _) => this.checkCondition(connectionConfigByName)
+            case FileExistsWaitCondition(_) => this.checkCondition
             case x => throw new InvalidWaitConditionException(x.getClass.getName)
           }
           if (!isDataAvailable) {
