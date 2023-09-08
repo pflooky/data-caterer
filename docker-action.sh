@@ -5,16 +5,10 @@ sparkVersion=$(grep spark gradle.properties | cut -d= -f2)
 platforms="linux/amd64,linux/arm64"
 
 echo "Creating API jars and uploading to Github packages"
-gradle clean :api:shadowJar :api:publish
+gradle clean :api:shadowJar :api:publish :api-java:shadowJar :api-java:publish
 publish_res=$?
 if [[ "$publish_res" -ne 0 ]] ; then
-  echo "Publish Scala API failed, exiting"
-  exit 1
-fi
-gradle :api-java:shadowJar :api-java:publish
-publish_java_res=$?
-if [[ "$publish_java_res" -ne 0 ]] ; then
-  echo "Publish Java API failed, exiting"
+  echo "Publish Scala or Java API jar failed, exiting"
   exit 1
 fi
 

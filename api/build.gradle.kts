@@ -106,7 +106,7 @@ publishing {
     }
     publications {
         create<MavenPublication>("mavenScala") {
-            from(components["java"])
+            artifact(tasks.shadowJar)
             groupId = "org.data-catering"
             artifactId = "data-caterer-api"
             pom {
