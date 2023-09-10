@@ -24,3 +24,5 @@ jobs:
         run: bash docker-action.sh
         env:
           PACKAGE_TOKEN: ${{ secrets.PACKAGE_TOKEN }}
+          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}

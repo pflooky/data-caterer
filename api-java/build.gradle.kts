@@ -64,12 +64,18 @@ tasks.shadowJar {
 publishing {
     repositories {
         maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/pflooky/data-caterer")
+            name = "OSSRH"
+            url = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
             credentials {
-                username = "pflooky"
-                password = System.getenv("PACKAGE_TOKEN")
+                username = System.getenv("MAVEN_USERNAME")
+                password = System.getenv("MAVEN_PASSWORD")
             }
+//            name = "GitHubPackages"
+//            url = uri("https://maven.pkg.github.com/pflooky/data-caterer")
+//            credentials {
+//                username = "pflooky"
+//                password = System.getenv("PACKAGE_TOKEN")
+//            }
         }
     }
     publications {
