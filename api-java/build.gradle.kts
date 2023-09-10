@@ -81,7 +81,7 @@ publishing {
     publications {
         create<MavenPublication>("mavenJava") {
             artifact(tasks.shadowJar)
-            groupId = "org.data-catering"
+            groupId = "io.github.pflooky"
             artifactId = "data-caterer-api-java"
             pom {
                 name.set("Data Caterer API - Java")
