@@ -83,7 +83,7 @@ class DocsPlanRun extends PlanRun {
     )
   val t = task
     .name("csv_file")
-    .step(
+    .steps(
       step
         .name("transactions")
         .`type`("csv")
@@ -107,7 +107,7 @@ class FullExamplePlanRun extends PlanRun {
   val nameField = field.name("name").expression("#{Name.name}")
 
   val postgresTask = task.name("postgres_account_details")
-    .stepsWithBuilders(
+    .steps(
       step
         .name("transaction")
         .jdbcTable("account.transaction")
@@ -132,7 +132,7 @@ class FullExamplePlanRun extends PlanRun {
     )
 
   val jsonTask = task.name("json_account_details")
-    .step(
+    .steps(
       step
         .name("account_info")
         .path("/tmp/src/main/resources/sample/json")
@@ -165,4 +165,61 @@ class FullExamplePlanRun extends PlanRun {
   )
 
   execute(p, conf)
+}
+
+class ConnectionBasedApiPlanRun extends PlanRun {
+
+  val csvGenerate = csv("my_csv", "app/src/test/resources/sample/connection-api/csv")
+    .schema(
+      field.name("account_id"),
+      field.name("year").`type`(IntegerType).min(2022)
+    )
+    .count(count.total(100))
+
+  val jsonGenerate = json("my_json", "app/src/test/resources/sample/connection-api/json")
+    .partitionBy("age")
+    .schema(
+      field.name("name").expression("#{Name.name}"),
+      field.name("age").`type`(IntegerType).min(18).max(20),
+    )
+    .count(count.total(100))
+
+  val x = json("account_info", "/tmp/data-caterer/json")
+    .schema(
+      field.name("account_id"),
+      field.name("year").`type`(IntegerType).min(2022),
+      field.name("name").expression("#{Name.name}"),
+      field.name("amount").`type`(DoubleType).max(1000.0),
+      field.name("date").`type`(DateType).min(Date.valueOf("2022-01-01")),
+      field.name("status").oneOf("open", "closed"),
+      field.name("txn_list")
+        .`type`(ArrayType)
+        .schema(schema.addFields(
+          field.name("id"),
+          field.name("date").`type`(DateType).min(Date.valueOf("2022-01-01")),
+          field.name("amount").`type`(DoubleType),
+        ))
+    )
+    .count(count.total(100))
+
+  val postgresGenerate = postgres("my_postgres")
+    .task(task.steps(
+      step
+        .jdbcTable("public.accounts")
+        .schema(
+          field.name("account_id"),
+          field.name("name").expression("#{Name.name}"),
+        ),
+      step
+        .jdbcTable("public.transactions")
+        .schema(
+          field.name("account_id"),
+          field.name("amount").`type`(DoubleType).max(1000)
+        )
+        .count(count.perColumnTotal(10, "account_id"))
+    ))
+    .schema(field.name("account_id"))
+    .count(count.total(2))
+
+  execute(csvGenerate, jsonGenerate)
 }

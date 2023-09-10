@@ -8,7 +8,8 @@ import org.junit.Test;
 
 import java.util.Objects;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class SchemaBuilderTest {
 
@@ -40,8 +41,8 @@ public class SchemaBuilderTest {
     @Test
     public void canCreateSchemaWithFieldBuilder() {
         var result = new SchemaBuilder()
-                .addField(new FieldBuilder().name("account_id"))
-                .addField(new FieldBuilder().name("year"))
+                .addFields(new FieldBuilder().name("account_id"))
+                .addFields(new FieldBuilder().name("year"))
                 .schema();
 
         assertTrue(result.fields().isDefined());
@@ -72,7 +73,7 @@ public class SchemaBuilderTest {
                         new FieldBuilder().name("account_id").type(StringType.instance()),
                         new FieldBuilder().name("year").type(IntegerType.instance())
                 )
-                .addField(new FieldBuilder().name("name"))
+                .addFields(new FieldBuilder().name("name"))
                 .addField("amount", DoubleType.instance())
                 .schema();
 

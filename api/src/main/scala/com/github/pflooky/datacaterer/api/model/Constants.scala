@@ -1,5 +1,7 @@
 package com.github.pflooky.datacaterer.api.model
 
+import java.util.UUID
+
 object Constants {
 
   lazy val PLAN_CLASS = "PLAN_CLASS"
@@ -23,9 +25,6 @@ object Constants {
   //jdbc drivers
   lazy val POSTGRES_DRIVER = "org.postgresql.Driver"
   lazy val MYSQL_DRIVER = "com.mysql.cj.jdbc.Driver"
-  //solace defaults
-  lazy val DEFAULT_SOLACE_CONNECTION_FACTORY = "/jms/cf/default"
-  lazy val DEFAULT_SOLACE_INITIAL_CONTEXT_FACTORY = "com.solacesystems.jndi.SolJNDIInitialContextFactory"
 
   //spark data options
   lazy val FORMAT = "format"
@@ -58,9 +57,9 @@ object Constants {
   lazy val PROBABILITY_OF_EDGE_CASE = "edgeCaseProb"
   lazy val AVERAGE_LENGTH = "avgLen"
   lazy val MINIMUM_LENGTH = "minLen"
-  lazy val LIST_MINIMUM_LENGTH = "listMinLen"
+  lazy val ARRAY_MINIMUM_LENGTH = "arrayMinLen"
   lazy val MAXIMUM_LENGTH = "maxLen"
-  lazy val LIST_MAXIMUM_LENGTH = "listMaxLen"
+  lazy val ARRAY_MAXIMUM_LENGTH = "arrayMaxLen"
   lazy val SOURCE_MAXIMUM_LENGTH = "sourceMaxLen"
   lazy val MINIMUM = "min"
   lazy val MAXIMUM = "max"
@@ -135,21 +134,48 @@ object Constants {
     "spark.hadoop.fs.s3a.bucket.all.committer.magic.enabled", "true"
   )
 
+  //jdbc defaults
+  lazy val DEFAULT_POSTGRES_URL = "jdbc:postgresql://postgresserver:5432/customer"
+  lazy val DEFAULT_POSTGRES_USERNAME = "postgres"
+  lazy val DEFAULT_POSTGRES_PASSWORD = "postgres"
+  lazy val DEFAULT_MYSQL_URL = "jdbc:mysql://mysqlserver:3306/customer"
+  lazy val DEFAULT_MYSQL_USERNAME = "root"
+  lazy val DEFAULT_MYSQL_PASSWORD = "root"
+
+  //cassandra defaults
+  lazy val DEFAULT_CASSANDRA_URL = "cassandraserver:9042"
+  lazy val DEFAULT_CASSANDRA_USERNAME = "cassandra"
+  lazy val DEFAULT_CASSANDRA_PASSWORD = "cassandra"
+
+  //solace defaults
+  lazy val DEFAULT_SOLACE_URL = "smf://solaceserver:55554"
+  lazy val DEFAULT_SOLACE_USERNAME = "admin"
+  lazy val DEFAULT_SOLACE_PASSWORD = "admin"
+  lazy val DEFAULT_SOLACE_VPN_NAME = "default"
+  lazy val DEFAULT_SOLACE_CONNECTION_FACTORY = "/jms/cf/default"
+  lazy val DEFAULT_SOLACE_INITIAL_CONTEXT_FACTORY = "com.solacesystems.jndi.SolJNDIInitialContextFactory"
+
+  //kafka defaults
+  lazy val DEFAULT_KAFKA_URL = "kafkaserver:9092"
+
   //foreign key defaults
   lazy val DEFAULT_FOREIGN_KEY_COLUMN = "default_column"
 
   //task defaults
-  lazy val DEFAULT_TASK_NAME = "default_task"
+  def DEFAULT_TASK_NAME: String = UUID.randomUUID().toString
+
   lazy val DEFAULT_DATA_SOURCE_NAME = "json"
   lazy val DEFAULT_TASK_SUMMARY_ENABLE = true
 
   //step defaults
-  lazy val DEFAULT_STEP_NAME = "default_step"
+  def DEFAULT_STEP_NAME: String = UUID.randomUUID().toString
+
   lazy val DEFAULT_STEP_TYPE = "json"
   lazy val DEFAULT_STEP_ENABLED = true
 
   //field defaults
-  lazy val DEFAULT_FIELD_NAME = "default_field"
+  def DEFAULT_FIELD_NAME: String = UUID.randomUUID().toString
+
   lazy val DEFAULT_FIELD_TYPE = "string"
   lazy val DEFAULT_FIELD_NULLABLE = true
 

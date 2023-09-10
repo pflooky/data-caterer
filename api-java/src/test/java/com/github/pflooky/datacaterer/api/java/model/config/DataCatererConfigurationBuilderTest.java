@@ -6,7 +6,9 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.Map;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class DataCatererConfigurationBuilderTest {
 
@@ -91,7 +93,7 @@ public class DataCatererConfigurationBuilderTest {
     public void canCreateDataCatererConfigurationWithFlags() {
         var result = new DataCatererConfigurationBuilder()
                 .enableCount(false)
-                .enableGenerate(false)
+                .enableGenerateData(false)
                 .enableDeleteGeneratedRecords(true)
                 .enableFailOnError(false)
                 .enableGeneratePlanAndTasks(true)

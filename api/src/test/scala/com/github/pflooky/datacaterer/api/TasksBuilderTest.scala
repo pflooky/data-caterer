@@ -1,7 +1,6 @@
 package com.github.pflooky.datacaterer.api
 
-import com.github.pflooky.datacaterer.api.model.generator.BaseGenerator
-import com.github.pflooky.datacaterer.api.model.{ArrayType, Count, DateType, Field, Generator, IntegerType, Step, StringType, Task}
+import com.github.pflooky.datacaterer.api.model.{ArrayType, Count, DateType, Field, Generator, IntegerType, StringType}
 import org.scalatest.funsuite.AnyFunSuite
 
 class TasksBuilderTest extends AnyFunSuite {
@@ -188,8 +187,8 @@ class TasksBuilderTest extends AnyFunSuite {
       .minLength(3)
       .maxLength(4)
       .avgLength(3)
-      .listMinLength(2)
-      .listMaxLength(2)
+      .arrayMinLength(2)
+      .arrayMaxLength(2)
       .expression("hello")
       .nullable(false)
       .static("acc123")
@@ -221,8 +220,8 @@ class TasksBuilderTest extends AnyFunSuite {
     assert(gen("minLen") == "3")
     assert(gen("maxLen") == "4")
     assert(gen("avgLen") == "3")
-    assert(gen("listMinLen") == "2")
-    assert(gen("listMaxLen") == "2")
+    assert(gen("arrayMinLen") == "2")
+    assert(gen("arrayMaxLen") == "2")
     assert(gen("expression") == "hello")
     assert(gen("static") == "acc123")
     assert(gen("arrayType") == "boolean")

@@ -14,6 +14,16 @@ object GeneratorUtil {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
 
+  def getDataGenerator(structField: StructField, faker: Faker): DataGenerator[_] = {
+    val hasRegex = structField.metadata.contains(REGEX_GENERATOR)
+    val hasOneOf = structField.metadata.contains(REGEX_GENERATOR)
+    (hasRegex, hasOneOf) match {
+      case (true, _) => RegexDataGenerator.getGenerator(structField, faker)
+      case (_, true) => OneOfDataGenerator.getGenerator(structField, faker)
+      case _ => RandomDataGenerator.getGeneratorForStructField(structField, faker)
+    }
+  }
+
   def getDataGenerator(optGenerator: Option[Generator], structField: StructField, faker: Faker): DataGenerator[_] = {
     if (optGenerator.isDefined) {
       optGenerator.get.`type` match {

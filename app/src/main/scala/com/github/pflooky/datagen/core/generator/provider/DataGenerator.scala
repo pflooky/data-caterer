@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.provider
 
-import com.github.pflooky.datacaterer.api.model.Constants.{ENABLED_EDGE_CASE, ENABLED_NULL, IS_UNIQUE, LIST_MAXIMUM_LENGTH, LIST_MINIMUM_LENGTH, PROBABILITY_OF_EDGE_CASE, PROBABILITY_OF_NULL, RANDOM_SEED, STATIC}
+import com.github.pflooky.datacaterer.api.model.Constants.{ARRAY_MAXIMUM_LENGTH, ARRAY_MINIMUM_LENGTH, ENABLED_EDGE_CASE, ENABLED_NULL, IS_UNIQUE, PROBABILITY_OF_EDGE_CASE, PROBABILITY_OF_NULL, RANDOM_SEED, STATIC}
 import com.github.pflooky.datacaterer.api.model.generator.BaseGenerator
 import net.datafaker.Faker
 import org.apache.spark.sql.functions.{expr, rand, when}
@@ -92,8 +92,8 @@ trait NullableDataGenerator[T >: Null] extends DataGenerator[T] {
 
 trait ListDataGenerator[T] extends NullableDataGenerator[List[T]] {
 
-  lazy val listMaxSize: Int = if (structField.metadata.contains(LIST_MAXIMUM_LENGTH)) structField.metadata.getString(LIST_MAXIMUM_LENGTH).toInt else 5
-  lazy val listMinSize: Int = if (structField.metadata.contains(LIST_MINIMUM_LENGTH)) structField.metadata.getString(LIST_MINIMUM_LENGTH).toInt else 0
+  lazy val listMaxSize: Int = if (structField.metadata.contains(ARRAY_MAXIMUM_LENGTH)) structField.metadata.getString(ARRAY_MAXIMUM_LENGTH).toInt else 5
+  lazy val listMinSize: Int = if (structField.metadata.contains(ARRAY_MINIMUM_LENGTH)) structField.metadata.getString(ARRAY_MINIMUM_LENGTH).toInt else 0
 
   def elementGenerator: DataGenerator[T]
 

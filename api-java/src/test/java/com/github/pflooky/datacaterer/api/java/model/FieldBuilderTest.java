@@ -275,12 +275,12 @@ public class FieldBuilderTest {
     }
 
     @Test
-    public void canCreateFieldListMinLength() {
-        var result = new FieldBuilder().listMinLength(1).field();
+    public void canCreateFieldArrayMinLength() {
+        var result = new FieldBuilder().arrayMinLength(1).field();
 
         assertEquals(1, result.generator().get().options().size());
-        assertTrue(result.generator().get().options().contains(Constants.LIST_MINIMUM_LENGTH()));
-        assertTrue(result.generator().get().options().get(Constants.LIST_MINIMUM_LENGTH()).contains("1"));
+        assertTrue(result.generator().get().options().contains(Constants.ARRAY_MINIMUM_LENGTH()));
+        assertTrue(result.generator().get().options().get(Constants.ARRAY_MINIMUM_LENGTH()).contains("1"));
     }
 
     @Test
@@ -302,12 +302,12 @@ public class FieldBuilderTest {
     }
 
     @Test
-    public void canCreateFieldListMaxLength() {
-        var result = new FieldBuilder().listMaxLength(1).field();
+    public void canCreateFieldArrayMaxLength() {
+        var result = new FieldBuilder().arrayMaxLength(1).field();
 
         assertEquals(1, result.generator().get().options().size());
-        assertTrue(result.generator().get().options().contains(Constants.LIST_MAXIMUM_LENGTH()));
-        assertTrue(result.generator().get().options().get(Constants.LIST_MAXIMUM_LENGTH()).contains("1"));
+        assertTrue(result.generator().get().options().contains(Constants.ARRAY_MAXIMUM_LENGTH()));
+        assertTrue(result.generator().get().options().get(Constants.ARRAY_MAXIMUM_LENGTH()).contains("1"));
     }
 
     @Test

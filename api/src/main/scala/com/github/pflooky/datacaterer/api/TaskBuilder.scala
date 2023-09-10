@@ -33,16 +33,20 @@ case class TaskSummaryBuilder(
 
 case class TasksBuilder(tasks: List[Task] = List(), dataSourceName: String = DEFAULT_DATA_SOURCE_NAME) {
 
-  def addTasksWithBuilders(dataSourceName: String, taskBuilder: TaskBuilder*): TasksBuilder =
-    this.modify(_.tasks)(_ ++ taskBuilder.map(_.task))
+  def addTasks(dataSourceName: String, taskBuilder: TaskBuilder, taskBuilders: TaskBuilder*): TasksBuilder =
+    this.modify(_.tasks)(_ ++ (taskBuilder +: taskBuilders).map(_.task))
       .modify(_.dataSourceName).setTo(dataSourceName)
 
-  def addTasks(dataSourceName: String, tasks: Task*): TasksBuilder =
-    this.modify(_.tasks)(_ ++ tasks)
+  def addTasks(dataSourceName: String, task: Task, tasks: Task*): TasksBuilder =
+    this.modify(_.tasks)(_ ++ (task +: tasks))
       .modify(_.dataSourceName).setTo(dataSourceName)
 
-  def addTask(name: String, dataSourceName: String, stepBuilders: StepBuilder*): TasksBuilder =
-    this.modify(_.tasks)(_ ++ List(TaskBuilder(Task(name, stepBuilders.map(_.step).toList)).task))
+  def addTask(name: String, dataSourceName: String, stepBuilder: StepBuilder, stepBuilders: StepBuilder*): TasksBuilder =
+    this.modify(_.tasks)(_ ++ List(TaskBuilder(Task(name, (stepBuilder +: stepBuilders).map(_.step).toList)).task))
+      .modify(_.dataSourceName).setTo(dataSourceName)
+
+  def addTask(name: String, dataSourceName: String, step: Step, steps: Step*): TasksBuilder =
+    this.modify(_.tasks)(_ ++ List(TaskBuilder(Task(name, (step +: steps).toList)).task))
       .modify(_.dataSourceName).setTo(dataSourceName)
 
   def addTask(name: String, dataSourceName: String, steps: List[Step]): TasksBuilder =
@@ -54,13 +58,9 @@ case class TaskBuilder(task: Task = Task()) {
 
   def name(name: String): TaskBuilder = this.modify(_.task.name).setTo(name)
 
-  def step(step: StepBuilder): TaskBuilder = this.modify(_.task.steps)(_ ++ List(step.step))
+  def steps(step: StepBuilder, steps: StepBuilder*): TaskBuilder = this.modify(_.task.steps)(_ ++ (step +: steps).map(_.step))
 
-  def step(step: Step): TaskBuilder = this.modify(_.task.steps)(_ ++ List(step))
-
-  def stepsWithBuilders(stepBuilders: StepBuilder*): TaskBuilder = this.modify(_.task.steps)(_ ++ stepBuilders.map(_.step))
-
-  def steps(steps: Step*): TaskBuilder = this.modify(_.task.steps)(_ ++ steps)
+  def steps(step: Step, steps: Step*): TaskBuilder = this.modify(_.task.steps)(_ ++ (step +: steps))
 }
 
 case class StepBuilder(step: Step = Step()) {
@@ -98,8 +98,8 @@ case class StepBuilder(step: Step = Step()) {
   def path(path: String): StepBuilder =
     this.modify(_.step.options)(_ ++ Map(PATH -> path))
 
-  def partitionBy(partitionBy: String*): StepBuilder =
-    this.modify(_.step.options)(_ ++ Map(PARTITION_BY -> partitionBy.map(_.trim).mkString(",")))
+  def partitionBy(partitionBy: String, partitionsBy: String*): StepBuilder =
+    this.modify(_.step.options)(_ ++ Map(PARTITION_BY -> (partitionBy +: partitionsBy).map(_.trim).mkString(",")))
 
   def numPartitions(partitions: Int): StepBuilder =
     this.modify(_.step.options)(_ ++ Map(PARTITIONS -> partitions.toString))
@@ -133,6 +133,12 @@ case class StepBuilder(step: Step = Step()) {
 
   def schema(schema: Schema): StepBuilder =
     this.modify(_.step.schema).setTo(schema)
+
+  def schema(field: FieldBuilder, fields: FieldBuilder*): StepBuilder =
+    this.modify(_.step.schema).setTo(SchemaBuilder().addFields(field, fields: _*).schema)
+
+  def schema(field: Field, fields: Field*): StepBuilder =
+    this.modify(_.step.schema).setTo(SchemaBuilder().addFields(field, fields: _*).schema)
 }
 
 case class CountBuilder(count: Count = Count()) {
@@ -198,16 +204,16 @@ case class SchemaBuilder(schema: Schema = Schema()) {
   def addField(field: FieldBuilder): SchemaBuilder =
     addFields(field)
 
-  def addFieldsJava(fields: Field*): SchemaBuilder =
+  def addFields(field: Field, fields: Field*): SchemaBuilder =
     this.modify(_.schema.fields).setTo(schema.fields match {
-      case Some(value) => Some(value ++ fields)
-      case None => Some(fields.toList)
+      case Some(value) => Some(value ++ (field +: fields))
+      case None => Some((field +: fields).toList)
     })
 
-  def addFields(fields: FieldBuilder*): SchemaBuilder =
+  def addFields(field: FieldBuilder, fields: FieldBuilder*): SchemaBuilder =
     this.modify(_.schema.fields).setTo(schema.fields match {
-      case Some(value) => Some(value ++ fields.map(_.field))
-      case None => Some(fields.map(_.field).toList)
+      case Some(value) => Some(value ++ (field +: fields).map(_.field))
+      case None => Some((field +: fields).map(_.field).toList)
     })
 }
 
@@ -299,8 +305,8 @@ case class FieldBuilder(field: Field = Field()) {
   def minLength(length: Int): FieldBuilder =
     this.modify(_.field.generator).setTo(Some(getGenBuilder.minLength(length).generator))
 
-  def listMinLength(length: Int): FieldBuilder =
-    this.modify(_.field.generator).setTo(Some(getGenBuilder.listMinLength(length).generator))
+  def arrayMinLength(length: Int): FieldBuilder =
+    this.modify(_.field.generator).setTo(Some(getGenBuilder.arrayMinLength(length).generator))
 
   def max(max: Any): FieldBuilder =
     this.modify(_.field.generator).setTo(Some(getGenBuilder.max(max).generator))
@@ -308,8 +314,8 @@ case class FieldBuilder(field: Field = Field()) {
   def maxLength(length: Int): FieldBuilder =
     this.modify(_.field.generator).setTo(Some(getGenBuilder.maxLength(length).generator))
 
-  def listMaxLength(length: Int): FieldBuilder =
-    this.modify(_.field.generator).setTo(Some(getGenBuilder.listMaxLength(length).generator))
+  def arrayMaxLength(length: Int): FieldBuilder =
+    this.modify(_.field.generator).setTo(Some(getGenBuilder.arrayMaxLength(length).generator))
 
   def numericPrecision(precision: Int): FieldBuilder =
     this.modify(_.field.generator).setTo(Some(getGenBuilder.numericPrecision(precision).generator))
@@ -398,8 +404,8 @@ case class GeneratorBuilder(generator: Generator = Generator()) {
   def minLength(length: Int): GeneratorBuilder =
     this.modify(_.generator.options)(_ ++ Map(MINIMUM_LENGTH -> length.toString))
 
-  def listMinLength(length: Int): GeneratorBuilder =
-    this.modify(_.generator.options)(_ ++ Map(LIST_MINIMUM_LENGTH -> length.toString))
+  def arrayMinLength(length: Int): GeneratorBuilder =
+    this.modify(_.generator.options)(_ ++ Map(ARRAY_MINIMUM_LENGTH -> length.toString))
 
   def max(max: Any): GeneratorBuilder =
     this.modify(_.generator.options)(_ ++ Map(MAXIMUM -> max.toString))
@@ -407,8 +413,8 @@ case class GeneratorBuilder(generator: Generator = Generator()) {
   def maxLength(length: Int): GeneratorBuilder =
     this.modify(_.generator.options)(_ ++ Map(MAXIMUM_LENGTH -> length.toString))
 
-  def listMaxLength(length: Int): GeneratorBuilder =
-    this.modify(_.generator.options)(_ ++ Map(LIST_MAXIMUM_LENGTH -> length.toString))
+  def arrayMaxLength(length: Int): GeneratorBuilder =
+    this.modify(_.generator.options)(_ ++ Map(ARRAY_MAXIMUM_LENGTH -> length.toString))
 
   def numericPrecision(precision: Int): GeneratorBuilder =
     this.modify(_.generator.options)(_ ++ Map(NUMERIC_PRECISION -> precision.toString))

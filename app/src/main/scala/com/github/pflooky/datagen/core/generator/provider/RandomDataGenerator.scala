@@ -1,8 +1,9 @@
 package com.github.pflooky.datagen.core.generator.provider
 
-import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_VALUE, DISTINCT_COUNT, EXPRESSION, LIST_MAXIMUM_LENGTH, LIST_MINIMUM_LENGTH, MAXIMUM, MAXIMUM_LENGTH, MINIMUM, MINIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE, ROW_COUNT}
+import com.github.pflooky.datacaterer.api.model.Constants.{ARRAY_MAXIMUM_LENGTH, ARRAY_MINIMUM_LENGTH, DEFAULT_VALUE, DISTINCT_COUNT, EXPRESSION, MAXIMUM, MAXIMUM_LENGTH, MINIMUM, MINIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE, ROW_COUNT}
 import com.github.pflooky.datagen.core.exception.UnsupportedDataGeneratorType
 import com.github.pflooky.datagen.core.model.Constants._
+import com.github.pflooky.datagen.core.util.GeneratorUtil
 import net.datafaker.Faker
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
@@ -286,8 +287,8 @@ object RandomDataGenerator {
   }
 
   class RandomListDataGenerator[T](val structField: StructField, val dataType: DataType, val faker: Faker = new Faker()) extends ListDataGenerator[T] {
-    override lazy val listMinSize: Int = tryGetValue(structField.metadata, LIST_MINIMUM_LENGTH, 0)
-    override lazy val listMaxSize: Int = tryGetValue(structField.metadata, LIST_MAXIMUM_LENGTH, 5)
+    override lazy val listMinSize: Int = tryGetValue(structField.metadata, ARRAY_MINIMUM_LENGTH, 0)
+    override lazy val listMaxSize: Int = tryGetValue(structField.metadata, ARRAY_MAXIMUM_LENGTH, 5)
 
     override def elementGenerator: DataGenerator[T] = {
       dataType match {
@@ -328,7 +329,7 @@ object RandomDataGenerator {
           val listGenerator = new RandomListDataGenerator(structField, dt)
           listGenerator.generateSqlExpression
         case StructType(fields) =>
-          fields.map(getGeneratorForStructField(_))
+          fields.map(f => GeneratorUtil.getDataGenerator(f, faker))
             .map(f => s"'${f.structField.name}', ${f.generateSqlExpression}")
             .mkString(",")
         case _ =>

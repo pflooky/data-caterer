@@ -3,7 +3,8 @@ package com.github.pflooky.datacaterer.api.java.model.validation;
 import com.github.pflooky.datacaterer.api.model.ExpressionValidation;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class ValidationBuilderTest {
 

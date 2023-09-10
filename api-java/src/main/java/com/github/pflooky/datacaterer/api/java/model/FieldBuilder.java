@@ -4,10 +4,8 @@ import com.github.pflooky.datacaterer.api.java.SchemaBuilder;
 import com.github.pflooky.datacaterer.api.model.Constants;
 import com.github.pflooky.datacaterer.api.model.DataType;
 import com.github.pflooky.datacaterer.api.model.Field;
-import com.github.pflooky.datacaterer.api.model.Generator;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
@@ -132,8 +130,8 @@ public final class FieldBuilder {
         return new FieldBuilder(scalaDef.minLength(minLength));
     }
 
-    public FieldBuilder listMinLength(int minLength) {
-        return new FieldBuilder(scalaDef.listMinLength(minLength));
+    public FieldBuilder arrayMinLength(int minLength) {
+        return new FieldBuilder(scalaDef.arrayMinLength(minLength));
     }
 
     public FieldBuilder max(Object max) {
@@ -144,8 +142,8 @@ public final class FieldBuilder {
         return new FieldBuilder(scalaDef.maxLength(maxLength));
     }
 
-    public FieldBuilder listMaxLength(int maxLength) {
-        return new FieldBuilder(scalaDef.listMaxLength(maxLength));
+    public FieldBuilder arrayMaxLength(int maxLength) {
+        return new FieldBuilder(scalaDef.arrayMaxLength(maxLength));
     }
 
     public FieldBuilder numericPrecision(int precision) {

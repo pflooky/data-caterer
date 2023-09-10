@@ -3,7 +3,9 @@ package com.github.pflooky.datacaterer.api.java.model;
 import com.github.pflooky.datacaterer.api.model.Constants;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class TaskBuilderTest {
 
@@ -11,14 +13,14 @@ public class TaskBuilderTest {
     public void canCreateTaskWithDefaults() {
         var result = new TaskBuilder().task();
 
-        assertEquals(Constants.DEFAULT_TASK_NAME(), result.name());
+        assertFalse(result.name().isEmpty());
         assertTrue(result.steps().isEmpty());
     }
 
     @Test
     public void canCreateTaskWithStep() {
         var result = new TaskBuilder().name("my_task")
-                .step(new StepBuilder().path("/my/json"))
+                .steps(new StepBuilder().path("/my/json"))
                 .task();
 
         assertEquals("my_task", result.name());

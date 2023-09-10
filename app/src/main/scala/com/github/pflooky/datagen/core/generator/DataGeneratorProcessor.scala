@@ -70,13 +70,18 @@ class DataGeneratorProcessor(dataCatererConfiguration: DataCatererConfiguration)
       summaryWithTask.foreach(t => LOGGER.debug(s"Enabled task details: ${t._2.toTaskDetailString}"))
     }
     val stepNames = summaryWithTask.map(t => s"task=${t._2.name}, num-steps=${t._2.steps.size}, steps=${t._2.steps.map(_.name).mkString(",")}").mkString("||")
-    LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=$stepNames")
-    val generationResult = batchDataProcessor.splitAndProcess(plan, summaryWithTask, faker)
 
-    val optValidationResults = if (flagsConfig.enableValidation) Some(validationProcessor.executeValidations) else None
+    if (summaryWithTask.isEmpty) {
+      LOGGER.warn("No tasks found or no tasks enabled. No data will be generated")
+    } else {
+      LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=$stepNames")
+      val generationResult = batchDataProcessor.splitAndProcess(plan, summaryWithTask, faker)
 
-    if (flagsConfig.enableSaveReports) {
-      dataGenerationResultWriter.writeResult(plan, generationResult, optValidationResults, sparkRecordListener)
+      val optValidationResults = if (flagsConfig.enableValidation) Some(validationProcessor.executeValidations) else None
+
+      if (flagsConfig.enableSaveReports) {
+        dataGenerationResultWriter.writeResult(plan, generationResult, optValidationResults, sparkRecordListener)
+      }
     }
   }
 

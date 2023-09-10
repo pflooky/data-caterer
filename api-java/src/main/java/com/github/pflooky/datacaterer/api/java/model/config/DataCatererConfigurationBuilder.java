@@ -277,7 +277,7 @@ public final class DataCatererConfigurationBuilder {
     }
 
 
-    public DataCatererConfigurationBuilder enableGenerate(boolean enable) {
+    public DataCatererConfigurationBuilder enableGenerateData(boolean enable) {
         return new DataCatererConfigurationBuilder(scalaDef.enableGenerateData(enable));
     }
 

@@ -10,6 +10,7 @@ class PlanFileNotFoundException(filePath: String) extends RuntimeException {
 class TaskFolderNotDirectoryException(folderPath: String) extends RuntimeException {
   override def getMessage: String = s"Task folder defined is not a directory. Define in application.conf under task-folder-path or via env var TASK_FOLDER_PATH, task-folder-path: $folderPath"
 }
+
 class TaskParseException(taskFileName: String, throwable: Throwable) extends RuntimeException(throwable) {
   override def getMessage: String = s"Failed to parse task from file, task-file-name: $taskFileName"
 }

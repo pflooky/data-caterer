@@ -4,11 +4,10 @@ import com.github.pflooky.datacaterer.api.model.Constants;
 import org.junit.Test;
 
 import java.sql.Date;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class GeneratorBuilderTest {
 
@@ -225,12 +224,12 @@ public class GeneratorBuilderTest {
     }
 
     @Test
-    public void canCreateGeneratorListMinLength() {
-        var result = new GeneratorBuilder().listMinLength(1).generator();
+    public void canCreateGeneratorArrayMinLength() {
+        var result = new GeneratorBuilder().arrayMinLength(1).generator();
 
         assertEquals(1, result.options().size());
-        assertTrue(result.options().contains(Constants.LIST_MINIMUM_LENGTH()));
-        assertTrue(result.options().get(Constants.LIST_MINIMUM_LENGTH()).contains("1"));
+        assertTrue(result.options().contains(Constants.ARRAY_MINIMUM_LENGTH()));
+        assertTrue(result.options().get(Constants.ARRAY_MINIMUM_LENGTH()).contains("1"));
     }
 
     @Test
@@ -252,12 +251,12 @@ public class GeneratorBuilderTest {
     }
 
     @Test
-    public void canCreateGeneratorListMaxLength() {
-        var result = new GeneratorBuilder().listMaxLength(1).generator();
+    public void canCreateGeneratorArrayMaxLength() {
+        var result = new GeneratorBuilder().arrayMaxLength(1).generator();
 
         assertEquals(1, result.options().size());
-        assertTrue(result.options().contains(Constants.LIST_MAXIMUM_LENGTH()));
-        assertTrue(result.options().get(Constants.LIST_MAXIMUM_LENGTH()).contains("1"));
+        assertTrue(result.options().contains(Constants.ARRAY_MAXIMUM_LENGTH()));
+        assertTrue(result.options().get(Constants.ARRAY_MAXIMUM_LENGTH()).contains("1"));
     }
 
     @Test

@@ -13,7 +13,7 @@ public class TaskSummaryBuilderTest {
     public void canCreateTaskSummaryWithDefaults() {
         var result = new TaskSummaryBuilder().taskSummary();
 
-        assertEquals(Constants.DEFAULT_TASK_NAME(), result.taskSummary().name());
+        assertFalse(result.taskSummary().name().isEmpty());
         assertEquals(Constants.DEFAULT_DATA_SOURCE_NAME(), result.taskSummary().dataSourceName());
         assertTrue(result.taskSummary().enabled());
         assertTrue(result.task().isEmpty());

@@ -5,7 +5,6 @@ import com.github.pflooky.datacaterer.api.model.DataType;
 import com.github.pflooky.datacaterer.api.model.Schema;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -31,12 +30,9 @@ public final class SchemaBuilder {
         return new SchemaBuilder(scalaDef.addField(name, type));
     }
 
-    public SchemaBuilder addField(FieldBuilder fieldBuilder) {
-        return new SchemaBuilder(scalaDef.addFieldsJava(toScalaSeq(List.of(fieldBuilder.field()))));
-    }
-
-    public SchemaBuilder addFields(FieldBuilder... fieldBuilders) {
-        return new SchemaBuilder(scalaDef.addFieldsJava(
+    public SchemaBuilder addFields(FieldBuilder fieldBuilder, FieldBuilder... fieldBuilders) {
+        return new SchemaBuilder(scalaDef.addFields(
+                fieldBuilder.field(),
                 toScalaSeq(Arrays.stream(fieldBuilders).map(FieldBuilder::field).collect(Collectors.toList()))
         ));
     }

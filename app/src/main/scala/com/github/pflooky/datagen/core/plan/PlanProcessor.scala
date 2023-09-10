@@ -9,7 +9,7 @@ import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceM
 import com.github.pflooky.datagen.core.util.SparkProvider
 import org.apache.spark.sql.SparkSession
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 
 object PlanProcessor {
 
@@ -17,6 +17,7 @@ object PlanProcessor {
     val optPlanClass = getPlanClass
     optPlanClass.map(Class.forName)
       .map(cls => {
+        cls.getDeclaredConstructor().newInstance()
         val tryScalaPlan = Try(cls.getDeclaredConstructor().newInstance().asInstanceOf[PlanRun])
         val tryJavaPlan = Try(cls.getDeclaredConstructor().newInstance().asInstanceOf[com.github.pflooky.datacaterer.api.java.PlanRun])
         (tryScalaPlan, tryJavaPlan) match {

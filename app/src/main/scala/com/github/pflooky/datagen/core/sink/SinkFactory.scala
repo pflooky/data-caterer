@@ -25,7 +25,7 @@ class SinkFactory(
 
   def pushToSink(df: DataFrame, dataSourceName: String, step: Step, flagsConfig: FlagsConfig, startTime: LocalDateTime): SinkResult = {
     if (!connectionConfigs.contains(dataSourceName)) {
-      //throw new RuntimeException(s"Cannot find sink connection details in application config for data source, data-source-name=$dataSourceName, step-name=${step.name}")
+      //      throw new RuntimeException(s"Cannot find sink connection details in application config for data source, data-source-name=$dataSourceName, step-name=${step.name}")
     }
     val connectionConfig = connectionConfigs.getOrElse(dataSourceName, Map(FORMAT -> step.`type`))
     val saveMode = connectionConfig.get(SAVE_MODE).map(_.toLowerCase.capitalize).map(SaveMode.valueOf).getOrElse(SaveMode.Append)

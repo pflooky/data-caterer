@@ -1,7 +1,6 @@
 package com.github.pflooky.datagen.core.generator.result
 
 import com.github.pflooky.datacaterer.api.model.Constants.HISTOGRAM
-import com.github.pflooky.datacaterer.api.model.generator.BaseGenerator
 import com.github.pflooky.datacaterer.api.model.{ExpressionValidation, FlagsConfig, Generator, Plan, Step}
 import com.github.pflooky.datagen.core.listener.{SparkRecordListener, SparkTaskRecordSummary}
 import com.github.pflooky.datagen.core.model.PlanImplicits.CountOps
@@ -47,11 +46,7 @@ class ResultHtmlWriter {
           {DateTime.now()}
         </div>
         <h1>Data Caterer Summary</h1>
-        <h2>Flags</h2>{flagsSummary(flagsConfig)}
-        <h2>Plan</h2>{planSummary(plan, stepResultSummary, taskResultSummary, dataSourceResultSummary)}
-        <h2>Tasks</h2>{tasksSummary(taskResultSummary)}
-        <h2>Validations</h2>{validationSummary(optValidationResults)}
-        <h2>Output Rows Per Second</h2>{createLineGraph("outputRowsPerSecond", sparkRecordListener.outputRows.toList)}
+        <h2>Flags</h2>{flagsSummary(flagsConfig)}<h2>Plan</h2>{planSummary(plan, stepResultSummary, taskResultSummary, dataSourceResultSummary)}<h2>Tasks</h2>{tasksSummary(taskResultSummary)}<h2>Validations</h2>{validationSummary(optValidationResults)}<h2>Output Rows Per Second</h2>{createLineGraph("outputRowsPerSecond", sparkRecordListener.outputRows.toList)}
       </body>
     </html>
   }
@@ -545,7 +540,9 @@ class ResultHtmlWriter {
         val validationLink = s"validations.html#${validationConfRes.name}"
         <tr>
           <td>
-            <a href={validationLink}>{validationConfRes.name}</a>
+            <a href={validationLink}>
+              {validationConfRes.name}
+            </a>
           </td>
           <td>
             {validationConfRes.description}
@@ -584,7 +581,7 @@ class ResultHtmlWriter {
       <div>
         <p>No data found</p>
       </div>
-      <p></p>
+        <p></p>
     }
   }
 
@@ -592,27 +589,27 @@ class ResultHtmlWriter {
     val xValuesStr = s"[${xValues.mkString(",")}]"
     val yValuesStr = s"[${yValues.mkString(",")}]"
     <canvas id={name} style="width:100%;max-width:700px"></canvas>
-    <script type="text/javascript">
-      {xml.Unparsed(
-      s"""new Chart($name, {
-         |    type: "line",
-         |    data: {
-         |      labels: $xValuesStr,
-         |      datasets: [{
-         |        backgroundColor: "rgba(0,0,255,1.0)",
-         |        borderColor: "rgba(0,0,255,0.1)",
-         |        data: $yValuesStr
-         |      }]
-         |    },
-         |    options: {
-         |      legend: {display: false},
-         |      scales: {
-         |        yAxes: [{ticks: {min: $minY, max: $maxY}}],
-         |      }
-         |    }
-         |  });
-         |""".stripMargin)}
-    </script>
+      <script type="text/javascript">
+        {xml.Unparsed(
+        s"""new Chart($name, {
+           |    type: "line",
+           |    data: {
+           |      labels: $xValuesStr,
+           |      datasets: [{
+           |        backgroundColor: "rgba(0,0,255,1.0)",
+           |        borderColor: "rgba(0,0,255,0.1)",
+           |        data: $yValuesStr
+           |      }]
+           |    },
+           |    options: {
+           |      legend: {display: false},
+           |      scales: {
+           |        yAxes: [{ticks: {min: $minY, max: $maxY}}],
+           |      }
+           |    }
+           |  });
+           |""".stripMargin)}
+      </script>
   }
 
   private def checkMark(isSuccess: Boolean): NodeSeq = if (isSuccess) xml.EntityRef("#9989") else xml.EntityRef("#10060")

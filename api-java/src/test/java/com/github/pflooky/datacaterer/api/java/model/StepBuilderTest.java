@@ -9,7 +9,9 @@ import org.junit.Test;
 import java.util.Map;
 import java.util.Objects;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class StepBuilderTest {
 
@@ -17,7 +19,7 @@ public class StepBuilderTest {
     public void canCreateStepWithDefaults() {
         var result = new StepBuilder().step();
 
-        assertEquals(Constants.DEFAULT_STEP_NAME(), result.name());
+        assertFalse(result.name().isEmpty());
         assertEquals(Constants.DEFAULT_STEP_TYPE(), result.type());
         assertTrue(result.count().total().contains(Constants.DEFAULT_COUNT_TOTAL()));
         assertTrue(result.count().generator().isEmpty());

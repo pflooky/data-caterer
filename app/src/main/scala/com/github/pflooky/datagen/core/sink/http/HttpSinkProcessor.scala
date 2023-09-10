@@ -23,6 +23,7 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] {
   var http: Http = Http.default
 
   override def createConnections(connectionConfig: Map[String, String], step: Step): SinkProcessor[_] = this
+
   override def createConnection(connectionConfig: Map[String, String], step: Step): Unit = {}
 
   def createConnections(connectionConfig: Map[String, String], step: Step, http: Http): SinkProcessor[_] = {

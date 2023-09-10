@@ -55,7 +55,7 @@ object ProtobufUtil {
   }
 
   private def getDataTypeForField(fieldDescriptor: FieldDescriptorProto): DataType = {
-//    val nonProtoField = FieldDescriptor.Type.valueOf(fieldDescriptor.getType)
+    //    val nonProtoField = FieldDescriptor.Type.valueOf(fieldDescriptor.getType)
     FieldDescriptor.Type.valueOf(fieldDescriptor.getType).getJavaType match {
       case JavaType.BOOLEAN => DataTypes.BooleanType
       case JavaType.INT => DataTypes.IntegerType

@@ -28,14 +28,14 @@ public final class TasksBuilder {
         return scalaDef;
     }
 
-    public TasksBuilder addTasks(String dataSourceName, TaskBuilder... tasks) {
-        return new TasksBuilder(scalaDef.addTasks(dataSourceName,
+    public TasksBuilder addTasks(String dataSourceName, TaskBuilder task, TaskBuilder... tasks) {
+        return new TasksBuilder(scalaDef.addTasks(dataSourceName, task.task(),
                 toScalaSeq(Arrays.stream(tasks).map(TaskBuilder::task).collect(Collectors.toList()))
         ));
     }
 
-    public TasksBuilder addTask(String name, String dataSourceName, StepBuilder... steps) {
-        return new TasksBuilder(scalaDef.addTask(name, dataSourceName,
+    public TasksBuilder addTask(String name, String dataSourceName, StepBuilder step, StepBuilder... steps) {
+        return new TasksBuilder(scalaDef.addTask(name, dataSourceName, step.step(),
                 toScalaList(Arrays.stream(steps).map(StepBuilder::step).collect(Collectors.toList()))
         ));
     }

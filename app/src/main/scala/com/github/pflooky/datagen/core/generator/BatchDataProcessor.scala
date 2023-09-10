@@ -76,7 +76,7 @@ class BatchDataProcessor(connectionConfigsByName: Map[String, Map[String, String
       val sinkResult = sinkFactory.pushToSink(df._2, dataSourceName, step, flagsConfig, startTime)
 
       if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION) && flagsConfig.enableRecordTracking) {
-        val format = connectionConfigsByName.get(dataSourceName).map(_(FORMAT)).getOrElse(step.`type`)
+        val format = connectionConfigsByName.get(dataSourceName).map(_ (FORMAT)).getOrElse(step.`type`)
         recordTrackingProcessor.trackRecords(df._2, dataSourceName, format, step)
       } else if (applicationType.equalsIgnoreCase(BASIC_APPLICATION) && flagsConfig.enableRecordTracking) {
         LOGGER.warn(s"Please upgrade from the free plan to paid plan to enable record tracking. More details here: $DATA_CATERER_SITE_PRICING")

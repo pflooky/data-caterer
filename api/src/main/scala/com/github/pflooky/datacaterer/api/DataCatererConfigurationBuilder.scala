@@ -1,5 +1,6 @@
 package com.github.pflooky.datacaterer.api
 
+import com.github.pflooky.datacaterer.api.connection.{CassandraBuilder, ConnectionTaskBuilder, FileBuilder, HttpBuilder, JdbcBuilder, KafkaBuilder, SolaceBuilder}
 import com.github.pflooky.datacaterer.api.model.Constants._
 import com.github.pflooky.datacaterer.api.model.DataCatererConfiguration
 import com.softwaremill.quicklens.ModifyPimp
@@ -40,27 +41,27 @@ case class DataCatererConfigurationBuilder(build: DataCatererConfiguration = Dat
 
   def postgres(
                 name: String,
-                url: String = "jdbc:postgresql://postgresserver:5432/customer",
-                username: String = "postgres",
-                password: String = "postgres",
+                url: String = DEFAULT_POSTGRES_URL,
+                username: String = DEFAULT_POSTGRES_USERNAME,
+                password: String = DEFAULT_POSTGRES_PASSWORD,
                 options: Map[String, String] = Map()
               ): DataCatererConfigurationBuilder =
     addConnection(name, JDBC, url, username, password, options ++ Map(DRIVER -> POSTGRES_DRIVER))
 
   def mysql(
              name: String,
-             url: String = "jdbc:mysql://mysqlserver:3306/customer",
-             username: String = "root",
-             password: String = "root",
+             url: String = DEFAULT_MYSQL_URL,
+             username: String = DEFAULT_MYSQL_USERNAME,
+             password: String = DEFAULT_MYSQL_PASSWORD,
              options: Map[String, String] = Map()
            ): DataCatererConfigurationBuilder =
     addConnection(name, JDBC, url, username, password, options ++ Map(DRIVER -> MYSQL_DRIVER))
 
   def cassandra(
                  name: String,
-                 url: String = "cassandraserver:9042",
-                 username: String = "cassandra",
-                 password: String = "cassandra",
+                 url: String = DEFAULT_CASSANDRA_URL,
+                 username: String = DEFAULT_CASSANDRA_USERNAME,
+                 password: String = DEFAULT_CASSANDRA_PASSWORD,
                  options: Map[String, String] = Map()
                ): DataCatererConfigurationBuilder = {
     val sptUrl = url.split(":")
@@ -79,10 +80,10 @@ case class DataCatererConfigurationBuilder(build: DataCatererConfiguration = Dat
 
   def solace(
               name: String,
-              url: String = "smf://solaceserver:55554",
-              username: String = "admin",
-              password: String = "admin",
-              vpnName: String = "default",
+              url: String = DEFAULT_SOLACE_URL,
+              username: String = DEFAULT_SOLACE_USERNAME,
+              password: String = DEFAULT_SOLACE_PASSWORD,
+              vpnName: String = DEFAULT_SOLACE_VPN_NAME,
               connectionFactory: String = DEFAULT_SOLACE_CONNECTION_FACTORY,
               initialContextFactory: String = DEFAULT_SOLACE_INITIAL_CONTEXT_FACTORY,
               options: Map[String, String] = Map()
@@ -93,7 +94,7 @@ case class DataCatererConfigurationBuilder(build: DataCatererConfiguration = Dat
       JMS_INITIAL_CONTEXT_FACTORY -> initialContextFactory,
     ) ++ options)
 
-  def kafka(name: String, url: String = "kafkaserver:9092", options: Map[String, String] = Map()): DataCatererConfigurationBuilder = {
+  def kafka(name: String, url: String = DEFAULT_KAFKA_URL, options: Map[String, String] = Map()): DataCatererConfigurationBuilder = {
     addConnectionConfig(name, KAFKA, Map(
       "kafka.bootstrap.servers" -> url,
     ) ++ options)
@@ -186,3 +187,79 @@ case class DataCatererConfigurationBuilder(build: DataCatererConfiguration = Dat
   def numRecordsPerStep(numRecords: Long): DataCatererConfigurationBuilder =
     this.modify(_.build.generationConfig.numRecordsPerStep).setTo(Some(numRecords))
 }
+
+case class ConnectionConfigWithTaskBuilder(
+                                            dataSourceName: String = DEFAULT_DATA_SOURCE_NAME,
+                                            options: Map[String, String] = Map()
+                                          ) {
+
+  def file(name: String, format: String, path: String = "", options: Map[String, String] = Map()): FileBuilder = {
+    val configBuilder = DataCatererConfigurationBuilder()
+    val fileConnectionConfig = format match {
+      case CSV => configBuilder.csv(name, path, options)
+      case JSON => configBuilder.json(name, path, options)
+      case ORC => configBuilder.orc(name, path, options)
+      case PARQUET => configBuilder.parquet(name, path, options)
+    }
+    setConnectionConfig(name, fileConnectionConfig, FileBuilder())
+  }
+
+  def jdbc(
+            name: String,
+            `type`: String,
+            url: String,
+            username: String,
+            password: String,
+            options: Map[String, String] = Map()
+          ): JdbcBuilder = {
+    val configBuilder = DataCatererConfigurationBuilder()
+    val fileConnectionConfig = `type` match {
+      case POSTGRES => configBuilder.postgres(name, url, username, password, options)
+      case MYSQL => configBuilder.mysql(name, url, username, password, options)
+    }
+    setConnectionConfig(name, fileConnectionConfig, JdbcBuilder())
+  }
+
+  def cassandra(
+                 name: String,
+                 url: String,
+                 username: String,
+                 password: String,
+                 options: Map[String, String] = Map()
+               ): CassandraBuilder = {
+    val configBuilder = DataCatererConfigurationBuilder().cassandra(name, url, username, password, options)
+    setConnectionConfig(name, configBuilder, CassandraBuilder())
+  }
+
+  def solace(
+              name: String,
+              url: String,
+              username: String,
+              password: String,
+              vpnName: String,
+              connectionFactory: String,
+              initialContextFactory: String,
+              options: Map[String, String] = Map()
+            ): SolaceBuilder = {
+    val configBuilder = DataCatererConfigurationBuilder().solace(name, url, username, password, vpnName, connectionFactory, initialContextFactory, options)
+    setConnectionConfig(name, configBuilder, SolaceBuilder())
+  }
+
+  def kafka(name: String, url: String, options: Map[String, String] = Map()): KafkaBuilder = {
+    val configBuilder = DataCatererConfigurationBuilder().kafka(name, url, options)
+    setConnectionConfig(name, configBuilder, KafkaBuilder())
+  }
+
+  def http(name: String, username: String, password: String, options: Map[String, String] = Map()): HttpBuilder = {
+    val configBuilder = DataCatererConfigurationBuilder().http(name, username, password, options)
+    setConnectionConfig(name, configBuilder, HttpBuilder())
+  }
+
+  private def setConnectionConfig[T <: ConnectionTaskBuilder](name: String, configBuilder: DataCatererConfigurationBuilder, connectionBuilder: T): T = {
+    val modifiedConnectionConfig = this.modify(_.dataSourceName).setTo(name)
+      .modify(_.options).setTo(configBuilder.build.connectionConfigByName(name))
+    connectionBuilder.connectionConfigWithTaskBuilder = modifiedConnectionConfig
+    connectionBuilder
+  }
+}
+

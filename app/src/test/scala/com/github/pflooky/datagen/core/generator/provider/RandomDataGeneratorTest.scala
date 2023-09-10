@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.provider
 
-import com.github.pflooky.datacaterer.api.model.Constants.{ENABLED_EDGE_CASE, ENABLED_NULL, EXPRESSION, IS_UNIQUE, LIST_MINIMUM_LENGTH, MAXIMUM, MINIMUM, PROBABILITY_OF_EDGE_CASE, PROBABILITY_OF_NULL}
+import com.github.pflooky.datacaterer.api.model.Constants.{ARRAY_MINIMUM_LENGTH, ENABLED_EDGE_CASE, ENABLED_NULL, EXPRESSION, IS_UNIQUE, MAXIMUM, MINIMUM, PROBABILITY_OF_EDGE_CASE, PROBABILITY_OF_NULL}
 import com.github.pflooky.datagen.core.generator.provider.RandomDataGenerator._
 import org.apache.spark.sql.types._
 import org.junit.runner.RunWith
@@ -235,7 +235,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
   }
 
   test("Can create random list of string generator") {
-    val metadata = new MetadataBuilder().putString(LIST_MINIMUM_LENGTH, "1").build()
+    val metadata = new MetadataBuilder().putString(ARRAY_MINIMUM_LENGTH, "1").build()
     val listGenerator = new RandomListDataGenerator[String](StructField("random_list", ArrayType(StringType), false, metadata), StringType)
     val sampleData = listGenerator.generate
 
@@ -243,7 +243,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
   }
 
   test("Can create random list of struct type generator") {
-    val metadata = new MetadataBuilder().putString(LIST_MINIMUM_LENGTH, "1").build()
+    val metadata = new MetadataBuilder().putString(ARRAY_MINIMUM_LENGTH, "1").build()
     val innerStruct = StructType(Seq(StructField("random_acc", StringType), StructField("random_num", IntegerType)))
     val listGenerator = new RandomListDataGenerator[StructType](StructField("random_list", ArrayType(innerStruct), false, metadata), new StructType())
     val sampleData = listGenerator.generate

@@ -32,11 +32,11 @@ case class ValidationConfigurationBuilder(validationConfiguration: ValidationCon
     addValidations(dataSourceName, options, WaitConditionBuilder().pause(0), validation, validations: _*)
 
   def addValidationsJava(
-                      dataSourceName: String,
-                      options: Map[String, String],
-                      validation: Validation,
-                      validations: Validation*
-                    ): ValidationConfigurationBuilder =
+                          dataSourceName: String,
+                          options: Map[String, String],
+                          validation: Validation,
+                          validations: Validation*
+                        ): ValidationConfigurationBuilder =
     addValidationsJava(dataSourceName, options, WaitConditionBuilder().pause(0).waitCondition, validation, validations: _*)
 
   def addValidations(
@@ -49,12 +49,12 @@ case class ValidationConfigurationBuilder(validationConfiguration: ValidationCon
     addValidationsJava(dataSourceName, options, waitCondition.waitCondition, validationBuilder.validation, validationBuilders.map(_.validation): _*)
 
   def addValidationsJava(
-                      dataSourceName: String,
-                      options: Map[String, String],
-                      waitCondition: WaitCondition,
-                      validation: Validation,
-                      validations: Validation*
-                    ): ValidationConfigurationBuilder =
+                          dataSourceName: String,
+                          options: Map[String, String],
+                          waitCondition: WaitCondition,
+                          validation: Validation,
+                          validations: Validation*
+                        ): ValidationConfigurationBuilder =
     this.modify(_.validationConfiguration.dataSources)(_ ++ Map(dataSourceName -> addValidationsToDataSource(dataSourceName, options, waitCondition, validation +: validations)))
 
   private def addValidationsToDataSource(

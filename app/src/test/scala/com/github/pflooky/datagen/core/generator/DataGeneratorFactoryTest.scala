@@ -1,6 +1,5 @@
 package com.github.pflooky.datagen.core.generator
 
-import com.github.pflooky.datacaterer.api.model.generator.BaseGenerator
 import com.github.pflooky.datacaterer.api.model.{Count, Field, Generator, PerColumnCount, Schema, Step}
 import com.github.pflooky.datagen.core.util.{Account, SparkSuite}
 import net.datafaker.Faker

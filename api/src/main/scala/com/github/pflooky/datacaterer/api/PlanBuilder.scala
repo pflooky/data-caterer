@@ -1,66 +1,7 @@
 package com.github.pflooky.datacaterer.api
 
-import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, ForeignKeyRelation, Plan, SinkOptions, Task, TaskSummary, ValidationConfiguration}
+import com.github.pflooky.datacaterer.api.model.{ForeignKeyRelation, Plan, SinkOptions}
 import com.softwaremill.quicklens.ModifyPimp
-
-
-trait PlanRun {
-  var _plan: Plan = Plan()
-  var _tasks: List[Task] = List()
-  var _configuration: DataCatererConfiguration = DataCatererConfiguration()
-  var _validations: List[ValidationConfiguration] = List()
-
-  def plan: PlanBuilder = PlanBuilder()
-
-  def taskSummary: TaskSummaryBuilder = TaskSummaryBuilder()
-
-  def tasks: TasksBuilder = TasksBuilder()
-
-  def task: TaskBuilder = TaskBuilder()
-
-  def step: StepBuilder = StepBuilder()
-
-  def schema: SchemaBuilder = SchemaBuilder()
-
-  def field: FieldBuilder = FieldBuilder()
-
-  def generator: GeneratorBuilder = GeneratorBuilder()
-
-  def count: CountBuilder = CountBuilder()
-
-  def configuration: DataCatererConfigurationBuilder = DataCatererConfigurationBuilder()
-
-  def validation: ValidationBuilder = ValidationBuilder()
-
-  def dataSourceValidation: DataSourceValidationBuilder = DataSourceValidationBuilder()
-
-  def validationConfig: ValidationConfigurationBuilder = ValidationConfigurationBuilder()
-
-  def foreignField(dataSource: String, step: String, column: String): ForeignKeyRelation = ForeignKeyRelation(dataSource, step, column)
-
-  def execute(tasks: TasksBuilder): Unit = execute(List(tasks))
-
-  def execute(planBuilder: PlanBuilder, configuration: DataCatererConfigurationBuilder): Unit = {
-    execute(planBuilder.tasks, planBuilder, configuration)
-  }
-
-  def execute(
-               tasks: List[TasksBuilder] = List(),
-               plan: PlanBuilder = PlanBuilder(),
-               configuration: DataCatererConfigurationBuilder = DataCatererConfigurationBuilder(),
-               validations: List[ValidationConfigurationBuilder] = List()
-             ): Unit = {
-    val taskToDataSource = tasks.flatMap(x => x.tasks.map(t => (t.name, x.dataSourceName, t)))
-    val planWithTaskToDataSource = plan.taskSummaries(taskToDataSource.map(t => taskSummary.name(t._1).dataSource(t._2)): _*)
-
-    _plan = planWithTaskToDataSource.plan
-    _tasks = taskToDataSource.map(_._3)
-    _configuration = configuration.build
-    _validations = validations.map(_.validationConfiguration)
-  }
-}
-
-class BasePlanRun extends PlanRun
 
 case class PlanBuilder(plan: Plan = Plan(), tasks: List[TasksBuilder] = List()) {
 
