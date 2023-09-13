@@ -13,6 +13,7 @@ ARG APP_VERSION=0.1
 ARG APP_TYPE=basic
 COPY --chown=app:app app/build/libs/datacaterer-${APP_TYPE}-${APP_VERSION}.jar /opt/app/job.jar
 COPY --chown=app:app api/build/libs/datacaterer-api-${APP_VERSION}.jar /opt/spark/jars/datacaterer-api-${APP_VERSION}.jar
+COPY --chown=app:app api-java/build/libs/datacaterer-api-java-${APP_VERSION}.jar /opt/spark/jars/datacaterer-api-java-${APP_VERSION}.jar
 RUN chmod 755 -R /opt/app
 
 RUN mkdir -p /opt/app/data-caterer/sample/json
