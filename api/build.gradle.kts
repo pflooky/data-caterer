@@ -16,6 +16,7 @@ plugins {
     scala
     `java-library`
     `maven-publish`
+//    signing
 
     id("org.scoverage") version "8.0.3"
     id("com.github.johnrengelman.shadow") version "8.1.1"
@@ -77,6 +78,11 @@ sourceSets {
     }
 }
 
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
 tasks.shadowJar {
     archiveBaseName.set("datacaterer")
     archiveAppendix.set("api")
@@ -96,18 +102,18 @@ configure<ScoverageExtension> {
 publishing {
     repositories {
         maven {
-            name = "OSSRH"
-            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-            credentials {
-                username = System.getenv("MAVEN_USERNAME")
-                password = System.getenv("MAVEN_PASSWORD")
-            }
-//            name = "GitHubPackages"
-//            url = uri("https://maven.pkg.github.com/pflooky/data-caterer")
+//            name = "OSSRH"
+//            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
 //            credentials {
-//                username = "pflooky"
-//                password = System.getenv("PACKAGE_TOKEN")
+//                username = System.getenv("MAVEN_USERNAME")
+//                password = System.getenv("MAVEN_PASSWORD")
 //            }
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/pflooky/data-caterer")
+            credentials {
+                username = "pflooky"
+                password = System.getenv("PACKAGE_TOKEN")
+            }
         }
     }
     publications {
@@ -119,6 +125,10 @@ publishing {
                 name.set("Data Caterer API - Scala")
                 description.set("API for discovering, generating and validating data using Data Caterer")
                 url.set("https://pflooky.github.io/data-caterer-docs/")
+//                scm {
+//                    url.set("https://github.com/pflooky/data-caterer-example")
+//                    developerConnection.set("git@github.com:pflooky/data-caterer-example.git")
+//                }
                 developers {
                     developer {
                         id.set("pflooky")
@@ -130,3 +140,10 @@ publishing {
         }
     }
 }
+
+//signing {
+//    val signingKey: String? by project
+//    val signingPassword: String? by project
+//    useInMemoryPgpKeys(signingKey, signingPassword)
+//    sign(publishing.publications["mavenScala"])
+//}

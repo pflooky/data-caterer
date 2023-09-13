@@ -9,7 +9,7 @@ object Constants {
   lazy val ADVANCED_APPLICATION = "advanced"
 
   //base config
-  lazy val SPARK_MASTER = "spark.master"
+  lazy val RUNTIME_MASTER = "runtime.master"
 
   //spark data options
   lazy val DEFAULT_HTTP_METHOD = "GET"

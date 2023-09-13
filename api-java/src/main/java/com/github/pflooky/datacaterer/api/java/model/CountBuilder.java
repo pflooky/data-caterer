@@ -19,7 +19,7 @@ public final class CountBuilder {
     public CountBuilder() {
         this.scalaDef = new com.github.pflooky.datacaterer.api.CountBuilder(
                 new Count(
-                        toScalaOption(Optional.of(Constants.DEFAULT_COUNT_TOTAL())),
+                        toScalaOption(Optional.of(Constants.DEFAULT_COUNT_RECORDS())),
                         toScalaOption(Optional.empty()),
                         toScalaOption(Optional.empty())
                 )
@@ -30,8 +30,8 @@ public final class CountBuilder {
         return scalaDef.count();
     }
 
-    public CountBuilder total(long total) {
-        return new CountBuilder(scalaDef.total(total));
+    public CountBuilder records(long records) {
+        return new CountBuilder(scalaDef.records(records));
     }
 
     public CountBuilder generator(GeneratorBuilder generatorBuilder) {
@@ -46,15 +46,15 @@ public final class CountBuilder {
         return new CountBuilder(scalaDef.columns(col, toScalaSeq(Arrays.asList(cols))));
     }
 
-    public CountBuilder perColumnTotal(long total, String col, String... cols) {
-        return new CountBuilder(scalaDef.perColumnTotal(total, col, toScalaSeq(Arrays.asList(cols))));
+    public CountBuilder recordsPerColumn(long total, String col, String... cols) {
+        return new CountBuilder(scalaDef.recordsPerColumn(total, col, toScalaSeq(Arrays.asList(cols))));
     }
 
     public CountBuilder perColumnGenerator(GeneratorBuilder generatorBuilder, String col, String... cols) {
         return new CountBuilder(scalaDef.perColumnGenerator(generatorBuilder.generator(), col, toScalaSeq(Arrays.asList(cols))));
     }
 
-    public CountBuilder perColumnGeneratorWithTotal(long total, GeneratorBuilder generatorBuilder, String col, String... cols) {
-        return new CountBuilder(scalaDef.perColumnGenerator(total, generatorBuilder.generator(), col, toScalaSeq(Arrays.asList(cols))));
+    public CountBuilder recordsPerColumnGenerator(long records, GeneratorBuilder generatorBuilder, String col, String... cols) {
+        return new CountBuilder(scalaDef.perColumnGenerator(records, generatorBuilder.generator(), col, toScalaSeq(Arrays.asList(cols))));
     }
 }

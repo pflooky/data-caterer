@@ -64,21 +64,21 @@ public final class DataCatererConfigurationBuilder {
                         ),
                         toScalaMap(Collections.emptyMap()),
                         toScalaMap(Collections.emptyMap()),
-                        Constants.DEFAULT_SPARK_MASTER()
+                        Constants.DEFAULT_MASTER()
                 )
         );
     }
 
-    public DataCatererConfigurationBuilder sparkMaster(String master) {
-        return new DataCatererConfigurationBuilder(scalaDef.sparkMaster(master));
+    public DataCatererConfigurationBuilder master(String master) {
+        return new DataCatererConfigurationBuilder(scalaDef.master(master));
     }
 
-    public DataCatererConfigurationBuilder sparkConfig(Map<String, String> config) {
-        return new DataCatererConfigurationBuilder(scalaDef.sparkConfig(toScalaMap(config)));
+    public DataCatererConfigurationBuilder runtimeConfig(Map<String, String> config) {
+        return new DataCatererConfigurationBuilder(scalaDef.runtimeConfig(toScalaMap(config)));
     }
 
-    public DataCatererConfigurationBuilder addSparkConfig(String key, String value) {
-        return new DataCatererConfigurationBuilder(scalaDef.addSparkConfig(toScalaTuple(key, value)));
+    public DataCatererConfigurationBuilder addRuntimeConfig(String key, String value) {
+        return new DataCatererConfigurationBuilder(scalaDef.addRuntimeConfig(toScalaTuple(key, value)));
     }
 
     private DataCatererConfigurationBuilder connectionConfig(Map<String, Map<String, String>> connectionConfigByName) {

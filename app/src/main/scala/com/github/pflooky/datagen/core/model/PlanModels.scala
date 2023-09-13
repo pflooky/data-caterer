@@ -113,13 +113,13 @@ object PlanImplicits {
 
   implicit class CountOps(count: Count) {
     def numRecordsString: String = {
-      if (count.total.isDefined && count.perColumn.isDefined && count.perColumn.get.count.isDefined && count.perColumn.get.generator.isEmpty) {
-        val records = count.total.get * count.perColumn.get.count.get
+      if (count.records.isDefined && count.perColumn.isDefined && count.perColumn.get.count.isDefined && count.perColumn.get.generator.isEmpty) {
+        val records = count.records.get * count.perColumn.get.count.get
         s"per-column-count: columns=${count.perColumn.get.columnNames.mkString(",")}, num-records=${records.toString}"
       } else if (count.perColumn.isDefined && count.perColumn.get.generator.isDefined) {
         s"per-column-count: columns=${count.perColumn.get.columnNames.mkString(",")}, num-records-via-generator=(${count.perColumn.get.generator.get.toString})"
-      } else if (count.total.isDefined) {
-        s"basic-count: num-records=${count.total.get.toString}"
+      } else if (count.records.isDefined) {
+        s"basic-count: num-records=${count.records.get.toString}"
       } else if (count.generator.isDefined) {
         s"generated-count: num-records=${count.generator.toString}"
       } else {
@@ -129,7 +129,7 @@ object PlanImplicits {
     }
 
     def numRecords: Long = {
-      (count.total, count.generator, count.perColumn, count.perColumn.flatMap(_.generator)) match {
+      (count.records, count.generator, count.perColumn, count.perColumn.flatMap(_.generator)) match {
         case (Some(t), None, Some(perCol), Some(_)) =>
           perCol.averageCountPerColumn * t
         case (Some(t), None, Some(perCol), None) =>

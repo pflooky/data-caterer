@@ -35,7 +35,7 @@ public class DataSourceValidationBuilderTest {
     @Test
     public void canCreateDataSourceValidationWithValidation() {
         var result = new DataSourceValidationBuilder()
-                .addValidation(new ValidationBuilder())
+                .validations(new ValidationBuilder())
                 .dataSourceValidation();
 
         assertEquals(1, result.validations().size());
@@ -44,7 +44,7 @@ public class DataSourceValidationBuilderTest {
     @Test
     public void canCreateDataSourceValidationWithValidations() {
         var result = new DataSourceValidationBuilder()
-                .addValidation(new ValidationBuilder())
+                .validations(new ValidationBuilder())
                 .validations(
                         new ValidationBuilder().expr("amount < 0"),
                         new ValidationBuilder().expr("name != 'Peter'").errorThreshold(1)

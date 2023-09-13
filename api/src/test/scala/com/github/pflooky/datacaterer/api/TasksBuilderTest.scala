@@ -40,9 +40,9 @@ class TasksBuilderTest extends AnyFunSuite {
   }
 
   test("Can create simple count") {
-    val result = CountBuilder().total(20).count
+    val result = CountBuilder().records(20).count
 
-    assert(result.total.contains(20))
+    assert(result.records.contains(20))
     assert(result.perColumn.isEmpty)
     assert(result.generator.isEmpty)
   }
@@ -50,11 +50,11 @@ class TasksBuilderTest extends AnyFunSuite {
   test("Can create per column count") {
     val result = CountBuilder()
       .perColumn(PerColumnCountBuilder()
-        .total(20, "account_id")
+        .records(20, "account_id")
       )
       .count
 
-    assert(result.total.contains(1000))
+    assert(result.records.contains(1000))
     assert(result.perColumn.isDefined)
     assert(result.perColumn.get.count.contains(20))
     assert(result.perColumn.get.columnNames == List("account_id"))
@@ -71,7 +71,7 @@ class TasksBuilderTest extends AnyFunSuite {
         )
       ).count
 
-    assert(result.total.contains(1000))
+    assert(result.records.contains(1000))
     assert(result.perColumn.isDefined)
     assert(result.perColumn.get.count.contains(10))
     assert(result.perColumn.get.columnNames == List("account_id"))

@@ -2,9 +2,9 @@ package com.github.pflooky.datacaterer.api.connection
 
 import com.github.pflooky.datacaterer.api.model.Constants.FORMAT
 import com.github.pflooky.datacaterer.api.model.{Count, Field, Schema, Step, Task}
-import com.github.pflooky.datacaterer.api.{ConnectionConfigWithTaskBuilder, CountBuilder, FieldBuilder, GeneratorBuilder, SchemaBuilder, StepBuilder, TaskBuilder, TasksBuilder}
+import com.github.pflooky.datacaterer.api.{ConnectionConfigWithTaskBuilder, CountBuilder, FieldBuilder, GeneratorBuilder, SchemaBuilder, StepBuilder, TaskBuilder, TasksBuilder, ValidationBuilder}
 
-abstract class ConnectionTaskBuilder {
+abstract class ConnectionTaskBuilder[T] {
   var connectionConfigWithTaskBuilder: ConnectionConfigWithTaskBuilder = ConnectionConfigWithTaskBuilder()
   var task: Option[TaskBuilder] = None
   var step: Option[StepBuilder] = None
@@ -12,71 +12,77 @@ abstract class ConnectionTaskBuilder {
   def apply(builder: ConnectionConfigWithTaskBuilder, optTask: Option[Task], optStep: Option[Step]) = {
     this.connectionConfigWithTaskBuilder = builder
     this.task = optTask.map(TaskBuilder)
-    this.step = optStep.map(StepBuilder)
+    this.step = optStep.map(s => StepBuilder(s))
   }
 
-  def schema(field: FieldBuilder, fields: FieldBuilder*): ConnectionTaskBuilder = {
+  def fromBaseConfig(connectionTaskBuilder: ConnectionTaskBuilder[T]): T
+
+  def schema(field: FieldBuilder, fields: FieldBuilder*): ConnectionTaskBuilder[T] = {
     this.step = Some(getStep.schema(field, fields: _*))
     this
   }
 
-  def schema(field: Field, fields: Field*): ConnectionTaskBuilder = {
+  def schema(field: Field, fields: Field*): ConnectionTaskBuilder[T] = {
     this.step = Some(getStep.schema(field, fields: _*))
     this
   }
 
-  def schema(schemaBuilder: SchemaBuilder): ConnectionTaskBuilder = {
+  def schema(schemaBuilder: SchemaBuilder): ConnectionTaskBuilder[T] = {
     this.step = Some(getStep.schema(schemaBuilder))
     this
   }
 
-  def schema(schema: Schema): ConnectionTaskBuilder = {
+  def schema(schema: Schema): ConnectionTaskBuilder[T] = {
     this.step = Some(getStep.schema(schema))
     this
   }
 
-  def count(countBuilder: CountBuilder): ConnectionTaskBuilder = {
+  def count(countBuilder: CountBuilder): ConnectionTaskBuilder[T] = {
     this.step = Some(getStep.count(countBuilder))
     this
   }
 
-  def count(generatorBuilder: GeneratorBuilder): ConnectionTaskBuilder = {
+  def count(generatorBuilder: GeneratorBuilder): ConnectionTaskBuilder[T] = {
     this.step = Some(getStep.count(generatorBuilder))
     this
   }
 
-  def count(count: Count): ConnectionTaskBuilder = {
+  def count(count: Count): ConnectionTaskBuilder[T] = {
     this.step = Some(getStep.count(count))
     this
   }
 
-  def numPartitions(numPartitions: Int): ConnectionTaskBuilder = {
+  def numPartitions(numPartitions: Int): ConnectionTaskBuilder[T] = {
     this.step = Some(getStep.numPartitions(numPartitions))
     this
   }
 
-  def task(taskBuilder: TaskBuilder): ConnectionTaskBuilder = {
+  def validations(validationBuilder: ValidationBuilder, validationBuilders: ValidationBuilder*): ConnectionTaskBuilder[T] = {
+    this.step = Some(getStep.validations(validationBuilder, validationBuilders: _*))
+    this
+  }
+
+  def task(taskBuilder: TaskBuilder): ConnectionTaskBuilder[T] = {
     this.task = Some(taskBuilder)
     this
   }
 
-  def task(task: Task): ConnectionTaskBuilder = {
+  def task(task: Task): ConnectionTaskBuilder[T] = {
     this.task = Some(TaskBuilder(task))
     this
   }
 
-  def toTasksBuilder: TasksBuilder = {
+  def toTasksBuilder: Option[TasksBuilder] = {
     val dataSourceName = connectionConfigWithTaskBuilder.dataSourceName
     val format = connectionConfigWithTaskBuilder.options(FORMAT)
-    val baseTask = (task, step) match {
-      case (Some(task), Some(step)) => task.steps(step.`type`(format))
-      case (Some(task), None) => task
-      case (None, Some(step)) => TaskBuilder().steps(step.`type`(format))
-      case _ =>
-        throw new RuntimeException(s"Need to define at least 1 task or step to execute for connection, data-source-name=$dataSourceName")
+    val optBaseTask = (task, step) match {
+      case (Some(task), Some(step)) => Some(task.steps(step.`type`(format)))
+      case (Some(task), None) => Some(task)
+      case (None, Some(step)) => Some(TaskBuilder().steps(step.`type`(format)))
+      case _ => None
     }
 
-    TasksBuilder().addTasks(dataSourceName, baseTask)
+    optBaseTask.map(TasksBuilder().addTasks(dataSourceName, _))
   }
 
   protected def getStep: StepBuilder = step match {
@@ -90,7 +96,11 @@ abstract class ConnectionTaskBuilder {
   }
 }
 
-case class FileBuilder() extends ConnectionTaskBuilder {
+case class FileBuilder() extends ConnectionTaskBuilder[FileBuilder] {
+  override def fromBaseConfig(connectionTaskBuilder: ConnectionTaskBuilder[FileBuilder]): FileBuilder = {
+    this.connectionConfigWithTaskBuilder = connectionTaskBuilder.connectionConfigWithTaskBuilder
+    this
+  }
 
   def partitionBy(partitionBy: String, partitionsBy: String*): FileBuilder = {
     this.step = Some(getStep.partitionBy(partitionBy, partitionsBy: _*))
@@ -98,21 +108,38 @@ case class FileBuilder() extends ConnectionTaskBuilder {
   }
 }
 
-case class JdbcBuilder() extends ConnectionTaskBuilder {
+trait JdbcBuilder[T] extends ConnectionTaskBuilder[T] {
 
-  def table(table: String): JdbcBuilder = {
+  def table(table: String): JdbcBuilder[T] = {
     this.step = Some(getStep.jdbcTable(table))
     this
   }
 
-  def table(schema: String, table: String): JdbcBuilder = {
+  def table(schema: String, table: String): JdbcBuilder[T] = {
     this.step = Some(getStep.jdbcTable(schema, table))
     this
   }
-
 }
 
-case class CassandraBuilder() extends ConnectionTaskBuilder {
+case class PostgresBuilder() extends JdbcBuilder[PostgresBuilder] {
+  override def fromBaseConfig(connectionTaskBuilder: ConnectionTaskBuilder[PostgresBuilder]): PostgresBuilder = {
+    this.connectionConfigWithTaskBuilder = connectionTaskBuilder.connectionConfigWithTaskBuilder
+    this
+  }
+}
+
+case class MySqlBuilder() extends JdbcBuilder[MySqlBuilder] {
+  override def fromBaseConfig(connectionTaskBuilder: ConnectionTaskBuilder[MySqlBuilder]): MySqlBuilder = {
+    this.connectionConfigWithTaskBuilder = connectionTaskBuilder.connectionConfigWithTaskBuilder
+    this
+  }
+}
+
+case class CassandraBuilder() extends ConnectionTaskBuilder[CassandraBuilder] {
+  override def fromBaseConfig(connectionTaskBuilder: ConnectionTaskBuilder[CassandraBuilder]): CassandraBuilder = {
+    this.connectionConfigWithTaskBuilder = connectionTaskBuilder.connectionConfigWithTaskBuilder
+    this
+  }
 
   def table(keyspace: String, table: String): CassandraBuilder = {
     this.step = Some(getStep.cassandraTable(keyspace, table))
@@ -121,7 +148,11 @@ case class CassandraBuilder() extends ConnectionTaskBuilder {
 
 }
 
-case class SolaceBuilder() extends ConnectionTaskBuilder {
+case class SolaceBuilder() extends ConnectionTaskBuilder[SolaceBuilder] {
+  override def fromBaseConfig(connectionTaskBuilder: ConnectionTaskBuilder[SolaceBuilder]): SolaceBuilder = {
+    this.connectionConfigWithTaskBuilder = connectionTaskBuilder.connectionConfigWithTaskBuilder
+    this
+  }
 
   def destination(destination: String): SolaceBuilder = {
     this.step = Some(getStep.jmsDestination(destination))
@@ -130,7 +161,11 @@ case class SolaceBuilder() extends ConnectionTaskBuilder {
 
 }
 
-case class KafkaBuilder() extends ConnectionTaskBuilder {
+case class KafkaBuilder() extends ConnectionTaskBuilder[KafkaBuilder] {
+  override def fromBaseConfig(connectionTaskBuilder: ConnectionTaskBuilder[KafkaBuilder]): KafkaBuilder = {
+    this.connectionConfigWithTaskBuilder = connectionTaskBuilder.connectionConfigWithTaskBuilder
+    this
+  }
 
   def topic(topic: String): KafkaBuilder = {
     this.step = Some(getStep.kafkaTopic(topic))
@@ -139,4 +174,9 @@ case class KafkaBuilder() extends ConnectionTaskBuilder {
 
 }
 
-case class HttpBuilder() extends ConnectionTaskBuilder
+case class HttpBuilder() extends ConnectionTaskBuilder[HttpBuilder] {
+  override def fromBaseConfig(connectionTaskBuilder: ConnectionTaskBuilder[HttpBuilder]): HttpBuilder = {
+    this.connectionConfigWithTaskBuilder = connectionTaskBuilder.connectionConfigWithTaskBuilder
+    this
+  }
+}

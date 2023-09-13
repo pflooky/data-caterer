@@ -3,7 +3,7 @@ steps:
   - name: "balances"
     type: "postgres"
     count:
-      total: 50
+      records: 50
     options:
       dbtable: "account.balances"
     schema:

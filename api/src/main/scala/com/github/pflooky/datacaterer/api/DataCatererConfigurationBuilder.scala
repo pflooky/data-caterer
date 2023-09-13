@@ -1,19 +1,19 @@
 package com.github.pflooky.datacaterer.api
 
-import com.github.pflooky.datacaterer.api.connection.{CassandraBuilder, ConnectionTaskBuilder, FileBuilder, HttpBuilder, JdbcBuilder, KafkaBuilder, SolaceBuilder}
+import com.github.pflooky.datacaterer.api.connection.{CassandraBuilder, ConnectionTaskBuilder, FileBuilder, HttpBuilder, KafkaBuilder, MySqlBuilder, PostgresBuilder, SolaceBuilder}
 import com.github.pflooky.datacaterer.api.model.Constants._
 import com.github.pflooky.datacaterer.api.model.DataCatererConfiguration
 import com.softwaremill.quicklens.ModifyPimp
 
 case class DataCatererConfigurationBuilder(build: DataCatererConfiguration = DataCatererConfiguration()) {
-  def sparkMaster(master: String): DataCatererConfigurationBuilder =
-    this.modify(_.build.sparkMaster).setTo(master)
+  def master(master: String): DataCatererConfigurationBuilder =
+    this.modify(_.build.master).setTo(master)
 
-  def sparkConfig(conf: Map[String, String]): DataCatererConfigurationBuilder =
-    this.modify(_.build.sparkConfig)(_ ++ conf)
+  def runtimeConfig(conf: Map[String, String]): DataCatererConfigurationBuilder =
+    this.modify(_.build.runtimeConfig)(_ ++ conf)
 
-  def addSparkConfig(conf: (String, String)): DataCatererConfigurationBuilder =
-    this.modify(_.build.sparkConfig)(_ ++ Map(conf))
+  def addRuntimeConfig(conf: (String, String)): DataCatererConfigurationBuilder =
+    this.modify(_.build.runtimeConfig)(_ ++ Map(conf))
 
 
   def connectionConfig(connectionConfigByName: Map[String, Map[String, String]]): DataCatererConfigurationBuilder =
@@ -188,10 +188,10 @@ case class DataCatererConfigurationBuilder(build: DataCatererConfiguration = Dat
     this.modify(_.build.generationConfig.numRecordsPerStep).setTo(Some(numRecords))
 }
 
-case class ConnectionConfigWithTaskBuilder(
-                                            dataSourceName: String = DEFAULT_DATA_SOURCE_NAME,
-                                            options: Map[String, String] = Map()
-                                          ) {
+final case class ConnectionConfigWithTaskBuilder(
+                                                  dataSourceName: String = DEFAULT_DATA_SOURCE_NAME,
+                                                  options: Map[String, String] = Map()
+                                                ) {
 
   def file(name: String, format: String, path: String = "", options: Map[String, String] = Map()): FileBuilder = {
     val configBuilder = DataCatererConfigurationBuilder()
@@ -204,20 +204,26 @@ case class ConnectionConfigWithTaskBuilder(
     setConnectionConfig(name, fileConnectionConfig, FileBuilder())
   }
 
-  def jdbc(
+  def postgres(
             name: String,
-            `type`: String,
             url: String,
             username: String,
             password: String,
             options: Map[String, String] = Map()
-          ): JdbcBuilder = {
-    val configBuilder = DataCatererConfigurationBuilder()
-    val fileConnectionConfig = `type` match {
-      case POSTGRES => configBuilder.postgres(name, url, username, password, options)
-      case MYSQL => configBuilder.mysql(name, url, username, password, options)
-    }
-    setConnectionConfig(name, fileConnectionConfig, JdbcBuilder())
+          ): PostgresBuilder = {
+    val configBuilder = DataCatererConfigurationBuilder().postgres(name, url, username, password, options)
+    setConnectionConfig(name, configBuilder, PostgresBuilder())
+  }
+
+  def mySql(
+            name: String,
+            url: String,
+            username: String,
+            password: String,
+            options: Map[String, String] = Map()
+          ): MySqlBuilder = {
+    val configBuilder = DataCatererConfigurationBuilder().mysql(name, url, username, password, options)
+    setConnectionConfig(name, configBuilder, MySqlBuilder())
   }
 
   def cassandra(
@@ -255,7 +261,11 @@ case class ConnectionConfigWithTaskBuilder(
     setConnectionConfig(name, configBuilder, HttpBuilder())
   }
 
-  private def setConnectionConfig[T <: ConnectionTaskBuilder](name: String, configBuilder: DataCatererConfigurationBuilder, connectionBuilder: T): T = {
+  def options(options: Map[String, String]): ConnectionConfigWithTaskBuilder = {
+    this.modify(_.options)(_ ++ options)
+  }
+
+  private def setConnectionConfig[T <: ConnectionTaskBuilder[_]](name: String, configBuilder: DataCatererConfigurationBuilder, connectionBuilder: T): T = {
     val modifiedConnectionConfig = this.modify(_.dataSourceName).setTo(name)
       .modify(_.options).setTo(configBuilder.build.connectionConfigByName(name))
     connectionBuilder.connectionConfigWithTaskBuilder = modifiedConnectionConfig

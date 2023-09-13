@@ -1,7 +1,7 @@
 package com.github.pflooky.datacaterer.api.model
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_COUNT_TOTAL, DEFAULT_DATA_SOURCE_NAME, DEFAULT_FIELD_NAME, DEFAULT_FIELD_NULLABLE, DEFAULT_FIELD_TYPE, DEFAULT_FOREIGN_KEY_COLUMN, DEFAULT_GENERATOR_TYPE, DEFAULT_PER_COLUMN_COUNT_TOTAL, DEFAULT_STEP_ENABLED, DEFAULT_STEP_NAME, DEFAULT_STEP_TYPE, DEFAULT_TASK_NAME, DEFAULT_TASK_SUMMARY_ENABLE}
+import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_COUNT_RECORDS, DEFAULT_DATA_SOURCE_NAME, DEFAULT_FIELD_NAME, DEFAULT_FIELD_NULLABLE, DEFAULT_FIELD_TYPE, DEFAULT_FOREIGN_KEY_COLUMN, DEFAULT_GENERATOR_TYPE, DEFAULT_PER_COLUMN_COUNT_RECORDS, DEFAULT_STEP_ENABLED, DEFAULT_STEP_NAME, DEFAULT_STEP_TYPE, DEFAULT_TASK_NAME, DEFAULT_TASK_SUMMARY_ENABLE}
 
 import scala.language.implicitConversions
 
@@ -48,14 +48,14 @@ case class Step(
                )
 
 case class Count(
-                  @JsonDeserialize(contentAs = classOf[java.lang.Long]) total: Option[Long] = Some(DEFAULT_COUNT_TOTAL),
+                  @JsonDeserialize(contentAs = classOf[java.lang.Long]) records: Option[Long] = Some(DEFAULT_COUNT_RECORDS),
                   perColumn: Option[PerColumnCount] = None,
                   generator: Option[Generator] = None
                 )
 
 case class PerColumnCount(
                            columnNames: List[String] = List(),
-                           @JsonDeserialize(contentAs = classOf[java.lang.Long]) count: Option[Long] = Some(DEFAULT_PER_COLUMN_COUNT_TOTAL),
+                           @JsonDeserialize(contentAs = classOf[java.lang.Long]) count: Option[Long] = Some(DEFAULT_PER_COLUMN_COUNT_RECORDS),
                            generator: Option[Generator] = None
                          )
 

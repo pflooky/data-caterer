@@ -3,8 +3,9 @@ package com.github.pflooky.datacaterer.api.java.model.config;
 import com.github.pflooky.datacaterer.api.java.model.config.connection.CassandraBuilder;
 import com.github.pflooky.datacaterer.api.java.model.config.connection.FileBuilder;
 import com.github.pflooky.datacaterer.api.java.model.config.connection.HttpBuilder;
-import com.github.pflooky.datacaterer.api.java.model.config.connection.JdbcBuilder;
 import com.github.pflooky.datacaterer.api.java.model.config.connection.KafkaBuilder;
+import com.github.pflooky.datacaterer.api.java.model.config.connection.MySqlBuilder;
+import com.github.pflooky.datacaterer.api.java.model.config.connection.PostgresBuilder;
 import com.github.pflooky.datacaterer.api.java.model.config.connection.SolaceBuilder;
 import com.github.pflooky.datacaterer.api.model.Constants;
 
@@ -40,15 +41,24 @@ public final class ConnectionConfigWithTaskBuilder {
         return new FileBuilder(scalaDef.file(name, format, path, toScalaMap(options)));
     }
 
-    public JdbcBuilder jdbc(
+    public PostgresBuilder postgres(
             String name,
-            String type,
             String url,
             String username,
             String password,
             Map<String, String> options
     ) {
-        return new JdbcBuilder(scalaDef.jdbc(name, type, url, username, password, toScalaMap(options)));
+        return new PostgresBuilder(scalaDef.postgres(name, url, username, password, toScalaMap(options)));
+    }
+
+    public MySqlBuilder mysql(
+            String name,
+            String url,
+            String username,
+            String password,
+            Map<String, String> options
+    ) {
+        return new MySqlBuilder(scalaDef.mySql(name, url, username, password, toScalaMap(options)));
     }
 
     public CassandraBuilder cassandra(

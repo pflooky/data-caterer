@@ -1,15 +1,18 @@
 package com.github.pflooky.datacaterer.api.java.model;
 
 import com.github.pflooky.datacaterer.api.java.SchemaBuilder;
+import com.github.pflooky.datacaterer.api.java.model.validation.ValidationBuilder;
 import com.github.pflooky.datacaterer.api.model.Constants;
 import com.github.pflooky.datacaterer.api.model.Step;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.github.pflooky.datacaterer.api.converter.Converters.toScalaMap;
+import static com.github.pflooky.datacaterer.api.converter.Converters.toScalaOption;
 import static com.github.pflooky.datacaterer.api.converter.Converters.toScalaSeq;
 import static com.github.pflooky.datacaterer.api.converter.Converters.toScalaTuple;
 
@@ -39,6 +42,7 @@ public final class StepBuilder {
      * options: empty<br>
      * schema: empty<br>
      * enabled: true<br>
+     * validations: empty<br>
      */
     public StepBuilder() {
         this.scalaDef = new com.github.pflooky.datacaterer.api.StepBuilder(
@@ -49,7 +53,8 @@ public final class StepBuilder {
                         toScalaMap(Collections.emptyMap()),
                         new SchemaBuilder().schema(),
                         Constants.DEFAULT_STEP_ENABLED()
-                )
+                ),
+                toScalaOption(Optional.empty())
         );
     }
 
@@ -233,15 +238,15 @@ public final class StepBuilder {
     }
 
     /**
-     * Define total number of records to be generated.
+     * Define number of records to be generated.
      * If you also have defined a per column count, this value will not represent the full number of records generated.
      *
-     * @param total Total number of records to generate
+     * @param records Number of records to generate
      * @return StepBuilder
      * @see <a href=https://pflooky.github.io/data-caterer-docs/setup/generator/count/>Count definition</a> for details
      */
-    public StepBuilder count(long total) {
-        return new StepBuilder(scalaDef.count(total));
+    public StepBuilder count(long records) {
+        return new StepBuilder(scalaDef.count(records));
     }
 
     /**
@@ -292,5 +297,19 @@ public final class StepBuilder {
      */
     public StepBuilder schema(FieldBuilder field, FieldBuilder... fields) {
         return new StepBuilder(scalaDef.schema(field.field(), toScalaSeq(Arrays.stream(fields).map(FieldBuilder::field).collect(Collectors.toList()))));
+    }
+
+    /**
+     * Define data validations once data has been generated. The result of the validations is logged out and included
+     * as part of the HTML report.
+     * @param validationBuilder First validation
+     * @param validationBuilders Other validations
+     * @return StepBuilder
+     */
+    public StepBuilder validations(ValidationBuilder validationBuilder, ValidationBuilder... validationBuilders) {
+        return new StepBuilder(scalaDef.validations(
+                validationBuilder.validation(),
+                toScalaSeq(Arrays.stream(validationBuilders).map(ValidationBuilder::validation).collect(Collectors.toList()))
+        ));
     }
 }

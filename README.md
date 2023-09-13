@@ -95,7 +95,7 @@ steps:
     type: "postgres"
     count:
       #Number of records to generate
-      total: 10
+      records: 10
     #Define any Spark options to pass when pushing data
     options:
       dbtable: "account.accounts"

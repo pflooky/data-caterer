@@ -1,5 +1,6 @@
 package com.github.pflooky.datacaterer.api
 
+import com.github.pflooky.datacaterer.api.connection.ConnectionTaskBuilder
 import com.github.pflooky.datacaterer.api.model.{ForeignKeyRelation, Plan, SinkOptions}
 import com.softwaremill.quicklens.ModifyPimp
 
@@ -36,6 +37,27 @@ case class PlanBuilder(plan: Plan = Plan(), tasks: List[TasksBuilder] = List()) 
 
   def addForeignKeyRelationship(foreignKey: ForeignKeyRelation, relations: List[ForeignKeyRelation]): PlanBuilder =
     this.modify(_.plan.sinkOptions).setTo(Some(getSinkOpt.foreignKey(foreignKey, relations).sinkOptions))
+
+  def addForeignKeyRelationship(connectionTaskBuilder: ConnectionTaskBuilder[_], column: String,
+                                relations: List[(ConnectionTaskBuilder[_], String)]): PlanBuilder = {
+    val baseRelation = toForeignKeyRelation(connectionTaskBuilder, column)
+    val otherRelations = relations.map(r => toForeignKeyRelation(r._1, r._2))
+    this.modify(_.plan.sinkOptions).setTo(Some(getSinkOpt.foreignKey(baseRelation, otherRelations).sinkOptions))
+  }
+
+  private def toForeignKeyRelation(connectionTaskBuilder: ConnectionTaskBuilder[_], column: String) = {
+    val dataSource = connectionTaskBuilder.connectionConfigWithTaskBuilder.dataSourceName
+    connectionTaskBuilder.step match {
+      case Some(value) =>
+        val hasColumn = value.step.schema.fields.getOrElse(List()).exists(f => f.name == column)
+        if (!hasColumn) {
+          throw new RuntimeException(s"Column name defined in foreign key relationship does not exist, data-source=$dataSource, column-name=$column")
+        }
+        ForeignKeyRelation(dataSource, value.step.name, column)
+      case None =>
+        throw new RuntimeException(s"Not schema defined for data source. Cannot create foreign key relationship, data-source=$dataSource, column-name=$column")
+    }
+  }
 
   private def getSinkOpt: SinkOptionsBuilder = {
     plan.sinkOptions match {

@@ -3,7 +3,7 @@ steps:
   - name: "file_account"
     type: "json"
     count:
-      total: 1000
+      records: 1000
     options:
       path: "src/test/resources/sample/data/generated/json/account-gen"
     schema:

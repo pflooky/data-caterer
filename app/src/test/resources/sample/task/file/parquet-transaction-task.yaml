@@ -5,7 +5,7 @@ steps:
     options:
       path: "app/src/test/resources/sample/parquet/transactions"
     count:
-      total: 1000
+      records: 1000
       perColumn:
         columnNames:
           - "account_id"

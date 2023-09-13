@@ -40,7 +40,7 @@ public class PerColumnCountBuilder {
         this.scalaDef = new com.github.pflooky.datacaterer.api.PerColumnCountBuilder(
                 new PerColumnCount(
                         toScalaList(Collections.emptyList()),
-                        toScalaOption(Optional.of(Constants.DEFAULT_PER_COLUMN_COUNT_TOTAL())),
+                        toScalaOption(Optional.of(Constants.DEFAULT_PER_COLUMN_COUNT_RECORDS())),
                         toScalaOption(Optional.empty())
                 )
         );
@@ -64,7 +64,7 @@ public class PerColumnCountBuilder {
      * @return PerColumnCountBuilder
      */
     public PerColumnCountBuilder total(long total, String col, String... cols) {
-        return new PerColumnCountBuilder(scalaDef.total(total, col, toScalaSeq(Arrays.asList(cols))));
+        return new PerColumnCountBuilder(scalaDef.records(total, col, toScalaSeq(Arrays.asList(cols))));
     }
 
     /**

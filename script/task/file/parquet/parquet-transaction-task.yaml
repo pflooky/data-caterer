@@ -5,7 +5,7 @@ steps:
     options:
       path: "/opt/app/data-caterer/sample/parquet/transaction-gen"
     count:
-      total: 50
+      records: 50
       perColumn:
         columnNames:
           - "account_id"

@@ -120,8 +120,8 @@ object Constants {
   lazy val DEFAULT_NUM_RECORDS_PER_BATCH = 100000
 
   //spark defaults
-  lazy val DEFAULT_SPARK_MASTER = "local[*]"
-  lazy val DEFAULT_SPARK_CONFIG = java.util.Map.of(
+  lazy val DEFAULT_MASTER = "local[*]"
+  lazy val DEFAULT_RUNTIME_CONFIG = java.util.Map.of(
     "spark.sql.cbo.enabled", "true",
     "spark.sql.adaptive.enabled", "true",
     "spark.sql.cbo.planStats.enabled", "true",
@@ -183,8 +183,8 @@ object Constants {
   lazy val DEFAULT_GENERATOR_TYPE = "random"
 
   //count defaults
-  lazy val DEFAULT_COUNT_TOTAL = 1000L
-  lazy val DEFAULT_PER_COLUMN_COUNT_TOTAL = 10L
+  lazy val DEFAULT_COUNT_RECORDS = 1000L
+  lazy val DEFAULT_PER_COLUMN_COUNT_RECORDS = 10L
 
   //validation defaults
   lazy val DEFAULT_VALIDATION_CONFIG_NAME = "default_validation"

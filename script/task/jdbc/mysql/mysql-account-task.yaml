@@ -3,7 +3,7 @@ steps:
   - name: "accounts"
     type: "mysql"
     count:
-      total: 50
+      records: 50
     options:
       dbtable: "account.accounts"
     schema:

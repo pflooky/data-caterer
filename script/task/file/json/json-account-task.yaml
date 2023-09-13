@@ -3,7 +3,7 @@ steps:
   - name: "account"
     type: "json"
     count:
-      total: 50
+      records: 50
     options:
       path: "/opt/app/data-caterer/sample/json/account-gen"
     schema:

@@ -21,4 +21,4 @@ RUN chown -R app:app /opt/app/data-caterer/sample/json
 USER app
 ENV APPLICATION_CONFIG_PATH=/opt/app/application.conf
 
-ENTRYPOINT ["/opt/app/run-spark.sh"]
+ENTRYPOINT ["/opt/app/run-data-caterer.sh"]

@@ -3,7 +3,7 @@ steps:
   - name: "transactions"
     type: "postgres"
     count:
-      total: 10000
+      records: 10000
       perColumn:
         columnNames:
           - "account_number"

@@ -44,7 +44,7 @@ object RecordCountUtil {
           .map(c => {
             LOGGER.debug(s"Step count total is defined in generation config, overriding count total defined in step, " +
               s"task-name=${task.name}, step-name=${step.name}, records-per-step=$c")
-            step.count.copy(total = Some(c))
+            step.count.copy(records = Some(c))
           })
           .getOrElse(step.count)
         (stepName, stepCount.numRecords)

@@ -13,6 +13,7 @@ val scalaSpecificVersion: String by project
 plugins {
     java
     `maven-publish`
+//    signing
 
     id("com.github.johnrengelman.shadow") version "8.1.1"
 }
@@ -53,6 +54,11 @@ sourceSets {
     }
 }
 
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
 tasks.shadowJar {
     archiveBaseName.set("datacaterer")
     archiveAppendix.set("api-java")
@@ -64,18 +70,18 @@ tasks.shadowJar {
 publishing {
     repositories {
         maven {
-            name = "OSSRH"
-            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-            credentials {
-                username = System.getenv("MAVEN_USERNAME")
-                password = System.getenv("MAVEN_PASSWORD")
-            }
-//            name = "GitHubPackages"
-//            url = uri("https://maven.pkg.github.com/pflooky/data-caterer")
+//            name = "OSSRH"
+//            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
 //            credentials {
-//                username = "pflooky"
-//                password = System.getenv("PACKAGE_TOKEN")
+//                username = System.getenv("MAVEN_USERNAME")
+//                password = System.getenv("MAVEN_PASSWORD")
 //            }
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/pflooky/data-caterer")
+            credentials {
+                username = "pflooky"
+                password = System.getenv("PACKAGE_TOKEN")
+            }
         }
     }
     publications {
@@ -98,3 +104,10 @@ publishing {
         }
     }
 }
+
+//signing {
+//    val signingKey: String? by project
+//    val signingPassword: String? by project
+//    useInMemoryPgpKeys(signingKey, signingPassword)
+//    sign(publishing.publications["mavenJava"])
+//}

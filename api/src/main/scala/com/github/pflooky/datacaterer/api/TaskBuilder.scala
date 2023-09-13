@@ -1,7 +1,7 @@
 package com.github.pflooky.datacaterer.api
 
 import com.github.pflooky.datacaterer.api.model.Constants._
-import com.github.pflooky.datacaterer.api.model.{Count, DataType, Field, Generator, PerColumnCount, Schema, Step, StringType, Task, TaskSummary}
+import com.github.pflooky.datacaterer.api.model.{Count, DataType, Field, Generator, PerColumnCount, Schema, Step, StringType, Task, TaskSummary, Validation}
 import com.softwaremill.quicklens.ModifyPimp
 
 case class TaskSummaryBuilder(
@@ -63,7 +63,7 @@ case class TaskBuilder(task: Task = Task()) {
   def steps(step: Step, steps: Step*): TaskBuilder = this.modify(_.task.steps)(_ ++ (step +: steps))
 }
 
-case class StepBuilder(step: Step = Step()) {
+case class StepBuilder(step: Step = Step(), optValidation: Option[DataSourceValidationBuilder] = None) {
 
   def name(name: String): StepBuilder =
     this.modify(_.step.name).setTo(name)
@@ -113,8 +113,8 @@ case class StepBuilder(step: Step = Step()) {
   def count(count: Count): StepBuilder =
     this.modify(_.step.count).setTo(count)
 
-  def count(total: Long): StepBuilder =
-    this.modify(_.step.count).setTo(CountBuilder().total(total).count)
+  def count(records: Long): StepBuilder =
+    this.modify(_.step.count).setTo(CountBuilder().records(records).count)
 
   def count(generator: GeneratorBuilder): StepBuilder =
     this.modify(_.step.count).setTo(CountBuilder().generator(generator).count)
@@ -139,11 +139,22 @@ case class StepBuilder(step: Step = Step()) {
 
   def schema(field: Field, fields: Field*): StepBuilder =
     this.modify(_.step.schema).setTo(SchemaBuilder().addFields(field, fields: _*).schema)
+
+  def validations(validation: ValidationBuilder, validations: ValidationBuilder*): StepBuilder =
+    this.validations(validation.validation, validations.map(_.validation): _*)
+
+  def validations(validation: Validation, validations: Validation*): StepBuilder =
+    this.modify(_.optValidation).setTo(Some(getValidation.validations(validation, validations: _*)))
+
+  def wait(waitConditionBuilder: WaitConditionBuilder): StepBuilder =
+    this.modify(_.optValidation).setTo(Some(getValidation.wait(waitConditionBuilder)))
+
+  private def getValidation: DataSourceValidationBuilder = optValidation.getOrElse(DataSourceValidationBuilder())
 }
 
 case class CountBuilder(count: Count = Count()) {
-  def total(total: Long): CountBuilder =
-    this.modify(_.count.total).setTo(Some(total))
+  def records(records: Long): CountBuilder =
+    this.modify(_.count.records).setTo(Some(records))
 
   def generator(generator: GeneratorBuilder): CountBuilder =
     this.modify(_.count.generator).setTo(Some(generator.generator))
@@ -160,8 +171,8 @@ case class CountBuilder(count: Count = Count()) {
   def columns(col: String, cols: String*): CountBuilder =
     this.modify(_.count.perColumn).setTo(Some(perColCount.columns(col, cols: _*).perColumnCount))
 
-  def perColumnTotal(total: Long, col: String, cols: String*): CountBuilder =
-    this.modify(_.count.perColumn).setTo(Some(perColCount.total(total, col, cols: _*).perColumnCount))
+  def recordsPerColumn(records: Long, col: String, cols: String*): CountBuilder =
+    this.modify(_.count.perColumn).setTo(Some(perColCount.records(records, col, cols: _*).perColumnCount))
 
   def perColumnGenerator(generator: GeneratorBuilder, col: String, cols: String*): CountBuilder =
     this.modify(_.count.perColumn).setTo(Some(perColCount.generator(generator, col, cols: _*).perColumnCount))
@@ -169,8 +180,8 @@ case class CountBuilder(count: Count = Count()) {
   def perColumnGenerator(generator: Generator, col: String, cols: String*): CountBuilder =
     this.modify(_.count.perColumn).setTo(Some(perColCount.generator(generator, col, cols: _*).perColumnCount))
 
-  def perColumnGenerator(total: Long, generator: Generator, col: String, cols: String*): CountBuilder =
-    this.modify(_.count.perColumn).setTo(Some(perColCount.generator(total, generator, col, cols: _*).perColumnCount))
+  def perColumnGenerator(records: Long, generator: Generator, col: String, cols: String*): CountBuilder =
+    this.modify(_.count.perColumn).setTo(Some(perColCount.generator(records, generator, col, cols: _*).perColumnCount))
 
   private def perColCount: PerColumnCountBuilder = {
     count.perColumn match {
@@ -184,8 +195,8 @@ case class PerColumnCountBuilder(perColumnCount: PerColumnCount = PerColumnCount
   def columns(col: String, cols: String*): PerColumnCountBuilder =
     this.modify(_.perColumnCount.columnNames).setTo((col +: cols).toList)
 
-  def total(total: Long, col: String, cols: String*): PerColumnCountBuilder =
-    columns(col, cols: _*).modify(_.perColumnCount.count).setTo(Some(total))
+  def records(records: Long, col: String, cols: String*): PerColumnCountBuilder =
+    columns(col, cols: _*).modify(_.perColumnCount.count).setTo(Some(records))
 
   def generator(generator: GeneratorBuilder, col: String, cols: String*): PerColumnCountBuilder =
     columns(col, cols: _*).modify(_.perColumnCount.generator).setTo(Some(generator.generator))
@@ -193,8 +204,8 @@ case class PerColumnCountBuilder(perColumnCount: PerColumnCount = PerColumnCount
   def generator(generator: Generator, col: String, cols: String*): PerColumnCountBuilder =
     columns(col, cols: _*).modify(_.perColumnCount.generator).setTo(Some(generator))
 
-  def generator(total: Long, generator: Generator, col: String, cols: String*): PerColumnCountBuilder =
-    this.total(total, col, cols: _*).modify(_.perColumnCount.generator).setTo(Some(generator))
+  def generator(records: Long, generator: Generator, col: String, cols: String*): PerColumnCountBuilder =
+    this.records(records, col, cols: _*).modify(_.perColumnCount.generator).setTo(Some(generator))
 }
 
 case class SchemaBuilder(schema: Schema = Schema()) {

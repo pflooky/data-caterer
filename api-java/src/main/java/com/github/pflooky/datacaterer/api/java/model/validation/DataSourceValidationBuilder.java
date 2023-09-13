@@ -43,12 +43,9 @@ public final class DataSourceValidationBuilder {
         return new DataSourceValidationBuilder(scalaDef.option(toScalaTuple(key, value)));
     }
 
-    public DataSourceValidationBuilder addValidation(ValidationBuilder validationBuilder) {
-        return new DataSourceValidationBuilder(scalaDef.addValidation(validationBuilder.validation()));
-    }
-
-    public DataSourceValidationBuilder validations(ValidationBuilder... validationBuilders) {
+    public DataSourceValidationBuilder validations(ValidationBuilder validationBuilder, ValidationBuilder... validationBuilders) {
         return new DataSourceValidationBuilder(scalaDef.validations(
+                validationBuilder.validation(),
                 toScalaSeq(Arrays.stream(validationBuilders).map(ValidationBuilder::validation).collect(Collectors.toList())))
         );
     }

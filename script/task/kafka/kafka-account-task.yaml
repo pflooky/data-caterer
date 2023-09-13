@@ -3,7 +3,7 @@ steps:
   - name: "kafka_account"
     type: "json"
     count:
-      total: 50
+      records: 50
     options:
       topic: "account-topic"
     schema:

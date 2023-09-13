@@ -15,9 +15,9 @@ public class DataCatererConfigurationBuilderTest {
     @Test
     public void canCreateDataCatererConfigurationWithConnections() {
         var result = new DataCatererConfigurationBuilder()
-                .sparkMaster("local[1]")
-                .sparkConfig(Map.of("spark.conf", "my_value"))
-                .addSparkConfig("spark.new.conf", "second_val")
+                .master("local[1]")
+                .runtimeConfig(Map.of("spark.conf", "my_value"))
+                .addRuntimeConfig("spark.new.conf", "second_val")
                 .csv("my_csv", "/path/csv")
                 .parquet("my_parquet", "/path/parquet")
                 .orc("my_orc", "/path/orc")

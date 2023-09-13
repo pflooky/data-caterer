@@ -2,7 +2,7 @@ name: "json_account_http"
 steps:
   - name: "account"
     count:
-      total: 50
+      records: 50
     schema:
       fields:
         - name: "url"

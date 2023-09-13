@@ -3,7 +3,7 @@ steps:
   - name: "file_account"
     type: "json"
     count:
-      total: 1000
+      records: 1000
     options:
       path: "app/src/test/resources/sample/json/account-gen"
     schema:
@@ -101,7 +101,7 @@ steps:
     options:
       path: "app/src/test/resources/sample/json/txn-gen"
     count:
-      total: 100
+      records: 100
       perColumn:
         columnNames:
           - "account_id"

@@ -73,8 +73,8 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
       val countStructField = StructField(RECORD_COUNT_GENERATOR_COL, IntegerType, false, metadata)
       val generatedCount = getDataGenerator(count.generator, countStructField, faker).generate.asInstanceOf[Int].toLong
       (1L to generatedCount).map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper())))
-    } else if (count.total.isDefined) {
-      (1L to count.total.get.asInstanceOf[Number].longValue()).map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper())))
+    } else if (count.records.isDefined) {
+      (1L to count.records.get.asInstanceOf[Number].longValue()).map(_ => Row.fromSeq(dataGenerators.map(_.generateWrapper())))
     } else {
       throw new InvalidStepCountGeneratorConfigurationException(step)
     }

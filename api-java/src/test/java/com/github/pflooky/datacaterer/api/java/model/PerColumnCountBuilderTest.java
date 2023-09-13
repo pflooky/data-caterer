@@ -12,7 +12,7 @@ public class PerColumnCountBuilderTest {
     public void canCreatePerColumnCountWithDefaults() {
         var result = new PerColumnCountBuilder().perColumnCount();
 
-        assertTrue(result.count().contains(Constants.DEFAULT_PER_COLUMN_COUNT_TOTAL()));
+        assertTrue(result.count().contains(Constants.DEFAULT_PER_COLUMN_COUNT_RECORDS()));
         assertTrue(result.columnNames().isEmpty());
         assertTrue(result.generator().isEmpty());
     }
@@ -21,7 +21,7 @@ public class PerColumnCountBuilderTest {
     public void canCreatePerColumnCountWithColumns() {
         var result = new PerColumnCountBuilder().columns("account_id", "year").perColumnCount();
 
-        assertTrue(result.count().contains(Constants.DEFAULT_PER_COLUMN_COUNT_TOTAL()));
+        assertTrue(result.count().contains(Constants.DEFAULT_PER_COLUMN_COUNT_RECORDS()));
         assertEquals(2, result.columnNames().size());
         assertTrue(result.columnNames().contains("account_id"));
         assertTrue(result.columnNames().contains("year"));
@@ -43,7 +43,7 @@ public class PerColumnCountBuilderTest {
     public void canCreatePerColumnCountWithGenerator() {
         var result = new PerColumnCountBuilder().generator(new GeneratorBuilder(), "account_id", "year").perColumnCount();
 
-        assertTrue(result.count().contains(Constants.DEFAULT_PER_COLUMN_COUNT_TOTAL()));
+        assertTrue(result.count().contains(Constants.DEFAULT_PER_COLUMN_COUNT_RECORDS()));
         assertEquals(2, result.columnNames().size());
         assertTrue(result.columnNames().contains("account_id"));
         assertTrue(result.columnNames().contains("year"));

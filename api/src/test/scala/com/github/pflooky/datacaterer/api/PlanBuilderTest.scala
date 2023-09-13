@@ -45,7 +45,7 @@ class PlanBuilderTest extends AnyFunSuite {
         )
 
       val c = configuration
-        .addSparkConfig("spark.sql.shuffle.partitions" -> "2")
+        .addRuntimeConfig("spark.sql.shuffle.partitions" -> "2")
         .enableGeneratePlanAndTasks(true)
         .enableValidation(true)
         .addConnectionConfig(dataSourceName, "json", Map())
@@ -57,7 +57,7 @@ class PlanBuilderTest extends AnyFunSuite {
         .addDataSourceValidation(
           dataSourceName,
           dataSourceValidation
-            .addValidation(
+            .validations(
               validation
                 .description("name is equal to Peter")
                 .errorThreshold(0.1)
@@ -100,7 +100,7 @@ class PlanBuilderTest extends AnyFunSuite {
     assert(result._configuration.connectionConfigByName("account_json") == Map("format" -> "json"))
     assert(result._configuration.connectionConfigByName.contains("txn_db"))
     assert(result._configuration.connectionConfigByName("txn_db") == Map("format" -> "postgres"))
-    assert(result._configuration.sparkConfig == DataCatererConfiguration().sparkConfig ++ Map("spark.sql.shuffle.partitions" -> "2"))
+    assert(result._configuration.runtimeConfig == DataCatererConfiguration().runtimeConfig ++ Map("spark.sql.shuffle.partitions" -> "2"))
 
     assert(result._validations.size == 1)
     assert(result._validations.head.dataSources.size == 1)

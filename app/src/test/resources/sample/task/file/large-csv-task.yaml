@@ -7,7 +7,7 @@ steps:
       partitions: 10
       partitionBy: "year"
     count:
-      total: 100000
+      records: 100000
       perColumn:
         count: 2
         columnNames:

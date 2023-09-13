@@ -13,8 +13,8 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
     assert(result.metadataConfig == MetadataConfig())
     assert(result.generationConfig == GenerationConfig())
     assert(result.connectionConfigByName.isEmpty)
-    assert(result.sparkConfig.size == 10)
-    assert(result.sparkMaster == "local[*]")
+    assert(result.runtimeConfig.size == 10)
+    assert(result.master == "local[*]")
   }
 
   test("Can create postgres connection configuration") {

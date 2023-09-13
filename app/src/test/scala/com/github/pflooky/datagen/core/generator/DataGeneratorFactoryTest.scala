@@ -24,7 +24,7 @@ class DataGeneratorFactoryTest extends SparkSuite {
   private val simpleSchema = Schema(Some(List(Field("id"))))
 
   test("Can generate data for basic step") {
-    val step = Step("transaction", "parquet", Count(total = Some(10)), Map("path" -> "sample/output/parquet/transactions"), schema)
+    val step = Step("transaction", "parquet", Count(records = Some(10)), Map("path" -> "sample/output/parquet/transactions"), schema)
 
     val df = dataGeneratorFactory.generateDataForStep(step, "parquet")
     df.cache()
@@ -49,7 +49,7 @@ class DataGeneratorFactoryTest extends SparkSuite {
 
   test("Can generate data when number of rows per column is defined") {
     val step = Step("transaction", "parquet",
-      Count(total = Some(10), perColumn = Some(PerColumnCount(List("id"), Some(2)))),
+      Count(records = Some(10), perColumn = Some(PerColumnCount(List("id"), Some(2)))),
       Map("path" -> "sample/output/parquet/transactions"), simpleSchema)
 
     val df = dataGeneratorFactory.generateDataForStep(step, "parquet")

@@ -2,7 +2,7 @@ package com.github.pflooky.datagen.core.config
 
 import com.github.pflooky.datacaterer.api.model.Constants.FORMAT
 import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, FlagsConfig, FoldersConfig, GenerationConfig, MetadataConfig}
-import com.github.pflooky.datagen.core.model.Constants.{APPLICATION_CONFIG_PATH, SPARK_MASTER, SUPPORTED_CONNECTION_FORMATS}
+import com.github.pflooky.datagen.core.model.Constants.{APPLICATION_CONFIG_PATH, RUNTIME_MASTER, SUPPORTED_CONNECTION_FORMATS}
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueType}
 import org.apache.log4j.Logger
@@ -21,8 +21,8 @@ object ConfigParser {
   lazy val foldersConfig: FoldersConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("folders").unwrapped(), classOf[FoldersConfig])
   lazy val metadataConfig: MetadataConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("metadata").unwrapped(), classOf[MetadataConfig])
   lazy val generationConfig: GenerationConfig = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("generation").unwrapped(), classOf[GenerationConfig])
-  lazy val sparkMaster: String = config.getString(SPARK_MASTER)
-  lazy val baseSparkConfig: Map[String, String] = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("spark.config").unwrapped(), classOf[Map[String, String]])
+  lazy val master: String = config.getString(RUNTIME_MASTER)
+  lazy val baseRuntimeConfig: Map[String, String] = ObjectMapperUtil.jsonObjectMapper.convertValue(config.getObject("runtime.config").unwrapped(), classOf[Map[String, String]])
   lazy val connectionConfigsByName: Map[String, Map[String, String]] = getConnectionConfigsByName
   lazy val sparkConnectionConfig: Map[String, String] = getSparkConnectionConfig
 
@@ -76,8 +76,8 @@ object ConfigParser {
       metadataConfig,
       generationConfig,
       connectionConfigsByName,
-      baseSparkConfig ++ sparkConnectionConfig,
-      sparkMaster
+      baseRuntimeConfig ++ sparkConnectionConfig,
+      master
     )
   }
 

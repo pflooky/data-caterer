@@ -60,8 +60,8 @@ class LargeCountRun extends PlanRun {
           ))
       ))
       .count(count
-        .total(1000)
-        .perColumnTotal(100, "account_id")
+        .records(1000)
+        .recordsPerColumn(100, "account_id")
       )
   )
 
@@ -90,7 +90,7 @@ class DocsPlanRun extends PlanRun {
         .option("path", "app/src/test/resources/sample/csv/transactions")
         .count(
           count
-            .total(1000)
+            .records(1000)
             .perColumnGenerator(
               generator.min(1).max(2),
               "account_id"
@@ -174,7 +174,7 @@ class ConnectionBasedApiPlanRun extends PlanRun {
       field.name("account_id"),
       field.name("year").`type`(IntegerType).min(2022)
     )
-    .count(count.total(100))
+    .count(count.records(100))
 
   val jsonGenerate = json("my_json", "app/src/test/resources/sample/connection-api/json")
     .partitionBy("age")
@@ -182,7 +182,7 @@ class ConnectionBasedApiPlanRun extends PlanRun {
       field.name("name").expression("#{Name.name}"),
       field.name("age").`type`(IntegerType).min(18).max(20),
     )
-    .count(count.total(100))
+    .count(count.records(100))
 
   val x = json("account_info", "/tmp/data-caterer/json")
     .schema(
@@ -200,7 +200,7 @@ class ConnectionBasedApiPlanRun extends PlanRun {
           field.name("amount").`type`(DoubleType),
         ))
     )
-    .count(count.total(100))
+    .count(count.records(100))
 
   val postgresGenerate = postgres("my_postgres")
     .task(task.steps(
@@ -216,10 +216,52 @@ class ConnectionBasedApiPlanRun extends PlanRun {
           field.name("account_id"),
           field.name("amount").`type`(DoubleType).max(1000)
         )
-        .count(count.perColumnTotal(10, "account_id"))
+        .count(count.recordsPerColumn(10, "account_id"))
     ))
     .schema(field.name("account_id"))
-    .count(count.total(2))
+    .count(count.records(2))
 
   execute(csvGenerate, jsonGenerate)
+}
+
+class DocumentationPlanRun extends PlanRun {
+  val jsonTask = json("account_info", "/opt/app/data/json")
+    .schema(
+      field.name("account_id").regex("ACC[0-9]{8}"),
+      field.name("year").`type`(IntegerType).sql("YEAR(date)"),
+      field.name("name").expression("#{Name.name}"),
+      field.name("amount").`type`(DoubleType).min(10).max(1000),
+      field.name("date").`type`(DateType).min(Date.valueOf("2022-01-01")),
+      field.name("status").oneOf("open", "closed"),
+      field.name("txn_list")
+        .`type`(ArrayType)
+        .schema(schema.addFields(
+          field.name("id").sql("_join_txn_id"),
+          field.name("date").`type`(DateType).min(Date.valueOf("2022-01-01")),
+          field.name("amount").`type`(DoubleType)
+        )),
+      field.name("_join_txn_id").omit(true)
+    )
+    .count(count.records(100))
+  //count.recordsPerColumn
+  //count.records
+  //hide away spark config
+  //foreign key based on task and column
+  //example showing all base features
+
+  val csvTxns = csv("transactions", "/opt/app/data/csv")
+    .schema(
+      field.name("account_id"),
+      field.name("txn_id"),
+      field.name("amount"),
+      field.name("merchant").expression("#{Company.name}"),
+    )
+    .count(count.perColumnGenerator(generator.min(1).max(5), "account_id"))
+
+  val foreignKeySetup = plan
+    .addForeignKeyRelationship(jsonTask, "account_id", List((csvTxns, "account_id")))
+    .addForeignKeyRelationship(jsonTask, "_join_txn_id", List((csvTxns, "txn_id")))
+    .addForeignKeyRelationship(jsonTask, "amount", List((csvTxns, "amount")))
+
+  execute(foreignKeySetup, configuration, jsonTask, csvTxns)
 }

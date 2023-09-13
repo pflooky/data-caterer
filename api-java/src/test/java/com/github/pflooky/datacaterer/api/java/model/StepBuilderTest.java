@@ -21,7 +21,7 @@ public class StepBuilderTest {
 
         assertFalse(result.name().isEmpty());
         assertEquals(Constants.DEFAULT_STEP_TYPE(), result.type());
-        assertTrue(result.count().total().contains(Constants.DEFAULT_COUNT_TOTAL()));
+        assertTrue(result.count().records().contains(Constants.DEFAULT_COUNT_RECORDS()));
         assertTrue(result.count().generator().isEmpty());
         assertTrue(result.count().perColumn().isEmpty());
         assertTrue(result.options().isEmpty());
@@ -131,16 +131,16 @@ public class StepBuilderTest {
     public void canCreateStepWithCount() {
         var result = new StepBuilder().count(200).step();
 
-        assertTrue(result.count().total().contains(200));
+        assertTrue(result.count().records().contains(200));
         assertTrue(result.count().perColumn().isEmpty());
         assertTrue(result.count().generator().isEmpty());
     }
 
     @Test
     public void canCreateStepWithCountBuilder() {
-        var result = new StepBuilder().count(new CountBuilder().total(200)).step();
+        var result = new StepBuilder().count(new CountBuilder().records(200)).step();
 
-        assertTrue(result.count().total().contains(200));
+        assertTrue(result.count().records().contains(200));
         assertTrue(result.count().perColumn().isEmpty());
         assertTrue(result.count().generator().isEmpty());
     }
@@ -149,7 +149,7 @@ public class StepBuilderTest {
     public void canCreateStepWithCountGenerator() {
         var result = new StepBuilder().count(new GeneratorBuilder()).step();
 
-        assertTrue(result.count().total().contains(Constants.DEFAULT_COUNT_TOTAL()));
+        assertTrue(result.count().records().contains(Constants.DEFAULT_COUNT_RECORDS()));
         assertTrue(result.count().perColumn().isEmpty());
         assertTrue(result.count().generator().isDefined());
         assertEquals(Constants.DEFAULT_GENERATOR_TYPE(), result.count().generator().get().type());
@@ -160,10 +160,10 @@ public class StepBuilderTest {
     public void canCreateStepWithPerColumnCount() {
         var result = new StepBuilder().count(new PerColumnCountBuilder()).step();
 
-        assertTrue(result.count().total().contains(Constants.DEFAULT_COUNT_TOTAL()));
+        assertTrue(result.count().records().contains(Constants.DEFAULT_COUNT_RECORDS()));
         assertTrue(result.count().perColumn().isDefined());
         assertTrue(result.count().perColumn().get().columnNames().isEmpty());
-        assertTrue(result.count().perColumn().get().count().contains(Constants.DEFAULT_PER_COLUMN_COUNT_TOTAL()));
+        assertTrue(result.count().perColumn().get().count().contains(Constants.DEFAULT_PER_COLUMN_COUNT_RECORDS()));
         assertTrue(result.count().perColumn().get().generator().isEmpty());
         assertTrue(result.count().generator().isEmpty());
     }

@@ -3,7 +3,7 @@ steps:
   - name: "accounts"
     type: "cassandra"
     count:
-      total: 50
+      records: 50
     options:
       keyspace: "account"
       table: "accounts"

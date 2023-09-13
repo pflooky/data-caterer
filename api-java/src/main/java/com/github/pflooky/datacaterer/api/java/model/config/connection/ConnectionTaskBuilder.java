@@ -7,17 +7,18 @@ import com.github.pflooky.datacaterer.api.java.model.GeneratorBuilder;
 import com.github.pflooky.datacaterer.api.java.model.StepBuilder;
 import com.github.pflooky.datacaterer.api.java.model.TaskBuilder;
 import com.github.pflooky.datacaterer.api.java.model.config.ConnectionConfigWithTaskBuilder;
+import com.github.pflooky.datacaterer.api.java.model.validation.ValidationBuilder;
 
 import java.util.Optional;
 
 import static com.github.pflooky.datacaterer.api.converter.Converters.toScalaOption;
 
-public abstract class ConnectionTaskBuilder {
+public abstract class ConnectionTaskBuilder<T, K> {
     private ConnectionConfigWithTaskBuilder connectionConfigWithTaskBuilder = new ConnectionConfigWithTaskBuilder();
     private Optional<TaskBuilder> optTask = Optional.empty();
     private Optional<StepBuilder> optStep = Optional.empty();
 
-    public ConnectionTaskBuilder(com.github.pflooky.datacaterer.api.connection.ConnectionTaskBuilder scalaDef) {
+    public ConnectionTaskBuilder(com.github.pflooky.datacaterer.api.connection.ConnectionTaskBuilder<T> scalaDef) {
         setConnectionConfigWithTaskBuilder(new ConnectionConfigWithTaskBuilder(scalaDef.connectionConfigWithTaskBuilder()));
         var optTask = scalaDef.task().isDefined() ? Optional.of(new TaskBuilder(scalaDef.task().get())) : Optional.empty();
         setOptTask((Optional<TaskBuilder>) optTask);
@@ -25,8 +26,14 @@ public abstract class ConnectionTaskBuilder {
         setOptStep((Optional<StepBuilder>) optStep);
     }
 
-    public com.github.pflooky.datacaterer.api.connection.ConnectionTaskBuilder connectionTaskBuilder() {
-        var scalaDef = new com.github.pflooky.datacaterer.api.connection.ConnectionTaskBuilder() {
+    public abstract K fromBaseConfig(ConnectionTaskBuilder<T, K> connectionTaskBuilder);
+
+    public com.github.pflooky.datacaterer.api.connection.ConnectionTaskBuilder<T> connectionTaskBuilder() {
+        var scalaDef = new com.github.pflooky.datacaterer.api.connection.ConnectionTaskBuilder<T>() {
+            @Override
+            public T fromBaseConfig(com.github.pflooky.datacaterer.api.connection.ConnectionTaskBuilder<T> connectionTaskBuilder) {
+                return null;
+            }
         };
         scalaDef.apply(
                 connectionConfigWithTaskBuilder.connectionConfig(),
@@ -61,32 +68,37 @@ public abstract class ConnectionTaskBuilder {
         this.optStep = optStep;
     }
 
-    public ConnectionTaskBuilder schema(FieldBuilder field, FieldBuilder... fields) {
+    public ConnectionTaskBuilder<T, K> schema(FieldBuilder field, FieldBuilder... fields) {
         setOptStep(Optional.of(getStep().schema(field, fields)));
         return this;
     }
 
-    public ConnectionTaskBuilder schema(SchemaBuilder schemaBuilder) {
+    public ConnectionTaskBuilder<T, K> schema(SchemaBuilder schemaBuilder) {
         setOptStep(Optional.of(getStep().schema(schemaBuilder)));
         return this;
     }
 
-    public ConnectionTaskBuilder count(CountBuilder countBuilder) {
+    public ConnectionTaskBuilder<T, K> count(CountBuilder countBuilder) {
         setOptStep(Optional.of(getStep().count(countBuilder)));
         return this;
     }
 
-    public ConnectionTaskBuilder count(GeneratorBuilder generatorBuilder) {
+    public ConnectionTaskBuilder<T, K> count(GeneratorBuilder generatorBuilder) {
         setOptStep(Optional.of(getStep().count(generatorBuilder)));
         return this;
     }
 
-    public ConnectionTaskBuilder numPartitions(int numPartitions) {
+    public ConnectionTaskBuilder<T, K> numPartitions(int numPartitions) {
         setOptStep(Optional.of(getStep().numPartitions(numPartitions)));
         return this;
     }
 
-    public ConnectionTaskBuilder task(TaskBuilder taskBuilder) {
+    public ConnectionTaskBuilder<T, K> validations(ValidationBuilder validationBuilder, ValidationBuilder... validationBuilders) {
+        setOptStep(Optional.of(getStep().validations(validationBuilder, validationBuilders)));
+        return this;
+    }
+
+    public ConnectionTaskBuilder<T, K> task(TaskBuilder taskBuilder) {
         setOptTask(Optional.of(taskBuilder));
         return this;
     }
