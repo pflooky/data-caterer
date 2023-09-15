@@ -3,6 +3,7 @@ package com.github.pflooky.datacaterer.api.model
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonTypeInfo}
 import com.fasterxml.jackson.databind.annotation.{JsonDeserialize, JsonTypeIdResolver}
+import com.github.pflooky.datacaterer.api.ValidationBuilder
 import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_VALIDATION_CONFIG_NAME, DEFAULT_VALIDATION_DESCRIPTION}
 import com.github.pflooky.datacaterer.api.parser.ValidationIdResolver
 
@@ -28,7 +29,7 @@ case class ValidationConfiguration(
 case class DataSourceValidation(
                                  options: Map[String, String] = Map(),
                                  waitCondition: WaitCondition = PauseWaitCondition(),
-                                 validations: List[Validation] = List()
+                                 validations: List[ValidationBuilder] = List()
                                )
 
 trait WaitCondition {

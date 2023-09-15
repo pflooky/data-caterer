@@ -1,10 +1,12 @@
 package com.github.pflooky.datacaterer.api
 
 import com.github.pflooky.datacaterer.api.connection.ConnectionTaskBuilder
+import com.github.pflooky.datacaterer.api.converter.Converters.toScalaList
 import com.github.pflooky.datacaterer.api.model.{ForeignKeyRelation, Plan, SinkOptions}
 import com.softwaremill.quicklens.ModifyPimp
 
 case class PlanBuilder(plan: Plan = Plan(), tasks: List[TasksBuilder] = List()) {
+  def this() = this(Plan(), List())
 
   def name(name: String): PlanBuilder =
     this.modify(_.plan.name).setTo(name)
@@ -38,24 +40,37 @@ case class PlanBuilder(plan: Plan = Plan(), tasks: List[TasksBuilder] = List()) 
   def addForeignKeyRelationship(foreignKey: ForeignKeyRelation, relations: List[ForeignKeyRelation]): PlanBuilder =
     this.modify(_.plan.sinkOptions).setTo(Some(getSinkOpt.foreignKey(foreignKey, relations).sinkOptions))
 
-  def addForeignKeyRelationship(connectionTaskBuilder: ConnectionTaskBuilder[_], column: String,
-                                relations: List[(ConnectionTaskBuilder[_], String)]): PlanBuilder = {
-    val baseRelation = toForeignKeyRelation(connectionTaskBuilder, column)
+  def addForeignKeyRelationship(connectionTaskBuilder: ConnectionTaskBuilder[_], columns: List[String],
+                                relations: List[(ConnectionTaskBuilder[_], List[String])]): PlanBuilder = {
+    val baseRelation = toForeignKeyRelation(connectionTaskBuilder, columns)
     val otherRelations = relations.map(r => toForeignKeyRelation(r._1, r._2))
     this.modify(_.plan.sinkOptions).setTo(Some(getSinkOpt.foreignKey(baseRelation, otherRelations).sinkOptions))
   }
 
-  private def toForeignKeyRelation(connectionTaskBuilder: ConnectionTaskBuilder[_], column: String) = {
+  def addForeignKeyRelationship(connectionTaskBuilder: ConnectionTaskBuilder[_], columns: java.util.List[String],
+                                relations: java.util.List[java.util.Map.Entry[ConnectionTaskBuilder[_], java.util.List[String]]]): PlanBuilder = {
+    val scalaListRelations = toScalaList(relations)
+    val mappedRelations = scalaListRelations.map(r => (r.getKey, toScalaList(r.getValue)))
+    addForeignKeyRelationship(connectionTaskBuilder, toScalaList(columns), mappedRelations)
+  }
+
+  def addForeignKeyRelationship(connectionTaskBuilder: ConnectionTaskBuilder[_], column: String,
+                                relations: List[(ConnectionTaskBuilder[_], String)]): PlanBuilder =
+    addForeignKeyRelationship(connectionTaskBuilder, List(column), relations.map(r => (r._1, List(r._2))))
+
+  private def toForeignKeyRelation(connectionTaskBuilder: ConnectionTaskBuilder[_], columns: List[String]) = {
     val dataSource = connectionTaskBuilder.connectionConfigWithTaskBuilder.dataSourceName
+    val colNames = columns.mkString(",")
     connectionTaskBuilder.step match {
       case Some(value) =>
-        val hasColumn = value.step.schema.fields.getOrElse(List()).exists(f => f.name == column)
-        if (!hasColumn) {
-          throw new RuntimeException(s"Column name defined in foreign key relationship does not exist, data-source=$dataSource, column-name=$column")
+        val fields = value.step.schema.fields.getOrElse(List())
+        val hasColumns = columns.forall(c => fields.exists(_.name == c))
+        if (!hasColumns) {
+          throw new RuntimeException(s"Column name defined in foreign key relationship does not exist, data-source=$dataSource, column-name=$colNames")
         }
-        ForeignKeyRelation(dataSource, value.step.name, column)
+        ForeignKeyRelation(dataSource, value.step.name, columns)
       case None =>
-        throw new RuntimeException(s"Not schema defined for data source. Cannot create foreign key relationship, data-source=$dataSource, column-name=$column")
+        throw new RuntimeException(s"Not schema defined for data source. Cannot create foreign key relationship, data-source=$dataSource, column-name=$colNames")
     }
   }
 

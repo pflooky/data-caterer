@@ -2,22 +2,38 @@ package com.github.pflooky.datagen.core.sink.jms
 
 import com.github.pflooky.datacaterer.api.model.{Count, Field, Schema, Step}
 import com.github.pflooky.datagen.core.model.Constants.{REAL_TIME_BODY_COL, REAL_TIME_HEADERS_COL, REAL_TIME_PARTITION_COL, REAL_TIME_URL_COL}
-import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{ArrayType, StringType, StructField, StructType}
+import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
+import org.apache.spark.sql.types.{ArrayType, BinaryType, IntegerType, StringType, StructField, StructType}
+import org.junit.runner.RunWith
 import org.scalamock.scalatest.MockFactory
 import org.scalamock.util.Defaultable
 import org.scalatest.funsuite.AnyFunSuite
+import org.scalatestplus.junit.JUnitRunner
 
+import java.util
 import javax.jms.{Connection, Message, MessageProducer, Session, TextMessage}
 import javax.naming.Context
 
+@RunWith(classOf[JUnitRunner])
 class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
 
   private val mockConnection = mock[Connection]
   private val basicFields = List(Field(REAL_TIME_BODY_COL))
   private val step = Step("step1", "json", Count(), Map(), Schema(Some(basicFields)))
-  implicit val d = new Defaultable[java.util.Enumeration[_]] {
-    override val default = null
+  private val baseFieldsForStruct = Seq(
+    StructField(REAL_TIME_BODY_COL, StringType),
+    StructField(REAL_TIME_URL_COL, StringType),
+    StructField(REAL_TIME_PARTITION_COL, IntegerType)
+  )
+  private val baseStruct = StructType(baseFieldsForStruct)
+  private val headerField = StructField(REAL_TIME_HEADERS_COL, ArrayType(StructType(Seq(
+    StructField("key", StringType),
+    StructField("value", BinaryType))
+  )))
+  private val structWithHeader = StructType(baseFieldsForStruct ++ Seq(headerField))
+
+  implicit val d: Defaultable[util.Enumeration[_]] = new Defaultable[java.util.Enumeration[_]] {
+    override val default: util.Enumeration[_] = null
   }
 
   test("Push value as a basic text message") {
@@ -25,11 +41,9 @@ class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
     val mockMessageProducer = mock[MessageProducer]
     val jmsSinkProcessor = JmsSinkProcessor.createConnections(mockMessageProducer, mockSession, mockConnection, step)
 
-    val mockRow = mock[Row]
+    val mockRow = new GenericRowWithSchema(Array("some_value", "url", 4), baseStruct)
     val mockMessage = mock[TestTextMessage]
-    (mockRow.schema _).expects().anyNumberOfTimes().returns(StructType(Seq(StructField(REAL_TIME_URL_COL, StringType))))
-    (mockRow.getAs[String](_: String)).expects(REAL_TIME_BODY_COL).once()
-    (mockSession.createTextMessage(_: String)).expects(*).once().returns(mockMessage)
+    (mockSession.createTextMessage(_: String)).expects("some_value").once().returns(mockMessage)
     (mockMessage.setJMSPriority(_: Int)).expects(4).once()
     (mockMessageProducer.send(_: Message)).expects(*).once()
     jmsSinkProcessor.pushRowToSink(mockRow)
@@ -42,12 +56,9 @@ class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
     val mockMessageProducer = mock[MessageProducer]
     val jmsSinkProcessor = JmsSinkProcessor.createConnections(mockMessageProducer, mockSession, mockConnection, step.copy(schema = schema))
 
-    val mockRow = mock[Row]
+    val mockRow = new GenericRowWithSchema(Array("some_value", "url", 1), baseStruct)
     val mockMessage = mock[TestTextMessage]
-    (mockRow.schema _).expects().anyNumberOfTimes().returns(StructType(Seq(StructField(REAL_TIME_URL_COL, StringType), StructField(REAL_TIME_PARTITION_COL, StringType))))
-    (mockSession.createTextMessage(_: String)).expects(*).once().returns(mockMessage)
-    (mockRow.getAs[String](_: String)).expects(REAL_TIME_BODY_COL).once()
-    (mockRow.getAs[Int](_: String)).expects(REAL_TIME_PARTITION_COL).once().returns(1)
+    (mockSession.createTextMessage(_: String)).expects("some_value").once().returns(mockMessage)
     (mockMessage.setJMSPriority(_: Int)).expects(1).once()
     (mockMessageProducer.send(_: Message)).expects(*).once()
     jmsSinkProcessor.pushRowToSink(mockRow)
@@ -60,18 +71,9 @@ class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
     val mockMessageProducer = mock[MessageProducer]
     val jmsSinkProcessor = JmsSinkProcessor.createConnections(mockMessageProducer, mockSession, mockConnection, step.copy(schema = schema))
 
-    val mockRow = mock[Row]
+    val mockRow = new GenericRowWithSchema(Array("some_value", "url", 4, Array(("account-id", "abc123".getBytes))), structWithHeader)
     val mockMessage = mock[TestTextMessage]
-    (mockRow.schema _).expects().anyNumberOfTimes().returns(StructType(Seq(
-      StructField(REAL_TIME_URL_COL, StringType),
-      StructField(REAL_TIME_HEADERS_COL, ArrayType(StructType(Seq(
-        StructField("key", StringType),
-        StructField("value", StringType)
-      ))))
-    )))
-    (mockSession.createTextMessage(_: String)).expects(*).once().returns(mockMessage)
-    (mockRow.getAs[String](_: String)).expects(REAL_TIME_BODY_COL).once()
-    (mockRow.getAs[Array[(String, Array[Byte])]](_: String)).expects(REAL_TIME_HEADERS_COL).once().returns(Array(("account-id", "abc123".getBytes)))
+    (mockSession.createTextMessage(_: String)).expects("some_value").once().returns(mockMessage)
     (mockMessage.setStringProperty(_: String, _: String)).expects("account-id", "abc123").once()
     (mockMessage.setJMSPriority(_: Int)).expects(4).once()
     (mockMessageProducer.send(_: Message)).expects(*).once()
@@ -109,3 +111,5 @@ class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
 trait TestTextMessage extends TextMessage {
   override def isBodyAssignableTo(c: Class[_]): Boolean = this.isBodyAssignableTo(c)
 }
+
+case class MockRow(value: String = "some_value", url: String = "base_url", partition: String = "1", headers: Array[(String, Array[Byte])] = Array())

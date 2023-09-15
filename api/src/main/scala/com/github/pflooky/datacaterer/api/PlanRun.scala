@@ -4,6 +4,8 @@ import com.github.pflooky.datacaterer.api.connection.{CassandraBuilder, Connecti
 import com.github.pflooky.datacaterer.api.model.Constants._
 import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, ForeignKeyRelation, Plan, Task, ValidationConfiguration}
 
+import scala.annotation.varargs
+
 
 trait PlanRun {
   var _plan: Plan = Plan()
@@ -37,20 +39,64 @@ trait PlanRun {
 
   def validationConfig: ValidationConfigurationBuilder = ValidationConfigurationBuilder()
 
-  def foreignField(dataSource: String, step: String, column: String): ForeignKeyRelation = ForeignKeyRelation(dataSource, step, column)
+  def foreignField(dataSource: String, step: String, column: String): ForeignKeyRelation = new ForeignKeyRelation(dataSource, step, column)
 
+  def foreignField(dataSource: String, step: String, columns: List[String]): ForeignKeyRelation = ForeignKeyRelation(dataSource, step, columns)
+
+  /**
+   * Create new CSV generation step with configurations
+   *
+   * @param name    Data source name
+   * @param path    File path to generated CSV
+   * @param options Additional options for CSV generation
+   * @return FileBuilder
+   */
   def csv(name: String, path: String, options: Map[String, String] = Map()): FileBuilder =
     ConnectionConfigWithTaskBuilder().file(name, CSV, path, options)
 
+  /**
+   * Create new JSON generation step with configurations
+   *
+   * @param name    Data source name
+   * @param path    File path to generated JSON
+   * @param options Additional options for JSON generation
+   * @return FileBuilder
+   */
   def json(name: String, path: String, options: Map[String, String] = Map()): FileBuilder =
     ConnectionConfigWithTaskBuilder().file(name, JSON, path, options)
 
+  /**
+   * Create new ORC generation step with configurations
+   *
+   * @param name    Data source name
+   * @param path    File path to generated ORC
+   * @param options Additional options for ORC generation
+   * @return FileBuilder
+   */
   def orc(name: String, path: String, options: Map[String, String] = Map()): FileBuilder =
     ConnectionConfigWithTaskBuilder().file(name, ORC, path, options)
 
+  /**
+   * Create new PARQUET generation step with configurations
+   *
+   * @param name    Data source name
+   * @param path    File path to generated PARQUET
+   * @param options Additional options for PARQUET generation
+   * @return FileBuilder
+   */
   def parquet(name: String, path: String, options: Map[String, String] = Map()): FileBuilder =
     ConnectionConfigWithTaskBuilder().file(name, PARQUET, path, options)
 
+  /**
+   * Create new POSTGRES generation step with connection configuration
+   *
+   * @param name     Data source name
+   * @param url      Postgres url in format: jdbc:postgresql://_host_:_port_/_database_
+   * @param username Postgres username
+   * @param password Postgres password
+   * @param options  Additional driver options
+   * @return PostgresBuilder
+   */
   def postgres(
                 name: String,
                 url: String = DEFAULT_POSTGRES_URL,
@@ -60,9 +106,34 @@ trait PlanRun {
               ): PostgresBuilder =
     ConnectionConfigWithTaskBuilder().postgres(name, url, username, password, options)
 
+  /**
+   * Create new POSTGRES generation step with only Postgres URL and default username and password of 'postgres'
+   *
+   * @param name Data source name
+   * @param url  Postgres url in format: jdbc:postgresql://_host_:_port_/_database_
+   * @return PostgresBuilder
+   */
+  def postgresJava(name: String, url: String): PostgresBuilder = postgres(name, url)
+
+  /**
+   * Create new POSTGRES generation step using the same connection configuration from another PostgresBuilder
+   *
+   * @param connectionTaskBuilder Postgres builder with connection configuration
+   * @return PostgresBuilder
+   */
   def postgres(connectionTaskBuilder: ConnectionTaskBuilder[PostgresBuilder]): PostgresBuilder =
     PostgresBuilder().fromBaseConfig(connectionTaskBuilder)
 
+  /**
+   * Create new MYSQL generation step with connection configuration
+   *
+   * @param name     Data source name
+   * @param url      Mysql url in format: jdbc:mysql://_host_:_port_/_database_
+   * @param username Mysql username
+   * @param password Mysql password
+   * @param options  Additional driver options
+   * @return MySqlBuilder
+   */
   def mysql(
              name: String,
              url: String = DEFAULT_MYSQL_URL,
@@ -70,11 +141,39 @@ trait PlanRun {
              password: String = DEFAULT_MYSQL_PASSWORD,
              options: Map[String, String] = Map()
            ): MySqlBuilder =
-    ConnectionConfigWithTaskBuilder().mySql(name, url, username, password, options)
+    ConnectionConfigWithTaskBuilder().mysql(name, url, username, password, options)
 
+
+  /**
+   * Create new MYSQL generation step with only Mysql URL and default username and password of 'root'
+   *
+   * @param name Data source name
+   * @param url  Mysql url in format: jdbc:mysql://_host_:_port_/_dbname_
+   * @return MySqlBuilder
+   */
+  def mysqlJava(name: String, url: String): MySqlBuilder = mysql(name, url)
+
+
+  /**
+   * Create new MYSQL generation step using the same connection configuration from another MySqlBuilder
+   *
+   * @param connectionTaskBuilder Mysql builder with connection configuration
+   * @return MySqlBuilder
+   */
   def mysql(connectionTaskBuilder: ConnectionTaskBuilder[MySqlBuilder]): MySqlBuilder =
     MySqlBuilder().fromBaseConfig(connectionTaskBuilder)
 
+
+  /**
+   * Create new CASSANDRA generation step with connection configuration
+   *
+   * @param name     Data source name
+   * @param url      Cassandra url with format: _host_:_port_
+   * @param username Cassandra username
+   * @param password Cassandra password
+   * @param options  Additional connection options
+   * @return CassandraBuilder
+   */
   def cassandra(
                  name: String,
                  url: String = DEFAULT_CASSANDRA_URL,
@@ -84,9 +183,40 @@ trait PlanRun {
                ): CassandraBuilder =
     ConnectionConfigWithTaskBuilder().cassandra(name, url, username, password, options)
 
+
+  /**
+   * Create new CASSANDRA generation step with only Cassandra URL and default username and password of 'cassandra'
+   *
+   * @param name Data source name
+   * @param url  Cassandra url with format: _host_:_port_
+   * @return CassandraBuilder
+   */
+  def cassandraJava(name: String, url: String): CassandraBuilder = cassandra(name, url)
+
+
+  /**
+   * Create new Cassandra generation step using the same connection configuration from another CassandraBuilder
+   *
+   * @param connectionTaskBuilder Cassandra builder with connection configuration
+   * @return CassandraBuilder
+   */
   def cassandra(connectionTaskBuilder: ConnectionTaskBuilder[CassandraBuilder]): CassandraBuilder =
     CassandraBuilder().fromBaseConfig(connectionTaskBuilder)
 
+
+  /**
+   * Create new SOLACE generation step with connection configuration
+   *
+   * @param name                  Data source name
+   * @param url                   Solace url
+   * @param username              Solace username
+   * @param password              Solace password
+   * @param vpnName               VPN name in Solace to connect to
+   * @param connectionFactory     Connection factory
+   * @param initialContextFactory Initial context factory
+   * @param options               Additional connection options
+   * @return SolaceBuilder
+   */
   def solace(
               name: String,
               url: String = DEFAULT_SOLACE_URL,
@@ -99,26 +229,118 @@ trait PlanRun {
             ): SolaceBuilder =
     ConnectionConfigWithTaskBuilder().solace(name, url, username, password, vpnName, connectionFactory, initialContextFactory, options)
 
+
+  /**
+   * Create new SOLACE generation step with Solace URL, username, password and vpnName. Default connection factory and
+   * initial context factory used
+   *
+   * @param name     Data source name
+   * @param url      Solace url
+   * @param username Solace username
+   * @param password Solace password
+   * @param vpnName  VPN name in Solace to connect to
+   * @return SolaceBuilder
+   */
+  def solaceJava(name: String, url: String, username: String, password: String, vpnName: String): SolaceBuilder =
+    solace(name, url, username, password, vpnName)
+
+
+  /**
+   * Create new SOLACE generation step with Solace URL. Other configurations are set to default values
+   *
+   * @param name Data source name
+   * @param url  Solace url
+   * @return SolaceBuilder
+   */
+  def solaceJava(name: String, url: String): SolaceBuilder = solace(name, url)
+
+
+  /**
+   * Create new Solace generation step using the same connection configuration from another SolaceBuilder
+   *
+   * @param connectionTaskBuilder Solace step with connection configuration
+   * @return SolaceBuilder
+   */
   def solace(connectionTaskBuilder: ConnectionTaskBuilder[SolaceBuilder]): SolaceBuilder =
     SolaceBuilder().fromBaseConfig(connectionTaskBuilder)
 
+  /**
+   * Create new KAFKA generation step with connection configuration
+   *
+   * @param name    Data source name
+   * @param url     Kafka url
+   * @param options Additional connection options
+   * @return KafkaBuilder
+   */
   def kafka(name: String, url: String = DEFAULT_KAFKA_URL, options: Map[String, String] = Map()): KafkaBuilder =
     ConnectionConfigWithTaskBuilder().kafka(name, url, options)
 
+
+  /**
+   * Create new KAFKA generation step with url
+   *
+   * @param name Data source name
+   * @param url  Kafka url
+   * @return KafkaBuilder
+   */
+  def kafkaJava(name: String, url: String): KafkaBuilder = kafka(name, url)
+
+  /**
+   * Create new Kafka generation step using the same connection configuration from another KafkaBuilder
+   *
+   * @param connectionTaskBuilder Kafka step with connection configuration
+   * @return KafkaBuilder
+   */
   def kafka(connectionTaskBuilder: ConnectionTaskBuilder[KafkaBuilder]): KafkaBuilder =
     KafkaBuilder().fromBaseConfig(connectionTaskBuilder)
 
+  /**
+   * Create new HTTP generation step using connection configuration
+   *
+   * @param name     Data source name
+   * @param username HTTP username
+   * @param password HTTP password
+   * @param options  Additional connection options
+   * @return HttpBuilder
+   */
   def http(name: String, username: String = "", password: String = "", options: Map[String, String] = Map()): HttpBuilder =
     ConnectionConfigWithTaskBuilder().http(name, username, password, options)
 
+  /**
+   * Create new HTTP generation step without authentication
+   *
+   * @param name Data source name
+   * @return HttpBuilder
+   */
+  def httpJava(name: String): HttpBuilder = http(name)
+
+  /**
+   * Create new HTTP generation step using the same connection configuration from another HttpBuilder
+   *
+   * @param connectionTaskBuilder Http step with connection configuration
+   * @return HttpBuilder
+   */
   def http(connectionTaskBuilder: ConnectionTaskBuilder[HttpBuilder]): HttpBuilder =
     HttpBuilder().fromBaseConfig(connectionTaskBuilder)
 
 
+  /**
+   * Execute with the following connections and tasks defined
+   *
+   * @param connectionTaskBuilder  First connection and task
+   * @param connectionTaskBuilders Other connections and tasks
+   */
   def execute(connectionTaskBuilder: ConnectionTaskBuilder[_], connectionTaskBuilders: ConnectionTaskBuilder[_]*): Unit = {
     execute(configuration, connectionTaskBuilder, connectionTaskBuilders: _*)
   }
 
+  /**
+   * Execute with non-default configurations for a set of tasks
+   *
+   * @param baseConfiguration      Runtime configurations
+   * @param connectionTaskBuilder  First connection and task
+   * @param connectionTaskBuilders Other connections and tasks
+   */
   def execute(
                baseConfiguration: DataCatererConfigurationBuilder,
                connectionTaskBuilder: ConnectionTaskBuilder[_],
@@ -127,6 +349,14 @@ trait PlanRun {
     execute(plan, baseConfiguration, List(), connectionTaskBuilder, connectionTaskBuilders: _*)
   }
 
+  /**
+   * Execute with non-default configurations with validations and tasks
+   *
+   * @param planBuilder            Plan to set high level task configurations
+   * @param baseConfiguration      Runtime configurations
+   * @param connectionTaskBuilder  First connection and task
+   * @param connectionTaskBuilders Other connections and tasks
+   */
   def execute(
                planBuilder: PlanBuilder,
                baseConfiguration: DataCatererConfigurationBuilder,
@@ -136,13 +366,23 @@ trait PlanRun {
     execute(planBuilder, baseConfiguration, List(), connectionTaskBuilder, connectionTaskBuilders: _*)
   }
 
-  def execute(
-               planBuilder: PlanBuilder,
-               baseConfiguration: DataCatererConfigurationBuilder,
-               validations: List[ValidationConfigurationBuilder],
-               connectionTask: ConnectionTaskBuilder[_],
-               connectionTasks: ConnectionTaskBuilder[_]*
-             ): Unit = {
+  /**
+   * Execute with non-default configurations with validations and tasks. Validations have to be enabled before running
+   * (see [[DataCatererConfigurationBuilder.enableValidation()]].
+   *
+   * @param planBuilder       Plan to set high level task configurations
+   * @param baseConfiguration Runtime configurations
+   * @param validations       Validations to run if enabled
+   * @param connectionTask    First connection and task
+   * @param connectionTasks   Other connections and tasks
+   */
+  @varargs def execute(
+                        planBuilder: PlanBuilder,
+                        baseConfiguration: DataCatererConfigurationBuilder,
+                        validations: List[ValidationConfigurationBuilder],
+                        connectionTask: ConnectionTaskBuilder[_],
+                        connectionTasks: ConnectionTaskBuilder[_]*
+                      ): Unit = {
     val allConnectionTasks = connectionTask +: connectionTasks
     val connectionConfig = allConnectionTasks.map(x => {
       val connectionConfigWithTaskBuilder = x.connectionConfigWithTaskBuilder
@@ -155,12 +395,31 @@ trait PlanRun {
     execute(allTasks, planBuilder, withConnectionConfig, allValidations)
   }
 
+  /**
+   * Execute with set of tasks and default configurations
+   *
+   * @param tasks Tasks to generate data
+   */
   def execute(tasks: TasksBuilder): Unit = execute(List(tasks))
 
+  /**
+   * Execute with plan and non-default configuration
+   *
+   * @param planBuilder   Plan to set high level task configurations
+   * @param configuration Runtime configuration
+   */
   def execute(planBuilder: PlanBuilder, configuration: DataCatererConfigurationBuilder): Unit = {
     execute(planBuilder.tasks, planBuilder, configuration)
   }
 
+  /**
+   * Execute with tasks, plan, runtime configurations and validations defined
+   *
+   * @param tasks         Set of generation tasks
+   * @param plan          Plan to set high level task configurations
+   * @param configuration Runtime configurations
+   * @param validations   Validations on data sources
+   */
   def execute(
                tasks: List[TasksBuilder] = List(),
                plan: PlanBuilder = PlanBuilder(),

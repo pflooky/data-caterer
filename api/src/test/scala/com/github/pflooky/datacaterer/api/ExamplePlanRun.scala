@@ -34,7 +34,7 @@ class MinimalPlanWithManualTaskRun extends PlanRun {
   val tasksBuilder = tasks.addTask("my_task", "mininal_json",
     step
       .option(("path", "app/src/test/resources/sample/json/minimal"))
-      .schema(schema.addField(field.name("account_id")))
+      .schema(schema.addFields(field.name("account_id")))
   )
   execute(tasksBuilder)
 }
@@ -91,7 +91,7 @@ class DocsPlanRun extends PlanRun {
         .count(
           count
             .records(1000)
-            .perColumnGenerator(
+            .recordsPerColumnGenerator(
               generator.min(1).max(2),
               "account_id"
             )
@@ -243,11 +243,6 @@ class DocumentationPlanRun extends PlanRun {
       field.name("_join_txn_id").omit(true)
     )
     .count(count.records(100))
-  //count.recordsPerColumn
-  //count.records
-  //hide away spark config
-  //foreign key based on task and column
-  //example showing all base features
 
   val csvTxns = csv("transactions", "/opt/app/data/csv")
     .schema(
@@ -256,7 +251,7 @@ class DocumentationPlanRun extends PlanRun {
       field.name("amount"),
       field.name("merchant").expression("#{Company.name}"),
     )
-    .count(count.perColumnGenerator(generator.min(1).max(5), "account_id"))
+    .count(count.recordsPerColumnGenerator(generator.min(1).max(5), "account_id"))
 
   val foreignKeySetup = plan
     .addForeignKeyRelationship(jsonTask, "account_id", List((csvTxns, "account_id")))

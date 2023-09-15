@@ -6,6 +6,8 @@ import com.github.pflooky.datacaterer.api.model.DataCatererConfiguration
 import com.softwaremill.quicklens.ModifyPimp
 
 case class DataCatererConfigurationBuilder(build: DataCatererConfiguration = DataCatererConfiguration()) {
+  def this() = this(DataCatererConfiguration())
+
   def master(master: String): DataCatererConfigurationBuilder =
     this.modify(_.build.master).setTo(master)
 
@@ -192,6 +194,7 @@ final case class ConnectionConfigWithTaskBuilder(
                                                   dataSourceName: String = DEFAULT_DATA_SOURCE_NAME,
                                                   options: Map[String, String] = Map()
                                                 ) {
+  def this() = this(DEFAULT_DATA_SOURCE_NAME, Map())
 
   def file(name: String, format: String, path: String = "", options: Map[String, String] = Map()): FileBuilder = {
     val configBuilder = DataCatererConfigurationBuilder()
@@ -205,23 +208,23 @@ final case class ConnectionConfigWithTaskBuilder(
   }
 
   def postgres(
-            name: String,
-            url: String,
-            username: String,
-            password: String,
-            options: Map[String, String] = Map()
-          ): PostgresBuilder = {
+                name: String,
+                url: String,
+                username: String,
+                password: String,
+                options: Map[String, String] = Map()
+              ): PostgresBuilder = {
     val configBuilder = DataCatererConfigurationBuilder().postgres(name, url, username, password, options)
     setConnectionConfig(name, configBuilder, PostgresBuilder())
   }
 
-  def mySql(
-            name: String,
-            url: String,
-            username: String,
-            password: String,
-            options: Map[String, String] = Map()
-          ): MySqlBuilder = {
+  def mysql(
+             name: String,
+             url: String,
+             username: String,
+             password: String,
+             options: Map[String, String] = Map()
+           ): MySqlBuilder = {
     val configBuilder = DataCatererConfigurationBuilder().mysql(name, url, username, password, options)
     setConnectionConfig(name, configBuilder, MySqlBuilder())
   }

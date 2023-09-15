@@ -42,6 +42,7 @@ object JmsSinkProcessor extends RealTimeSinkProcessor[(MessageProducer, Session,
   }
 
   def createConnections(messageProducer: MessageProducer, session: Session, connection: Connection, step: Step): SinkProcessor[_] = {
+    connectionPool.clear()
     connectionPool.put((messageProducer, session, connection))
     this.step = step
     this

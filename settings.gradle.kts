@@ -11,4 +11,3 @@
 rootProject.name = "data-caterer"
 include("app")
 include("api")
-include("api-java")

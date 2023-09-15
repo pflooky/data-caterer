@@ -14,6 +14,7 @@ object App {
 
   def main(args: Array[String]): Unit = {
     val startTime = LocalDateTime.now()
+    LOGGER.info("Starting Data Caterer")
     PlanProcessor.determineAndExecutePlan()
     val endTime = LocalDateTime.now()
     val duration = Duration.between(startTime, endTime)

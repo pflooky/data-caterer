@@ -14,7 +14,7 @@ object PlanGenerator {
   private val LOGGER = Logger.getLogger(getClass.getName)
   private val OBJECT_MAPPER = ObjectMapperUtil.yamlObjectMapper
 
-  def writePlanAndTasksToFiles(tasks: List[(String, Task)], foreignKeys: Map[String, List[String]], baseFolderPath: String)
+  def writePlanAndTasksToFiles(tasks: List[(String, Task)], foreignKeys: List[(String, List[String])], baseFolderPath: String)
                               (implicit sparkSession: SparkSession): (Plan, List[Task]) = {
     val fileSystem = FileSystem.get(sparkSession.sparkContext.hadoopConfiguration)
     fileSystem.setWriteChecksum(false)
@@ -24,7 +24,7 @@ object PlanGenerator {
     (plan, tasks.map(_._2))
   }
 
-  private def writePlanToFile(tasks: List[(String, Task)], foreignKeys: Map[String, List[String]], planFolder: String, fileSystem: FileSystem)
+  private def writePlanToFile(tasks: List[(String, Task)], foreignKeys: List[(String, List[String])], planFolder: String, fileSystem: FileSystem)
                              (implicit sparkSession: SparkSession): Plan = {
     val currentTime = new DateTime().toString(ISODateTimeFormat.basicDateTimeNoMillis())
     val taskSummary = tasks.map(t => TaskSummary(t._2.name, t._1))

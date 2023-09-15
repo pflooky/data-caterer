@@ -5,9 +5,12 @@ import com.github.pflooky.datacaterer.api.model.MetadataConfig
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.{ColumnMetadata, PostgresMetadata}
 import org.apache.spark.sql.types.MetadataBuilder
 import org.apache.spark.sql.{Encoder, Encoders}
+import org.junit.runner.RunWith
+import org.scalatestplus.junit.JUnitRunner
 
 import java.sql.Date
 
+@RunWith(classOf[JUnitRunner])
 class MetadataUtilTest extends SparkSuite {
 
   test("Can convert metadata to map") {
@@ -41,7 +44,7 @@ class MetadataUtilTest extends SparkSuite {
 
     val result = MetadataUtil.mapToStructFields(df, readOptions, dataProfilingMetadata, columnMetadata)
 
-    assert(result.length == 4)
+    assert(result.length == 5)
     result.find(_.name == "account_id")
       .foreach(s => {
         assert(s.metadata.getString("minLen") == "2")
@@ -65,23 +68,27 @@ class MetadataUtilTest extends SparkSuite {
 
   test("Can calculate data profiling statistics from data frame") {
     val df = sparkSession.createDataFrame(Seq(
-      Account("acc123", "peter", Date.valueOf("2023-01-01"), 10),
-      Account("acc124", "john", Date.valueOf("2023-01-02"), 49),
-      Account("acc125", "peter", Date.valueOf("2023-02-02"), 21),
-      Account("acc126", "john", Date.valueOf("2023-02-04"), 26),
+      Account("acc123", "peter", Date.valueOf("2023-01-01"), 10, "D"),
+      Account("acc124", "john", Date.valueOf("2023-01-02"), 49, "D"),
+      Account("acc125", "peter", Date.valueOf("2023-02-02"), 21, "C"),
+      Account("acc126", "john", Date.valueOf("2023-02-04"), 26, "C"),
     ))
     val dataSourceMetadata = PostgresMetadata("postgres", Map("url" -> "localhost"))
 
-    val result = MetadataUtil.getFieldDataProfilingMetadata(df, Map(), dataSourceMetadata, MetadataConfig(100, 100, 0.5))
+    val result = MetadataUtil.getFieldDataProfilingMetadata(df, Map(), dataSourceMetadata, MetadataConfig(100, 100, 0.5, 1))
 
-    assert(result.size == 4)
+    assert(result.size == 5)
     val accountIdField = result.find(_.columnName == "account_id").get
-    assert(accountIdField.metadata == Map("count" -> "4", "distinctCount" -> "4", "version" -> "2", "maxLen" -> "6", "avgLen" -> "6", "nullCount" -> "0"))
+    assertResult(Map("count" -> "4", "distinctCount" -> "4", "maxLen" -> "6", "avgLen" -> "6", "nullCount" -> "0"))(accountIdField.metadata)
     val nameField = result.find(_.columnName == "name").get
-    assert(nameField.metadata == Map("count" -> "4", "distinctCount" -> "2", "version" -> "2", "maxLen" -> "5", "avgLen" -> "5", "nullCount" -> "0", ONE_OF_GENERATOR -> Some(Array("peter", "john"))))
+    val nameMeta = Map("count" -> "4", "distinctCount" -> "2", "maxLen" -> "5", "avgLen" -> "5", "nullCount" -> "0", ONE_OF_GENERATOR -> Array("peter", "john"), "expression" -> "#{Name.name}")
+    nameMeta.foreach(m => assertResult(m._2)(nameField.metadata(m._1)))
     val dateField = result.find(_.columnName == "open_date").get
-    assert(dateField.metadata == Map("count" -> "4", "distinctCount" -> "4", "min" -> "2023-01-01", "version" -> "2", "max" -> "2023-02-04", "maxLen" -> "4", "avgLen" -> "4", "nullCount" -> "0"))
+    assertResult(Map("count" -> "4", "distinctCount" -> "4", "min" -> "2023-01-01", "max" -> "2023-02-04", "maxLen" -> "4", "avgLen" -> "4", "nullCount" -> "0"))(dateField.metadata)
     val amountField = result.find(_.columnName == "age").get
-    assert(amountField.metadata == Map("count" -> "4", "distinctCount" -> "4", "min" -> "10", "version" -> "2", "max" -> "49", "maxLen" -> "4", "avgLen" -> "4", "nullCount" -> "0"))
+    assertResult(Map("count" -> "4", "distinctCount" -> "4", "min" -> "10", "max" -> "49", "maxLen" -> "4", "avgLen" -> "4", "nullCount" -> "0"))(amountField.metadata)
+    val debitCreditField = result.find(_.columnName == "debitCredit").get
+    val debitCreditMeta = Map("count" -> "4", "distinctCount" -> "2", "maxLen" -> "1", "avgLen" -> "1", "nullCount" -> "0", ONE_OF_GENERATOR -> Array("D", "C"))
+    debitCreditMeta.foreach(m => assertResult(m._2)(debitCreditField.metadata(m._1)))
   }
 }

@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.util
 
-import com.github.pflooky.datacaterer.api.model.{Plan, SinkOptions}
+import com.github.pflooky.datacaterer.api.model.{Plan, SinkOptions, TaskSummary}
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
 
@@ -11,7 +11,7 @@ import java.time.LocalDate
 class ForeignKeyUtilTest extends SparkSuite {
 
   test("When no foreign keys defined, return back same dataframes") {
-    val sinkOptions = SinkOptions(None, None, Map())
+    val sinkOptions = SinkOptions(None, None, List())
     val plan = Plan("no foreign keys", "simple plan", List(), Some(sinkOptions))
     val dfMap = Map("name" -> sparkSession.emptyDataFrame)
 
@@ -21,7 +21,7 @@ class ForeignKeyUtilTest extends SparkSuite {
   }
 
   test("Can get insert order") {
-    val foreignKeys = Map(
+    val foreignKeys = List(
       "orders" -> List("customers"),
       "order_items" -> List("orders", "products"),
       "reviews" -> List("products", "customers")
@@ -31,7 +31,7 @@ class ForeignKeyUtilTest extends SparkSuite {
   }
 
   test("Can link foreign keys between data sets") {
-    val sinkOptions = SinkOptions(None, None, Map("postgres.account.account_id" -> List("postgres.transaction.account_id")))
+    val sinkOptions = SinkOptions(None, None, List("postgres.account.account_id" -> List("postgres.transaction.account_id")))
     val plan = Plan("foreign keys", "simple plan", List(), Some(sinkOptions))
     val accountsList = List(
       Account("acc1", "peter", Date.valueOf(LocalDate.now())),
@@ -39,9 +39,9 @@ class ForeignKeyUtilTest extends SparkSuite {
       Account("acc3", "jack", Date.valueOf(LocalDate.now()))
     )
     val transactionList = List(
-      Transaction("some_acc9", "id123", Date.valueOf(LocalDate.now()), 10.0),
-      Transaction("some_acc9", "id124", Date.valueOf(LocalDate.now()), 23.9),
-      Transaction("some_acc10", "id125", Date.valueOf(LocalDate.now()), 85.1),
+      Transaction("some_acc9", "rand1", "id123", Date.valueOf(LocalDate.now()), 10.0),
+      Transaction("some_acc9", "rand2", "id124", Date.valueOf(LocalDate.now()), 23.9),
+      Transaction("some_acc10", "rand3", "id125", Date.valueOf(LocalDate.now()), 85.1),
     )
     val dfMap = Map(
       "postgres.account" -> sparkSession.createDataFrame(accountsList),
@@ -56,8 +56,45 @@ class ForeignKeyUtilTest extends SparkSuite {
     })
   }
 
+  test("Can link foreign keys between data sets with multiple columns") {
+    val sinkOptions = SinkOptions(None, None, List("postgres.account.account_id,name" -> List("postgres.transaction.account_id,name")))
+    val plan = Plan("foreign keys", "simple plan", List(TaskSummary("my_task", "postgres")), Some(sinkOptions))
+    val accountsList = List(
+      Account("acc1", "peter", Date.valueOf(LocalDate.now())),
+      Account("acc2", "john", Date.valueOf(LocalDate.now())),
+      Account("acc3", "jack", Date.valueOf(LocalDate.now()))
+    )
+    val transactionList = List(
+      Transaction("some_acc9", "rand1", "id123", Date.valueOf(LocalDate.now()), 10.0),
+      Transaction("some_acc9", "rand1", "id124", Date.valueOf(LocalDate.now()), 12.0),
+      Transaction("some_acc9", "rand2", "id125", Date.valueOf(LocalDate.now()), 23.9),
+      Transaction("some_acc10", "rand3", "id126", Date.valueOf(LocalDate.now()), 85.1),
+    )
+    val dfMap = Map(
+      "postgres.account" -> sparkSession.createDataFrame(accountsList),
+      "postgres.transaction" -> sparkSession.createDataFrame(transactionList)
+    )
+
+    val result = ForeignKeyUtil.getDataFramesWithForeignKeys(plan, dfMap)
+    val txn = result.filter(f => f._1.equalsIgnoreCase("postgres.transaction")).head._2
+    val resTxnRows = txn.collect()
+    val acc1 = resTxnRows.find(_.getString(0).equalsIgnoreCase("acc1"))
+    assert(acc1.isDefined)
+    assert(acc1.get.getString(1).equalsIgnoreCase("peter"))
+    val acc2 = resTxnRows.find(_.getString(0).equalsIgnoreCase("acc2"))
+    assert(acc2.isDefined)
+    assert(acc2.get.getString(1).equalsIgnoreCase("john"))
+    val acc3 = resTxnRows.find(_.getString(0).equalsIgnoreCase("acc3"))
+    assert(acc3.isDefined)
+    assert(acc3.get.getString(1).equalsIgnoreCase("jack"))
+    val acc1Count = resTxnRows.count(_.getString(0).equalsIgnoreCase("acc1"))
+    val acc2Count = resTxnRows.count(_.getString(0).equalsIgnoreCase("acc2"))
+    val acc3Count = resTxnRows.count(_.getString(0).equalsIgnoreCase("acc3"))
+    assert(acc1Count == 2 || acc2Count == 2 || acc3Count == 2)
+  }
+
   test("Can get delete order based on foreign keys defined") {
-    val foreignKeys = Map(
+    val foreignKeys = List(
       "postgres.accounts.account_id" -> List("postgres.balances.account_id", "postgres.transactions.account_id")
     )
     val deleteOrder = ForeignKeyUtil.getDeleteOrder(foreignKeys)
@@ -65,7 +102,7 @@ class ForeignKeyUtilTest extends SparkSuite {
   }
 
   test("Can get delete order based on nested foreign keys") {
-    val foreignKeys = Map(
+    val foreignKeys = List(
       "postgres.accounts.account_id" -> List("postgres.balances.account_id"),
       "postgres.balances.account_id" -> List("postgres.transactions.account_id"),
     )
@@ -73,14 +110,14 @@ class ForeignKeyUtilTest extends SparkSuite {
     val expected = List("postgres.transactions.account_id", "postgres.balances.account_id", "postgres.accounts.account_id")
     assert(deleteOrder == expected)
 
-    val foreignKeys1 = Map(
+    val foreignKeys1 = List(
       "postgres.balances.account_id" -> List("postgres.transactions.account_id"),
       "postgres.accounts.account_id" -> List("postgres.balances.account_id"),
     )
     val deleteOrder1 = ForeignKeyUtil.getDeleteOrder(foreignKeys1)
     assert(deleteOrder1 == expected)
 
-    val foreignKeys2 = Map(
+    val foreignKeys2 = List(
       "postgres.accounts.account_id" -> List("postgres.balances.account_id"),
       "postgres.balances.account_id" -> List("postgres.transactions.account_id"),
       "postgres.transactions.account_id" -> List("postgres.customer.account_id"),
@@ -90,8 +127,23 @@ class ForeignKeyUtilTest extends SparkSuite {
     assert(deleteOrder2 == expected2)
   }
 
+  test("Can generate correct values when per column count is defined over multiple columns that are also defined as foreign keys") {
+    val foreignKeys = List(
+      "postgres.accounts.account_id" -> List("postgres.balances.account_id", "postgres.transactions.account_id")
+    )
+    val deleteOrder = ForeignKeyUtil.getDeleteOrder(foreignKeys)
+    assert(deleteOrder == List("postgres.balances.account_id", "postgres.transactions.account_id", "postgres.accounts.account_id"))
+  }
+
+  test("Can generate correct values when primary keys are defined over multiple columns that are also defined as foreign keys") {
+    val foreignKeys = List(
+      "postgres.accounts.account_id" -> List("postgres.balances.account_id", "postgres.transactions.account_id")
+    )
+    val deleteOrder = ForeignKeyUtil.getDeleteOrder(foreignKeys)
+    assert(deleteOrder == List("postgres.balances.account_id", "postgres.transactions.account_id", "postgres.accounts.account_id"))
+  }
 }
 
-case class Account(account_id: String = "acc123", name: String = "peter", open_date: Date = Date.valueOf("2023-01-31"), age: Int = 10)
+case class Account(account_id: String = "acc123", name: String = "peter", open_date: Date = Date.valueOf("2023-01-31"), age: Int = 10, debitCredit: String = "D")
 
-case class Transaction(account_id: String, transaction_id: String, created_date: Date, amount: Double)
+case class Transaction(account_id: String, name: String, transaction_id: String, created_date: Date, amount: Double)

@@ -15,6 +15,8 @@ app/src/test/resources/sample/json
 app/src/test/resources/sample/data
 app/src/test/resources/sample/large
 app/src/test/resources/sample/html
+app/src/test/resources/sample/documentation
+api/src/test/resources/sample/documentation
 
 *.class
 *.log

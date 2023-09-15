@@ -60,11 +60,11 @@ trait JdbcMetadata extends DatabaseMetadata {
 
     filteredForeignKeyData.map(r =>
       ForeignKeyRelationship(
-        ForeignKeyRelation(name,
+        new ForeignKeyRelation(name,
           toStepName(Map(JDBC_TABLE -> r.getAs[String]("foreign_dbtable"))),
           r.getAs[String]("foreign_column")
         ),
-        ForeignKeyRelation(name,
+        new ForeignKeyRelation(name,
           toStepName(Map(JDBC_TABLE -> r.getAs[String]("dbtable"))),
           r.getAs[String]("column")
         )

@@ -53,7 +53,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(booleanGenerator.isInstanceOf[RandomBooleanDataGenerator])
     assert(binaryGenerator.isInstanceOf[RandomBinaryDataGenerator])
     assert(byteGenerator.isInstanceOf[RandomByteDataGenerator])
-    assert(listGenerator.isInstanceOf[RandomListDataGenerator[String]])
+    assert(listGenerator.isInstanceOf[RandomArrayDataGenerator[String]])
   }
 
   test("Can create random string generator") {
@@ -236,7 +236,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
 
   test("Can create random list of string generator") {
     val metadata = new MetadataBuilder().putString(ARRAY_MINIMUM_LENGTH, "1").build()
-    val listGenerator = new RandomListDataGenerator[String](StructField("random_list", ArrayType(StringType), false, metadata), StringType)
+    val listGenerator = new RandomArrayDataGenerator[String](StructField("random_list", ArrayType(StringType), false, metadata), StringType)
     val sampleData = listGenerator.generate
 
     assert(sampleData.nonEmpty)
@@ -245,7 +245,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
   test("Can create random list of struct type generator") {
     val metadata = new MetadataBuilder().putString(ARRAY_MINIMUM_LENGTH, "1").build()
     val innerStruct = StructType(Seq(StructField("random_acc", StringType), StructField("random_num", IntegerType)))
-    val listGenerator = new RandomListDataGenerator[StructType](StructField("random_list", ArrayType(innerStruct), false, metadata), new StructType())
+    val listGenerator = new RandomArrayDataGenerator[StructType](StructField("random_list", ArrayType(innerStruct), false, metadata), new StructType())
     val sampleData = listGenerator.generate
 
     assert(sampleData.nonEmpty)

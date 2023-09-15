@@ -33,7 +33,7 @@ object RandomDataGenerator {
       case BooleanType => new RandomBooleanDataGenerator(structField, faker)
       case BinaryType => new RandomBinaryDataGenerator(structField, faker)
       case ByteType => new RandomByteDataGenerator(structField, faker)
-      case ArrayType(dt, _) => new RandomListDataGenerator(structField, dt, faker)
+      case ArrayType(dt, _) => new RandomArrayDataGenerator(structField, dt, faker)
       case StructType(_) => new RandomStructTypeDataGenerator(structField, faker)
       case x => throw new UnsupportedDataGeneratorType(s"Unsupported type for random data generation: name=${structField.name}, type=${x.typeName}")
     }
@@ -286,9 +286,9 @@ object RandomDataGenerator {
     }
   }
 
-  class RandomListDataGenerator[T](val structField: StructField, val dataType: DataType, val faker: Faker = new Faker()) extends ListDataGenerator[T] {
-    override lazy val listMinSize: Int = tryGetValue(structField.metadata, ARRAY_MINIMUM_LENGTH, 0)
-    override lazy val listMaxSize: Int = tryGetValue(structField.metadata, ARRAY_MAXIMUM_LENGTH, 5)
+  class RandomArrayDataGenerator[T](val structField: StructField, val dataType: DataType, val faker: Faker = new Faker()) extends ArrayDataGenerator[T] {
+    override lazy val arrayMinSize: Int = tryGetValue(structField.metadata, ARRAY_MINIMUM_LENGTH, 0)
+    override lazy val arrayMaxSize: Int = tryGetValue(structField.metadata, ARRAY_MAXIMUM_LENGTH, 5)
 
     override def elementGenerator: DataGenerator[T] = {
       dataType match {
@@ -307,7 +307,7 @@ object RandomDataGenerator {
         case _ =>
           getGeneratorForStructField(structField.copy(dataType = dataType)).generateSqlExpression
       }
-      s"TRANSFORM(ARRAY_REPEAT(1, CAST($sqlRandom * ${listMaxSize - listMinSize} + $listMinSize AS INT)), x -> $nestedSqlExpressions)"
+      s"TRANSFORM(ARRAY_REPEAT(1, CAST($sqlRandom * ${arrayMaxSize - arrayMinSize} + $arrayMinSize AS INT)), x -> $nestedSqlExpressions)"
     }
   }
 
@@ -315,7 +315,7 @@ object RandomDataGenerator {
     override def generate: Row = {
       structField.dataType match {
         case ArrayType(dt, _) =>
-          val listGenerator = new RandomListDataGenerator(structField, dt, faker)
+          val listGenerator = new RandomArrayDataGenerator(structField, dt, faker)
           Row.fromSeq(listGenerator.generate)
         case StructType(fields) =>
           val dataGenerators = fields.map(field => getGeneratorForStructField(field, faker))
@@ -326,7 +326,7 @@ object RandomDataGenerator {
     override def generateSqlExpression: String = {
       val nestedSqlExpression = structField.dataType match {
         case ArrayType(dt, _) =>
-          val listGenerator = new RandomListDataGenerator(structField, dt)
+          val listGenerator = new RandomArrayDataGenerator(structField, dt)
           listGenerator.generateSqlExpression
         case StructType(fields) =>
           fields.map(f => GeneratorUtil.getDataGenerator(f, faker))

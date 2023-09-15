@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.sink
 
-import com.github.pflooky.datacaterer.api.model.Constants.{DRIVER, FORMAT, HTTP, JDBC, JMS, PARTITIONS, PARTITION_BY, POSTGRES_DRIVER, RATE, ROWS_PER_SECOND, SAVE_MODE}
+import com.github.pflooky.datacaterer.api.model.Constants.{DRIVER, FORMAT, HTTP, JDBC, JMS, OMIT, PARTITIONS, PARTITION_BY, POSTGRES_DRIVER, RATE, ROWS_PER_SECOND, SAVE_MODE}
 import com.github.pflooky.datacaterer.api.model.{FlagsConfig, MetadataConfig, Step}
 import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS, BATCH, DATA_CATERER_SITE_PRICING, DEFAULT_ROWS_PER_SECOND, FAILED, FINISHED, PER_COLUMN_INDEX_COL, REAL_TIME, STARTED}
 import com.github.pflooky.datagen.core.model.SinkResult
@@ -27,20 +27,21 @@ class SinkFactory(
     if (!connectionConfigs.contains(dataSourceName)) {
       //      throw new RuntimeException(s"Cannot find sink connection details in application config for data source, data-source-name=$dataSourceName, step-name=${step.name}")
     }
+    val dfWithoutOmitFields = removeOmitFields(df)
     val connectionConfig = connectionConfigs.getOrElse(dataSourceName, Map(FORMAT -> step.`type`))
     val saveMode = connectionConfig.get(SAVE_MODE).map(_.toLowerCase.capitalize).map(SaveMode.valueOf).getOrElse(SaveMode.Append)
     val saveModeName = saveMode.name()
     val format = connectionConfig(FORMAT)
     val enrichedConnectionConfig = additionalConnectionConfig(format, connectionConfig)
     val count = if (flagsConfig.enableCount) {
-      df.count().toString
+      dfWithoutOmitFields.count().toString
     } else if (!HAS_LOGGED_COUNT_DISABLE_WARNING) {
       LOGGER.warn("Count is disabled. It will help with performance. Defaulting to -1")
       HAS_LOGGED_COUNT_DISABLE_WARNING = true
       "-1"
     } else "-1"
     LOGGER.info(s"Pushing data to sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, num-records=$count, status=$STARTED")
-    saveData(df, dataSourceName, step, enrichedConnectionConfig, saveMode, saveModeName, format, count, flagsConfig.enableFailOnError, startTime)
+    saveData(dfWithoutOmitFields, dataSourceName, step, enrichedConnectionConfig, saveMode, saveModeName, format, count, flagsConfig.enableFailOnError, startTime)
   }
 
   private def saveData(df: DataFrame, dataSourceName: String, step: Step, connectionConfig: Map[String, String],
@@ -209,5 +210,14 @@ class SinkFactory(
     } else {
       sinkResult
     }
+  }
+
+  private def removeOmitFields(df: DataFrame) = {
+    val dfOmitFields = df.schema.fields
+      .filter(field => field.metadata.contains(OMIT) && field.metadata.getString(OMIT).equalsIgnoreCase("true"))
+      .map(_.name)
+    val dfWithoutOmitFields = df.selectExpr(df.columns.filter(c => !dfOmitFields.contains(c)): _*)
+    if (!dfWithoutOmitFields.storageLevel.useMemory) dfWithoutOmitFields.cache()
+    dfWithoutOmitFields
   }
 }

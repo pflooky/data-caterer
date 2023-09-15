@@ -2,7 +2,10 @@ package com.github.pflooky.datagen.core.util
 
 import com.github.pflooky.datacaterer.api.model.Constants.IS_UNIQUE
 import com.github.pflooky.datacaterer.api.model.{Count, Field, Generator, Schema, Step, Task, TaskSummary}
+import org.junit.runner.RunWith
+import org.scalatestplus.junit.JUnitRunner
 
+@RunWith(classOf[JUnitRunner])
 class UniqueFieldsUtilTest extends SparkSuite {
 
   test("Can identify the unique columns and create a data frame with unique values for column") {

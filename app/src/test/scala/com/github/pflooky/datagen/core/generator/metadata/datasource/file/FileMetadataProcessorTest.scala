@@ -1,9 +1,12 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.file
 
 import com.github.pflooky.datagen.core.util.SparkSuite
+import org.junit.runner.RunWith
+import org.scalatestplus.junit.JUnitRunner
 
+@RunWith(classOf[JUnitRunner])
 class FileMetadataProcessorTest extends SparkSuite {
-  private val baseFolder = "app/src/test/resources/sample/files"
+  private val baseFolder = "src/test/resources/sample/files"
 
   test("Can get all distinct folder pathways for csv file type") {
     val fileMetadata = FileMetadata("csv_data", "csv", Map("path" -> baseFolder))
@@ -37,7 +40,6 @@ class FileMetadataProcessorTest extends SparkSuite {
     val result = fileMetadataProcessor.getSubDataSourcesMetadata
 
     assert(result.length == 2)
-    val head = result.head
     assert(result.forall(m => m("format") == "json"))
     assert(result.forall(m => m("path").contains(s"$baseFolder/json") || m("path").contains(s"$baseFolder/csv/json")))
   }

@@ -45,7 +45,6 @@ dependencies {
     compileOnly("org.scala-lang:scala-library:$scalaSpecificVersion")
     compileOnly("org.apache.spark:spark-sql_$scalaVersion:$sparkVersion")
     compileOnly(project(":api"))
-    compileOnly(project(":api-java"))
 
     // additional spark
     basicImpl("org.apache.spark:spark-avro_$scalaVersion:$sparkVersion")
@@ -90,8 +89,8 @@ testing {
 
             dependencies {
                 // Use Scalatest for testing our library
-                implementation("org.scalatest:scalatest_$scalaVersion:3.2.10")
-                implementation("org.scalatestplus:junit-4-13_$scalaVersion:3.2.2.0")
+                implementation("org.scalatest:scalatest_$scalaVersion:3.2.17")
+                implementation("org.scalatestplus:junit-4-13_$scalaVersion:3.2.17.0")
                 implementation("org.scalamock:scalamock_$scalaVersion:5.2.0")
                 implementation("org.apache.spark:spark-sql_$scalaVersion:$sparkVersion")
                 implementation("org.apache.spark:spark-avro_$scalaVersion:$sparkVersion")

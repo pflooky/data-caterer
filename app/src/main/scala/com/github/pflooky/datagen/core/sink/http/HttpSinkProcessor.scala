@@ -28,6 +28,8 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] {
 
   def createConnections(connectionConfig: Map[String, String], step: Step, http: Http): SinkProcessor[_] = {
     this.http = http
+    this.connectionConfig = connectionConfig
+    this.step = step
     this
   }
 
@@ -50,7 +52,8 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] {
     }
   }
 
-  def createHttpRequest(row: Row): Req = {
+  def createHttpRequest(row: Row, connectionConfig: Option[Map[String, String]] = None): Req = {
+    connectionConfig.foreach(conf => this.connectionConfig = conf)
     val httpUrl = getRowValue[String](row, REAL_TIME_URL_COL)
     val method = getRowValue[String](row, REAL_TIME_METHOD_COL, DEFAULT_HTTP_METHOD)
     val body = getRowValue[String](row, REAL_TIME_BODY_COL, "")

@@ -1,19 +1,22 @@
 package com.github.pflooky.datacaterer.api
 
 import com.github.pflooky.datacaterer.api.model.ForeignKeyRelation
+import org.junit.runner.RunWith
 import org.scalatest.funsuite.AnyFunSuite
+import org.scalatestplus.junit.JUnitRunner
 
+@RunWith(classOf[JUnitRunner])
 class SinkOptionsBuilderTest extends AnyFunSuite {
 
   test("Can create sink options with random seed, locale and foreign keys") {
     val result = SinkOptionsBuilder()
       .seed(10)
       .locale("id")
-      .foreignKey(ForeignKeyRelation("my_postgres", "account", "account_id"),
-        ForeignKeyRelation("my_json", "account", "account_id"))
-      .foreignKey(ForeignKeyRelation("my_postgres", "account", "customer_number"),
-        ForeignKeyRelation("my_json", "account", "customer_number"),
-        ForeignKeyRelation("my_parquet", "transaction", "cust_num"))
+      .foreignKey(new ForeignKeyRelation("my_postgres", "account", "account_id"),
+        new ForeignKeyRelation("my_json", "account", "account_id"))
+      .foreignKey(new ForeignKeyRelation("my_postgres", "account", "customer_number"),
+        new ForeignKeyRelation("my_json", "account", "customer_number"),
+        new ForeignKeyRelation("my_parquet", "transaction", "cust_num"))
       .sinkOptions
 
     assert(result.seed.contains("10"))

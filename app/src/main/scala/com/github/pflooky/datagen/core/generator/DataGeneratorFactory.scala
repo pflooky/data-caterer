@@ -1,12 +1,12 @@
 package com.github.pflooky.datagen.core.generator
 
-import com.github.pflooky.datacaterer.api.model.Constants.{OMIT, SQL_GENERATOR}
+import com.github.pflooky.datacaterer.api.model.Constants.SQL_GENERATOR
 import com.github.pflooky.datacaterer.api.model.{Field, PerColumnCount, Step}
 import com.github.pflooky.datagen.core.exception.InvalidStepCountGeneratorConfigurationException
 import com.github.pflooky.datagen.core.generator.provider.DataGenerator
 import com.github.pflooky.datagen.core.model.Constants._
 import com.github.pflooky.datagen.core.model.PlanImplicits.{CountOps, FieldOps, PerColumnCountOps}
-import com.github.pflooky.datagen.core.util.GeneratorUtil.getDataGenerator
+import com.github.pflooky.datagen.core.util.GeneratorUtil.{applySqlExpressions, getDataGenerator}
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import net.datafaker.Faker
 import org.apache.spark.sql.expressions.UserDefinedFunction
@@ -49,16 +49,11 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
   def generateDataViaSql(dataGenerators: List[DataGenerator[_]], step: Step, indexedDf: DataFrame): DataFrame = {
     val structType = StructType(dataGenerators.map(_.structField))
 
-    val genSqlExpression = dataGenerators.filter(dg => !dg.structField.metadata.contains(SQL_GENERATOR))
-      .map(dg => s"${dg.generateSqlExpressionWrapper} AS `${dg.structField.name}`")
+    val genSqlExpression = dataGenerators.map(dg => s"${dg.generateSqlExpressionWrapper} AS `${dg.structField.name}`")
     val df = indexedDf.selectExpr(genSqlExpression: _*)
+    val dfWithMetadata = sparkSession.createDataFrame(df.selectExpr(structType.fieldNames: _*).rdd, structType)
+    val dfAllFields = applySqlExpressions(dfWithMetadata)
 
-    val sqlGeneratedFields = structType.fields.filter(f => f.metadata.contains(SQL_GENERATOR))
-    val sqlFieldExpr = sqlGeneratedFields.map(f => s"${f.metadata.getString(SQL_GENERATOR)} AS `${f.name}`")
-    val noSqlGeneratedFields = df.columns.filter(c => !sqlGeneratedFields.exists(_.name.equalsIgnoreCase(c)))
-      .map(s => s"`$s`")
-
-    val dfAllFields = df.selectExpr(noSqlGeneratedFields ++ sqlFieldExpr: _*)
     step.count.perColumn
       .map(perCol => generateRecordsPerColumn(dataGenerators, step, perCol, dfAllFields))
       .getOrElse(dfAllFields)
@@ -134,11 +129,6 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
 
   private def getStructWithGenerators(fields: List[Field]): List[DataGenerator[_]] = {
     val structFieldsWithDataGenerators = fields
-      .filter(field => {
-        val generatorOptions = field.generator.map(_.options).getOrElse(Map())
-        val isOmit = !generatorOptions.getOrElse(OMIT, "false").toString.toBoolean
-        isOmit
-      })
       .map(field => getDataGenerator(field.generator, field.toStructField, faker))
     structFieldsWithDataGenerators
   }

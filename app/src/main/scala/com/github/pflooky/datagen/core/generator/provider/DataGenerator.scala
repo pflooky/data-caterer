@@ -90,16 +90,16 @@ trait NullableDataGenerator[T >: Null] extends DataGenerator[T] {
   }
 }
 
-trait ListDataGenerator[T] extends NullableDataGenerator[List[T]] {
+trait ArrayDataGenerator[T] extends NullableDataGenerator[List[T]] {
 
-  lazy val listMaxSize: Int = if (structField.metadata.contains(ARRAY_MAXIMUM_LENGTH)) structField.metadata.getString(ARRAY_MAXIMUM_LENGTH).toInt else 5
-  lazy val listMinSize: Int = if (structField.metadata.contains(ARRAY_MINIMUM_LENGTH)) structField.metadata.getString(ARRAY_MINIMUM_LENGTH).toInt else 0
+  lazy val arrayMaxSize: Int = if (structField.metadata.contains(ARRAY_MAXIMUM_LENGTH)) structField.metadata.getString(ARRAY_MAXIMUM_LENGTH).toInt else 5
+  lazy val arrayMinSize: Int = if (structField.metadata.contains(ARRAY_MINIMUM_LENGTH)) structField.metadata.getString(ARRAY_MINIMUM_LENGTH).toInt else 0
 
   def elementGenerator: DataGenerator[T]
 
   override def generate: List[T] = {
-    val listSize = random.nextInt(listMaxSize) + listMinSize
-    (listMinSize to listSize)
+    val listSize = random.nextInt(arrayMaxSize) + arrayMinSize
+    (arrayMinSize to listSize)
       .map(_ => elementGenerator.generate)
       .toList
   }

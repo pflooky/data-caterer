@@ -1,8 +1,11 @@
 package com.github.pflooky.datacaterer.api
 
 import com.github.pflooky.datacaterer.api.model.{ArrayType, Count, DateType, Field, Generator, IntegerType, StringType}
+import org.junit.runner.RunWith
 import org.scalatest.funsuite.AnyFunSuite
+import org.scalatestplus.junit.JUnitRunner
 
+@RunWith(classOf[JUnitRunner])
 class TasksBuilderTest extends AnyFunSuite {
 
   test("Can create a task summary when given a task") {

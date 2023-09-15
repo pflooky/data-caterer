@@ -38,7 +38,7 @@ class ValidationProcessor(connectionConfigsByName: Map[String, Map[String, Strin
 
         val df = getDataFrame(dataSource)
         val count = df.count()
-        val results = dataSource._2.validations.map(validation => validation.validate(df, count))
+        val results = dataSource._2.validations.map(validBuilder => validBuilder.validation.validate(df, count))
         df.unpersist()
         DataSourceValidationResult(dataSource._1, dataSource._2.options, results)
       }).toList

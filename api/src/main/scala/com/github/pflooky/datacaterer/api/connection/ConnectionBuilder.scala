@@ -1,10 +1,12 @@
 package com.github.pflooky.datacaterer.api.connection
 
 import com.github.pflooky.datacaterer.api.model.Constants.FORMAT
-import com.github.pflooky.datacaterer.api.model.{Count, Field, Schema, Step, Task}
+import com.github.pflooky.datacaterer.api.model.{Step, Task}
 import com.github.pflooky.datacaterer.api.{ConnectionConfigWithTaskBuilder, CountBuilder, FieldBuilder, GeneratorBuilder, SchemaBuilder, StepBuilder, TaskBuilder, TasksBuilder, ValidationBuilder}
 
-abstract class ConnectionTaskBuilder[T] {
+import scala.annotation.varargs
+
+trait ConnectionTaskBuilder[T] {
   var connectionConfigWithTaskBuilder: ConnectionConfigWithTaskBuilder = ConnectionConfigWithTaskBuilder()
   var task: Option[TaskBuilder] = None
   var step: Option[StepBuilder] = None
@@ -17,23 +19,13 @@ abstract class ConnectionTaskBuilder[T] {
 
   def fromBaseConfig(connectionTaskBuilder: ConnectionTaskBuilder[T]): T
 
-  def schema(field: FieldBuilder, fields: FieldBuilder*): ConnectionTaskBuilder[T] = {
-    this.step = Some(getStep.schema(field, fields: _*))
-    this
-  }
-
-  def schema(field: Field, fields: Field*): ConnectionTaskBuilder[T] = {
-    this.step = Some(getStep.schema(field, fields: _*))
+  @varargs def schema(fields: FieldBuilder*): ConnectionTaskBuilder[T] = {
+    this.step = Some(getStep.schema(fields: _*))
     this
   }
 
   def schema(schemaBuilder: SchemaBuilder): ConnectionTaskBuilder[T] = {
     this.step = Some(getStep.schema(schemaBuilder))
-    this
-  }
-
-  def schema(schema: Schema): ConnectionTaskBuilder[T] = {
-    this.step = Some(getStep.schema(schema))
     this
   }
 
@@ -47,18 +39,13 @@ abstract class ConnectionTaskBuilder[T] {
     this
   }
 
-  def count(count: Count): ConnectionTaskBuilder[T] = {
-    this.step = Some(getStep.count(count))
-    this
-  }
-
   def numPartitions(numPartitions: Int): ConnectionTaskBuilder[T] = {
     this.step = Some(getStep.numPartitions(numPartitions))
     this
   }
 
-  def validations(validationBuilder: ValidationBuilder, validationBuilders: ValidationBuilder*): ConnectionTaskBuilder[T] = {
-    this.step = Some(getStep.validations(validationBuilder, validationBuilders: _*))
+  @varargs def validations(validationBuilders: ValidationBuilder*): ConnectionTaskBuilder[T] = {
+    this.step = Some(getStep.validations(validationBuilders: _*))
     this
   }
 
@@ -102,8 +89,8 @@ case class FileBuilder() extends ConnectionTaskBuilder[FileBuilder] {
     this
   }
 
-  def partitionBy(partitionBy: String, partitionsBy: String*): FileBuilder = {
-    this.step = Some(getStep.partitionBy(partitionBy, partitionsBy: _*))
+  @varargs def partitionBy(partitionsBy: String*): FileBuilder = {
+    this.step = Some(getStep.partitionBy(partitionsBy: _*))
     this
   }
 }

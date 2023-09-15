@@ -2,13 +2,16 @@ package com.github.pflooky.datacaterer.api
 
 import com.github.pflooky.datacaterer.api.model.Constants.{CSV, FORMAT, JDBC_TABLE, PATH, URL}
 import com.github.pflooky.datacaterer.api.model.ExpressionValidation
+import org.junit.runner.RunWith
 import org.scalatest.funsuite.AnyFunSuite
+import org.scalatestplus.junit.JUnitRunner
 
+@RunWith(classOf[JUnitRunner])
 class PlanRunTest extends AnyFunSuite {
-  
+
   test("Can create plan with each type of connection") {
     val result = new PlanRun {
-      val mySchema = schema.addField(field.name("account_id"))
+      val mySchema = schema.addFields(field.name("account_id"))
       val myCsv = csv("my_csv", "/my/csv").schema(mySchema)
       val myJson = json("my_json", "/my/json").schema(mySchema)
       val myParquet = parquet("my_parquet", "/my/parquet").schema(mySchema)
@@ -19,7 +22,7 @@ class PlanRunTest extends AnyFunSuite {
       val mySolace = solace("my_solace").destination("solace_topic").schema(mySchema)
       val myKafka = kafka("my_kafka").topic("kafka_topic").schema(mySchema)
       val myHttp = http("my_http").schema(mySchema)
-      
+
       execute(myCsv, myJson, myParquet, myOrc, myPostgres, myMySql, myCassandra, mySolace, myKafka, myHttp)
     }
 
@@ -79,8 +82,8 @@ class PlanRunTest extends AnyFunSuite {
     assert(dsValidation._2.options.get(PATH).contains("/my/data/path"))
     assert(dsValidation._2.options.get(FORMAT).contains("csv"))
     assert(dsValidation._2.validations.size == 1)
-    assert(dsValidation._2.validations.head.isInstanceOf[ExpressionValidation])
-    val expressionValidation = dsValidation._2.validations.head.asInstanceOf[ExpressionValidation]
+    assert(dsValidation._2.validations.head.validation.isInstanceOf[ExpressionValidation])
+    val expressionValidation = dsValidation._2.validations.head.validation.asInstanceOf[ExpressionValidation]
     assert(expressionValidation.expr == "account_id != ''")
   }
 
@@ -103,8 +106,8 @@ class PlanRunTest extends AnyFunSuite {
     assert(dsValidation._2.options.nonEmpty)
     assert(dsValidation._2.options.get(FORMAT).contains("jdbc"))
     assert(dsValidation._2.validations.size == 2)
-    assert(dsValidation._2.validations.exists(v => v.asInstanceOf[ExpressionValidation].expr == "account_id != ''"))
-    assert(dsValidation._2.validations.exists(v => v.asInstanceOf[ExpressionValidation].expr == "txn_id IS NOT NULL"))
+    assert(dsValidation._2.validations.exists(v => v.validation.asInstanceOf[ExpressionValidation].expr == "account_id != ''"))
+    assert(dsValidation._2.validations.exists(v => v.validation.asInstanceOf[ExpressionValidation].expr == "txn_id IS NOT NULL"))
   }
 
   test("Can create plan with validations only defined") {
@@ -120,7 +123,7 @@ class PlanRunTest extends AnyFunSuite {
     assert(result._validations.head.dataSources.contains("my_csv"))
     val validRes = result._validations.head.dataSources("my_csv")
     assert(validRes.validations.size == 1)
-    assert(validRes.validations.head.asInstanceOf[ExpressionValidation].expr == "account_id != 'acc123'")
+    assert(validRes.validations.head.validation.asInstanceOf[ExpressionValidation].expr == "account_id != 'acc123'")
     assert(validRes.options.size == 2)
     assert(validRes.options(FORMAT) == CSV)
     assert(validRes.options(PATH) == "/my/csv")

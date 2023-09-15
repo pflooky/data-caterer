@@ -1,8 +1,11 @@
 package com.github.pflooky.datacaterer.api
 
-import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, ExpressionValidation, Field, ForeignKeyRelation, PauseWaitCondition, Schema, Step}
+import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, ExpressionValidation, ForeignKeyRelation, PauseWaitCondition}
+import org.junit.runner.RunWith
 import org.scalatest.funsuite.AnyFunSuite
+import org.scalatestplus.junit.JUnitRunner
 
+@RunWith(classOf[JUnitRunner])
 class PlanBuilderTest extends AnyFunSuite {
 
   test("Can create Plan") {
@@ -29,19 +32,19 @@ class PlanBuilderTest extends AnyFunSuite {
       val t = tasks.addTask(
         "my task",
         dataSourceName,
-        step.schema(schema.addField(field.name("account_id")))
+        step.schema(schema.addFields(field.name("account_id")))
       )
 
       val p = plan.name("my plan")
         .seed(1)
         .locale("en")
         .addForeignKeyRelationship(
-          ForeignKeyRelation("account_json", "default_step", "account_id"),
-          List(ForeignKeyRelation("txn_db", "txn_step", "account_number"))
+          new ForeignKeyRelation("account_json", "default_step", "account_id"),
+          List(new ForeignKeyRelation("txn_db", "txn_step", "account_number"))
         )
         .addForeignKeyRelationship(
-          ForeignKeyRelation("account_json", "default_step", "customer_number"),
-          List(ForeignKeyRelation("acc_db", "acc_step", "customer_number"))
+          new ForeignKeyRelation("account_json", "default_step", "customer_number"),
+          List(new ForeignKeyRelation("acc_db", "acc_step", "customer_number"))
         )
 
       val c = configuration
@@ -70,7 +73,7 @@ class PlanBuilderTest extends AnyFunSuite {
 
     assert(result._tasks.size == 1)
     assert(result._tasks.head.name == "my task")
-    assert(result._tasks.head.steps == List(Step(schema = Schema(Some(List(Field("account_id")))))))
+    assert(result._tasks.head.steps.head.schema.fields.get.head.name == "account_id")
 
     assert(result._plan.name == "my plan")
     assert(result._plan.tasks.size == 1)
@@ -80,10 +83,10 @@ class PlanBuilderTest extends AnyFunSuite {
     assert(result._plan.sinkOptions.get.seed.contains("1"))
     assert(result._plan.sinkOptions.get.locale.contains("en"))
     val fk = result._plan.sinkOptions.get.foreignKeys
-    assert(fk.contains("account_json.default_step.account_id"))
-    assert(fk("account_json.default_step.account_id") == List("txn_db.txn_step.account_number"))
-    assert(fk.contains("account_json.default_step.customer_number"))
-    assert(fk("account_json.default_step.customer_number") == List("acc_db.acc_step.customer_number"))
+    assert(fk.exists(f => f._1.equalsIgnoreCase("account_json.default_step.account_id")))
+    assert(fk.find(f => f._1.equalsIgnoreCase(("account_json.default_step.account_id"))).get._2 == List("txn_db.txn_step.account_number"))
+    assert(fk.exists(f => f._1.equalsIgnoreCase("account_json.default_step.customer_number")))
+    assert(fk.find(f => f._1.equalsIgnoreCase("account_json.default_step.customer_number")).get._2 == List("acc_db.acc_step.customer_number"))
 
     assert(result._configuration.flagsConfig.enableCount)
     assert(result._configuration.flagsConfig.enableGenerateData)
@@ -107,7 +110,7 @@ class PlanBuilderTest extends AnyFunSuite {
     val dataSourceHead = result._validations.head.dataSources.head
     assert(dataSourceHead._1 == "account_json")
     assert(dataSourceHead._2.validations.size == 1)
-    val validationHead = dataSourceHead._2.validations.head
+    val validationHead = dataSourceHead._2.validations.head.validation
     assert(validationHead.description.contains("name is equal to Peter"))
     assert(validationHead.errorThreshold.contains(0.1))
     assert(validationHead.isInstanceOf[ExpressionValidation])

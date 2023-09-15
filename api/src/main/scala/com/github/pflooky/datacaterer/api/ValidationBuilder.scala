@@ -3,8 +3,12 @@ package com.github.pflooky.datacaterer.api
 import com.github.pflooky.datacaterer.api.model.{DataExistsWaitCondition, DataSourceValidation, ExpressionValidation, FileExistsWaitCondition, PauseWaitCondition, Validation, ValidationConfiguration, WaitCondition, WebhookWaitCondition}
 import com.softwaremill.quicklens.ModifyPimp
 
+import scala.annotation.varargs
+
 
 case class ValidationConfigurationBuilder(validationConfiguration: ValidationConfiguration = ValidationConfiguration()) {
+  def this() = this(ValidationConfiguration())
+
   def name(name: String): ValidationConfigurationBuilder =
     this.modify(_.validationConfiguration.name).setTo(name)
 
@@ -25,60 +29,43 @@ case class ValidationConfigurationBuilder(validationConfiguration: ValidationCon
 
   def addValidations(
                       dataSourceName: String,
-                      validations: Seq[Validation]
+                      validations: Seq[ValidationBuilder]
                     ): ValidationConfigurationBuilder =
     this.modify(_.validationConfiguration.dataSources)(_ ++ Map(dataSourceName -> addValidationsToDataSource(dataSourceName, validations)))
 
-  def addValidations(
-                      dataSourceName: String,
-                      options: Map[String, String],
-                      validation: ValidationBuilder,
-                      validations: ValidationBuilder*
-                    ): ValidationConfigurationBuilder =
-    addValidations(dataSourceName, options, WaitConditionBuilder().pause(0), validation, validations: _*)
+  @varargs def addValidations(
+                               dataSourceName: String,
+                               options: Map[String, String],
+                               validations: ValidationBuilder*
+                             ): ValidationConfigurationBuilder =
+    addValidations(dataSourceName, options, WaitConditionBuilder().pause(0), validations: _*)
 
-  def addValidationsJava(
-                          dataSourceName: String,
-                          options: Map[String, String],
-                          validation: Validation,
-                          validations: Validation*
-                        ): ValidationConfigurationBuilder =
-    addValidationsJava(dataSourceName, options, WaitConditionBuilder().pause(0).waitCondition, validation, validations: _*)
-
-  def addValidations(
-                      dataSourceName: String,
-                      options: Map[String, String],
-                      waitCondition: WaitConditionBuilder,
-                      validationBuilder: ValidationBuilder,
-                      validationBuilders: ValidationBuilder*
-                    ): ValidationConfigurationBuilder =
-    addValidationsJava(dataSourceName, options, waitCondition.waitCondition, validationBuilder.validation, validationBuilders.map(_.validation): _*)
-
-  def addValidationsJava(
-                          dataSourceName: String,
-                          options: Map[String, String],
-                          waitCondition: WaitCondition,
-                          validation: Validation,
-                          validations: Validation*
-                        ): ValidationConfigurationBuilder =
-    this.modify(_.validationConfiguration.dataSources)(_ ++ Map(dataSourceName -> addValidationsToDataSource(dataSourceName, options, waitCondition, validation +: validations)))
+  @varargs def addValidations(
+                               dataSourceName: String,
+                               options: Map[String, String],
+                               waitCondition: WaitConditionBuilder,
+                               validationBuilders: ValidationBuilder*
+                             ): ValidationConfigurationBuilder =
+    this.modify(_.validationConfiguration.dataSources)(_ ++
+      Map(dataSourceName -> addValidationsToDataSource(dataSourceName, options, waitCondition, validationBuilders))
+    )
 
   private def addValidationsToDataSource(
                                           dataSourceName: String,
                                           options: Map[String, String],
-                                          waitCondition: WaitCondition,
-                                          validation: Seq[Validation]
+                                          waitCondition: WaitConditionBuilder,
+                                          validation: Seq[ValidationBuilder]
                                         ): DataSourceValidation = {
     val dsValidBuilder = getDsBuilder(dataSourceName)
-    dsValidBuilder.options(options).wait(waitCondition).validations(validation.head, validation.tail: _*).dataSourceValidation
+    dsValidBuilder.options(options).wait(waitCondition).validations(validation: _*).dataSourceValidation
   }
 
   private def addValidationsToDataSource(
                                           dataSourceName: String,
-                                          validations: Seq[Validation]
+                                          validations: Seq[ValidationBuilder]
                                         ): DataSourceValidation = {
     val dsValidBuilder = getDsBuilder(dataSourceName)
-    dsValidBuilder.validations(validations.head, validations.tail: _*).dataSourceValidation
+    dsValidBuilder.validations(validations: _*).dataSourceValidation
   }
 
   private def getDsBuilder(dataSourceName: String) = {
@@ -91,17 +78,16 @@ case class ValidationConfigurationBuilder(validationConfiguration: ValidationCon
 }
 
 case class DataSourceValidationBuilder(dataSourceValidation: DataSourceValidation = DataSourceValidation()) {
+  def this() = this(DataSourceValidation())
+
   def options(options: Map[String, String]): DataSourceValidationBuilder =
     this.modify(_.dataSourceValidation.options)(_ ++ options)
 
   def option(option: (String, String)): DataSourceValidationBuilder =
     this.modify(_.dataSourceValidation.options)(_ ++ Map(option))
 
-  def validations(validation: ValidationBuilder, validations: ValidationBuilder*): DataSourceValidationBuilder =
-    this.modify(_.dataSourceValidation.validations)(_ ++ (validation +: validations).map(_.validation))
-
-  def validations(validation: Validation, validations: Validation*): DataSourceValidationBuilder =
-    this.modify(_.dataSourceValidation.validations)(_ ++ (validation +: validations))
+  @varargs def validations(validations: ValidationBuilder*): DataSourceValidationBuilder =
+    this.modify(_.dataSourceValidation.validations)(_ ++ validations)
 
   def wait(waitCondition: WaitConditionBuilder): DataSourceValidationBuilder =
     this.modify(_.dataSourceValidation.waitCondition).setTo(waitCondition.waitCondition)
@@ -111,6 +97,8 @@ case class DataSourceValidationBuilder(dataSourceValidation: DataSourceValidatio
 }
 
 case class ValidationBuilder(validation: Validation = ExpressionValidation()) {
+  def this() = this(ExpressionValidation())
+
   def description(description: String): ValidationBuilder = {
     this.validation.description = Some(description)
     this

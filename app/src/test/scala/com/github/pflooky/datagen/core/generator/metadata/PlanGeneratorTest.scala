@@ -22,7 +22,7 @@ class PlanGeneratorTest extends SparkSuite {
         )))
       )
     ))
-    val foreignKeys = Map("json.account_json.id" -> List("postgres.account.id"))
+    val foreignKeys = List("json.account_json.id" -> List("postgres.account.id"))
 
     PlanGenerator.writePlanAndTasksToFiles(List(("account_json", task)), foreignKeys, folderPath)
 

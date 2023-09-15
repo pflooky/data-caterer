@@ -13,13 +13,13 @@ import scala.util.{Success, Try}
 
 object PlanProcessor {
 
-  def determineAndExecutePlan(): Unit = {
+  def determineAndExecutePlan(optPlanRun: Option[PlanRun] = None): Unit = {
     val optPlanClass = getPlanClass
     optPlanClass.map(Class.forName)
       .map(cls => {
         cls.getDeclaredConstructor().newInstance()
         val tryScalaPlan = Try(cls.getDeclaredConstructor().newInstance().asInstanceOf[PlanRun])
-        val tryJavaPlan = Try(cls.getDeclaredConstructor().newInstance().asInstanceOf[com.github.pflooky.datacaterer.api.java.PlanRun])
+        val tryJavaPlan = Try(cls.getDeclaredConstructor().newInstance().asInstanceOf[com.github.pflooky.datacaterer.java.api.PlanRun])
         (tryScalaPlan, tryJavaPlan) match {
           case (Success(value), _) => value
           case (_, Success(value)) => value.getPlan
@@ -27,7 +27,10 @@ object PlanProcessor {
         }
       })
       .map(executePlan)
-      .getOrElse(executePlan)
+      .getOrElse(
+        optPlanRun.map(executePlan)
+          .getOrElse(executePlan)
+      )
   }
 
   private def executePlan(planRun: PlanRun): Unit = {

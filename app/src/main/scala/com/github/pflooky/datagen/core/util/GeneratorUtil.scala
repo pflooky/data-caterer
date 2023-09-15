@@ -16,7 +16,7 @@ object GeneratorUtil {
 
   def getDataGenerator(structField: StructField, faker: Faker): DataGenerator[_] = {
     val hasRegex = structField.metadata.contains(REGEX_GENERATOR)
-    val hasOneOf = structField.metadata.contains(REGEX_GENERATOR)
+    val hasOneOf = structField.metadata.contains(ONE_OF_GENERATOR)
     (hasRegex, hasOneOf) match {
       case (true, _) => RegexDataGenerator.getGenerator(structField, faker)
       case (_, true) => OneOfDataGenerator.getGenerator(structField, faker)
@@ -52,6 +52,28 @@ object GeneratorUtil {
 
   def getDataSourceName(taskSummary: TaskSummary, step: Step): String = {
     s"${taskSummary.dataSourceName}.${step.name}"
+  }
+
+  def applySqlExpressions(df: DataFrame, foreignKeyCols: List[String] = List(), isIgnoreForeignColExists: Boolean = true): DataFrame = {
+    def getSqlExpr(field: StructField): String = {
+      field.dataType match {
+        case StructType(fields) =>
+          val nestedSqlExpr = fields.map(f => s"'${f.name}', ${getSqlExpr(f.copy(name = s"${field.name}.${f.name}"))}").mkString(",")
+          s"NAMED_STRUCT($nestedSqlExpr)"
+        case _ =>
+          if (field.metadata.contains(SQL_GENERATOR) &&
+            (isIgnoreForeignColExists || foreignKeyCols.exists(col => field.metadata.getString(SQL_GENERATOR).contains(col)))) {
+            field.metadata.getString(SQL_GENERATOR)
+          } else {
+            field.name
+          }
+      }
+    }
+
+    val sqlExpressions = df.schema.fields.map(f => s"${getSqlExpr(f)} as `${f.name}`")
+    val res = df.selectExpr(sqlExpressions: _*)
+    if (!res.storageLevel.useMemory) res.cache()
+    res
   }
 
   private def getGeneratedCount(generator: Generator, faker: Faker): Long = {

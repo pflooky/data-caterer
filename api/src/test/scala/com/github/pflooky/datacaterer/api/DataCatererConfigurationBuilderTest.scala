@@ -1,8 +1,11 @@
 package com.github.pflooky.datacaterer.api
 
 import com.github.pflooky.datacaterer.api.model.{FlagsConfig, FoldersConfig, GenerationConfig, MetadataConfig}
+import org.junit.runner.RunWith
 import org.scalatest.funsuite.AnyFunSuite
+import org.scalatestplus.junit.JUnitRunner
 
+@RunWith(classOf[JUnitRunner])
 class DataCatererConfigurationBuilderTest extends AnyFunSuite {
 
   test("Can create basic configuration with defaults") {
@@ -26,7 +29,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
     assert(result.size == 1)
     assert(result.contains("my_postgres"))
     val config = result("my_postgres")
-    assert(config("url") == "jdbc:postgresql://localhost:5432")
+    assert(config("url") == "jdbc:postgresql://postgresserver:5432/customer")
     assert(config("user") == "postgres")
     assert(config("password") == "postgres")
     assert(config("format") == "jdbc")
@@ -56,7 +59,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
     assert(result.size == 1)
     assert(result.contains("my_mysql"))
     val config = result("my_mysql")
-    assert(config("url") == "jdbc:mysql://localhost:3306")
+    assert(config("url") == "jdbc:mysql://mysqlserver:3306/customer")
     assert(config("user") == "root")
     assert(config("password") == "root")
     assert(config("format") == "jdbc")
@@ -72,7 +75,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
     assert(result.size == 1)
     assert(result.contains("my_cassandra"))
     val config = result("my_cassandra")
-    assert(config("spark.cassandra.connection.host") == "localhost")
+    assert(config("spark.cassandra.connection.host") == "cassandraserver")
     assert(config("spark.cassandra.connection.port") == "9042")
     assert(config("spark.cassandra.auth.username") == "cassandra")
     assert(config("spark.cassandra.auth.password") == "cassandra")
@@ -88,7 +91,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
     assert(result.size == 1)
     assert(result.contains("my_solace"))
     val config = result("my_solace")
-    assert(config("url") == "smf://localhost:55554")
+    assert(config("url") == "smf://solaceserver:55554")
     assert(config("user") == "admin")
     assert(config("password") == "admin")
     assert(config("format") == "jms")
@@ -106,7 +109,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
     assert(result.size == 1)
     assert(result.contains("my_kafka"))
     val config = result("my_kafka")
-    assert(config("kafka.bootstrap.servers") == "localhost:9092")
+    assert(config("kafka.bootstrap.servers") == "kafkaserver:9092")
     assert(config("format") == "kafka")
   }
 

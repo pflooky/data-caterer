@@ -14,8 +14,10 @@ object ForeignKeyRelationHelper {
   def fromString(str: String): ForeignKeyRelation = {
     val strSpt = str.split("\\.", 3)
     if (strSpt.length == 2) {
-      ForeignKeyRelation(strSpt.head, strSpt.last, "")
-    } else ForeignKeyRelation(strSpt.head, strSpt(1), strSpt.last)
+      ForeignKeyRelation(strSpt.head, strSpt.last, List())
+    } else {
+      ForeignKeyRelation(strSpt.head, strSpt(1), strSpt.last.split(",").toList)
+    }
   }
 }
 
@@ -58,12 +60,12 @@ object PlanImplicits {
   implicit class SinkOptionsOps(sinkOptions: SinkOptions) {
     def gatherForeignKeyRelations(key: String): (ForeignKeyRelation, List[ForeignKeyRelation]) = {
       val source = ForeignKeyRelationHelper.fromString(key)
-      val targets = sinkOptions.foreignKeys(key)
+      val targets = sinkOptions.foreignKeys.filter(f => f._1.equalsIgnoreCase(key)).flatMap(_._2)
       val targetForeignKeys = targets.map(ForeignKeyRelationHelper.fromString)
       (source, targetForeignKeys)
     }
 
-    def foreignKeysWithoutColumnNames: Map[String, List[String]] = {
+    def foreignKeysWithoutColumnNames: List[(String, List[String])] = {
       sinkOptions.foreignKeys.map(foreignKey => {
         val mainFk = foreignKey._1.split("\\.").take(2).mkString(".")
         val subFks = foreignKey._2.map(sFk => sFk.split("\\.").take(2).mkString("."))

@@ -1,7 +1,7 @@
 package com.github.pflooky.datacaterer.api.model
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_COUNT_RECORDS, DEFAULT_DATA_SOURCE_NAME, DEFAULT_FIELD_NAME, DEFAULT_FIELD_NULLABLE, DEFAULT_FIELD_TYPE, DEFAULT_FOREIGN_KEY_COLUMN, DEFAULT_GENERATOR_TYPE, DEFAULT_PER_COLUMN_COUNT_RECORDS, DEFAULT_STEP_ENABLED, DEFAULT_STEP_NAME, DEFAULT_STEP_TYPE, DEFAULT_TASK_NAME, DEFAULT_TASK_SUMMARY_ENABLE}
+import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_COUNT_RECORDS, DEFAULT_DATA_SOURCE_NAME, DEFAULT_FIELD_NAME, DEFAULT_FIELD_NULLABLE, DEFAULT_FIELD_TYPE, DEFAULT_GENERATOR_TYPE, DEFAULT_PER_COLUMN_COUNT_RECORDS, DEFAULT_STEP_ENABLED, DEFAULT_STEP_NAME, DEFAULT_STEP_TYPE, DEFAULT_TASK_NAME, DEFAULT_TASK_SUMMARY_ENABLE}
 
 import scala.language.implicitConversions
 
@@ -16,15 +16,18 @@ case class Plan(
 case class SinkOptions(
                         seed: Option[String] = None,
                         locale: Option[String] = None,
-                        foreignKeys: Map[String, List[String]] = Map()
+                        foreignKeys: List[(String, List[String])] = List()
                       )
 
 case class ForeignKeyRelation(
                                dataSource: String = DEFAULT_DATA_SOURCE_NAME,
                                step: String = DEFAULT_STEP_NAME,
-                               column: String = DEFAULT_FOREIGN_KEY_COLUMN
+                               columns: List[String] = List()
                              ) {
-  override def toString: String = s"$dataSource.$step.$column"
+
+  def this(dataSource: String, step: String, column: String) = this(dataSource, step, List(column))
+
+  override def toString: String = s"$dataSource.$step.${columns.mkString(",")}"
 }
 
 case class TaskSummary(
