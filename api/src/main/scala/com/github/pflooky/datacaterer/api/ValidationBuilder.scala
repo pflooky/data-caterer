@@ -104,11 +104,30 @@ case class ValidationBuilder(validation: Validation = ExpressionValidation()) {
     this
   }
 
+  /**
+   * Define the number of records or percentage of records that do not meet the validation rule before marking the validation
+   * as failed. If no error threshold is defined, any failures will mark the whole validation as failed.<br>
+   * For example, if there are 10 records and 4 have failed:<br>
+   * {{{errorThreshold(2) #marked as failed as more than 2 records have failed}}}
+   * {{{errorThreshold(0.1) #marked as failed as more than 10% of records have failed}}}
+   * {{{errorThreshold(4) #marked as success as less than or equal to 4 records have failed}}}
+   * {{{errorThreshold(0.4) #marked as success as less than or equal to 40% of records have failed}}}
+   *
+   * @param threshold Number or percentage of failed records which is acceptable before marking as failed
+   * @return ValidationBuilder
+   */
   def errorThreshold(threshold: Double): ValidationBuilder = {
     this.validation.errorThreshold = Some(threshold)
     this
   }
 
+  /**
+   * SQL expression used to check if data is adhering to specified condition. Return result from SQL expression is
+   * required to be boolean
+   *
+   * @param expr SQL expression which returns a boolean
+   * @return ValidationBuilder
+   */
   def expr(expr: String): ValidationBuilder = {
     val expressionValidation = ExpressionValidation(expr)
     expressionValidation.description = this.validation.description

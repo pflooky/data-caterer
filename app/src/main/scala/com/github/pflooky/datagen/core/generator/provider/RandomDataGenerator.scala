@@ -44,6 +44,8 @@ object RandomDataGenerator {
     private lazy val maxLength = tryGetValue(structField.metadata, MAXIMUM_LENGTH, 10)
     assert(minLength <= maxLength, s"minLength has to be less than or equal to maxLength, field-name=${structField.name}, minLength=$minLength, maxLength=$maxLength")
     private lazy val tryExpression = Try(structField.metadata.getString(EXPRESSION))
+    private val characterSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 "
+    private val characterSetSize = characterSet.length
 
     override val edgeCases: List[String] = List("", "\n", "\r", "\t", " ", "\\u0000", "\\ufff",
       "İyi günler", "Спасибо", "Καλημέρα", "صباح الخير", "Förlåt", "你好吗", "Nhà vệ sinh ở đâu", "こんにちは", "नमस्ते", "Բարեւ", "Здравейте")
@@ -61,8 +63,10 @@ object RandomDataGenerator {
       if (tryExpression.isSuccess) {
         s"$GENERATE_FAKER_EXPRESSION_UDF('${tryExpression.get}')"
       } else {
+        //.withColumn("random_string", expr(s"concat_ws('', sequence(1, $stringLength) transform(sequence(1, $stringLength), _ => substr('$characterSet', ceil(rand() * charset_size), 1)))"))
         val randLength = s"CAST(ROUND($sqlRandom * ${maxLength - minLength} + $minLength, 0) AS INT)"
-        s"SUBSTRING(ARRAY_JOIN(SHUFFLE(SPLIT(REGEXP_REPLACE(BASE64(MD5(CONCAT($sqlRandom, CURRENT_TIMESTAMP()))), '\\\\+|/|=', ' '), '[.]')), ''), 0, $randLength)"
+//        s"SUBSTRING(ARRAY_JOIN(SHUFFLE(SPLIT(REGEXP_REPLACE(BASE64(CONCAT($sqlRandom, CURRENT_TIMESTAMP())), '\\\\+|/|=', ' '), '[.]')), ''), 0, $randLength)"
+        s"CONCAT_WS('', TRANSFORM(SEQUENCE(1, $randLength), i -> SUBSTR('$characterSet', CEIL(RAND() * $characterSetSize), 1)))"
       }
     }
   }

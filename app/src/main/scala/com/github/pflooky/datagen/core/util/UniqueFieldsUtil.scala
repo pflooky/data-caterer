@@ -4,6 +4,7 @@ import com.github.pflooky.datacaterer.api.model.{Task, TaskSummary}
 import com.github.pflooky.datagen.core.model.PlanImplicits.StepOps
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.storage.StorageLevel
 
 class UniqueFieldsUtil(executableTasks: List[(TaskSummary, Task)])(implicit sparkSession: SparkSession) {
 

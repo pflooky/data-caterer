@@ -121,17 +121,17 @@ object Constants {
 
   //spark defaults
   lazy val DEFAULT_MASTER = "local[*]"
-  lazy val DEFAULT_RUNTIME_CONFIG = java.util.Map.of(
-    "spark.sql.cbo.enabled", "true",
-    "spark.sql.adaptive.enabled", "true",
-    "spark.sql.cbo.planStats.enabled", "true",
-    "spark.sql.legacy.allowUntypedScalaUDF", "true",
-    "spark.sql.statistics.histogram.enabled", "true",
-    "spark.sql.shuffle.partitions", "10",
-    "spark.sql.catalog.postgres", "",
-    "spark.sql.catalog.cassandra", "com.datastax.spark.connector.datasource.CassandraCatalog",
-    "spark.hadoop.fs.s3a.directory.marker.retention", "keep",
-    "spark.hadoop.fs.s3a.bucket.all.committer.magic.enabled", "true"
+  lazy val DEFAULT_RUNTIME_CONFIG = Map(
+    "spark.sql.cbo.enabled" -> "true",
+    "spark.sql.adaptive.enabled" -> "true",
+    "spark.sql.cbo.planStats.enabled" -> "true",
+    "spark.sql.legacy.allowUntypedScalaUDF" -> "true",
+    "spark.sql.statistics.histogram.enabled" -> "true",
+    "spark.sql.shuffle.partitions" -> "10",
+    "spark.sql.catalog.postgres" -> "",
+    "spark.sql.catalog.cassandra" -> "com.datastax.spark.connector.datasource.CassandraCatalog",
+    "spark.hadoop.fs.s3a.directory.marker.retention" -> "keep",
+    "spark.hadoop.fs.s3a.bucket.all.committer.magic.enabled" -> "true"
   )
 
   //jdbc defaults

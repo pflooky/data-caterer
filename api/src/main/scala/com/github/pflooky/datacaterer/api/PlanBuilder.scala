@@ -58,6 +58,13 @@ case class PlanBuilder(plan: Plan = Plan(), tasks: List[TasksBuilder] = List()) 
                                 relations: List[(ConnectionTaskBuilder[_], String)]): PlanBuilder =
     addForeignKeyRelationship(connectionTaskBuilder, List(column), relations.map(r => (r._1, List(r._2))))
 
+  def addForeignKeyRelationship(connectionTaskBuilder: ConnectionTaskBuilder[_], column: String,
+                                relations: java.util.List[java.util.Map.Entry[ConnectionTaskBuilder[_], String]]): PlanBuilder = {
+    val scalaListRelations = toScalaList(relations)
+    val mappedRelations = scalaListRelations.map(r => (r.getKey, List(r.getValue)))
+    addForeignKeyRelationship(connectionTaskBuilder, List(column), mappedRelations)
+  }
+
   private def toForeignKeyRelation(connectionTaskBuilder: ConnectionTaskBuilder[_], columns: List[String]) = {
     val dataSource = connectionTaskBuilder.connectionConfigWithTaskBuilder.dataSourceName
     val colNames = columns.mkString(",")

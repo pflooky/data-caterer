@@ -54,8 +54,8 @@ trait ConnectionTaskBuilder[T] {
     this
   }
 
-  def task(task: Task): ConnectionTaskBuilder[T] = {
-    this.task = Some(TaskBuilder(task))
+  @varargs def task(stepBuilders: StepBuilder*): ConnectionTaskBuilder[T] = {
+    this.task = Some(TaskBuilder().steps(stepBuilders: _*))
     this
   }
 

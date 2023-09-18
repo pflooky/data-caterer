@@ -8,6 +8,7 @@ import com.github.pflooky.datagen.core.util.MetadataUtil.getFieldMetadata
 import com.google.common.util.concurrent.RateLimiter
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, DataFrameWriter, Dataset, Row, SaveMode, SparkSession}
+import org.apache.spark.storage.StorageLevel
 
 import java.time.LocalDateTime
 import scala.collection.mutable.ListBuffer
@@ -24,15 +25,12 @@ class SinkFactory(
   private var HAS_LOGGED_COUNT_DISABLE_WARNING = false
 
   def pushToSink(df: DataFrame, dataSourceName: String, step: Step, flagsConfig: FlagsConfig, startTime: LocalDateTime): SinkResult = {
-    if (!connectionConfigs.contains(dataSourceName)) {
-      //      throw new RuntimeException(s"Cannot find sink connection details in application config for data source, data-source-name=$dataSourceName, step-name=${step.name}")
-    }
     val dfWithoutOmitFields = removeOmitFields(df)
     val connectionConfig = connectionConfigs.getOrElse(dataSourceName, Map(FORMAT -> step.`type`))
     val saveMode = connectionConfig.get(SAVE_MODE).map(_.toLowerCase.capitalize).map(SaveMode.valueOf).getOrElse(SaveMode.Append)
-    val saveModeName = saveMode.name()
     val format = connectionConfig(FORMAT)
     val enrichedConnectionConfig = additionalConnectionConfig(format, connectionConfig)
+
     val count = if (flagsConfig.enableCount) {
       dfWithoutOmitFields.count().toString
     } else if (!HAS_LOGGED_COUNT_DISABLE_WARNING) {
@@ -40,14 +38,14 @@ class SinkFactory(
       HAS_LOGGED_COUNT_DISABLE_WARNING = true
       "-1"
     } else "-1"
-    LOGGER.info(s"Pushing data to sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, num-records=$count, status=$STARTED")
-    saveData(dfWithoutOmitFields, dataSourceName, step, enrichedConnectionConfig, saveMode, saveModeName, format, count, flagsConfig.enableFailOnError, startTime)
+    LOGGER.info(s"Pushing data to sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=${saveMode.name()}, num-records=$count, status=$STARTED")
+    saveData(dfWithoutOmitFields, dataSourceName, step, enrichedConnectionConfig, saveMode, format, count, flagsConfig.enableFailOnError, startTime)
   }
 
   private def saveData(df: DataFrame, dataSourceName: String, step: Step, connectionConfig: Map[String, String],
-                       saveMode: SaveMode, saveModeName: String, format: String, count: String, enableFailOnError: Boolean, startTime: LocalDateTime): SinkResult = {
+                       saveMode: SaveMode, format: String, count: String, enableFailOnError: Boolean, startTime: LocalDateTime): SinkResult = {
     val saveTiming = determineSaveTiming(dataSourceName, format, step.name)
-    val baseSinkResult = SinkResult(dataSourceName, format, saveModeName)
+    val baseSinkResult = SinkResult(dataSourceName, format, saveMode.name())
     val sinkResult = if (saveTiming.equalsIgnoreCase(BATCH)) {
       saveBatchData(dataSourceName, df, saveMode, connectionConfig, step.options, count, startTime)
     } else if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION)) {
@@ -57,19 +55,21 @@ class SinkFactory(
       baseSinkResult
     } else baseSinkResult
 
-    (sinkResult.isSuccess, sinkResult.exception) match {
+    val finalSinkResult = (sinkResult.isSuccess, sinkResult.exception) match {
       case (false, Some(exception)) =>
-        LOGGER.error(s"Failed to save data for sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, " +
+        LOGGER.error(s"Failed to save data for sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=${saveMode.name()}, " +
           s"num-records=$count, status=$FAILED, exception=${exception.getMessage.take(500)}")
         if (enableFailOnError) throw new RuntimeException(exception) else baseSinkResult
       case (true, None) =>
-        LOGGER.info(s"Successfully saved data to sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=$saveModeName, " +
+        LOGGER.info(s"Successfully saved data to sink, data-source-name=$dataSourceName, step-name=${step.name}, save-mode=${saveMode.name()}, " +
           s"num-records=$count, status=$FINISHED")
         sinkResult
       case (isSuccess, optException) =>
         LOGGER.warn(s"Unexpected sink result scenario, is-success=$isSuccess, exception-exists=${optException.isDefined}")
         sinkResult
     }
+    df.unpersist()
+    finalSinkResult
   }
 
   private def determineSaveTiming(dataSourceName: String, format: String, stepName: String): String = {

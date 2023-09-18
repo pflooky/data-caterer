@@ -13,6 +13,7 @@ import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, UniqueFieldsUtil}
 import net.datafaker.Faker
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.storage.StorageLevel
 
 import java.time.LocalDateTime
 
@@ -42,12 +43,12 @@ class BatchDataProcessor(connectionConfigsByName: Map[String, Map[String, String
           val endIndex = stepRecords.currentNumRecords + stepRecords.numRecordsPerBatch
 
           val genDf = dataGeneratorFactory.generateDataForStep(s, task._1.dataSourceName, startIndex, endIndex)
-          val dfRecordCount = if (flagsConfig.enableCount) genDf.count() else stepRecords.numRecordsPerBatch
+          val df = if (s.gatherPrimaryKeys.nonEmpty && flagsConfig.enableUniqueCheck) uniqueFieldUtil.getUniqueFieldsValues(dataSourceStepName, genDf) else genDf
+
+          if (!df.storageLevel.useMemory) df.cache()
+          val dfRecordCount = if (flagsConfig.enableCount) df.count() else stepRecords.numRecordsPerBatch
           LOGGER.debug(s"Step record count for batch, batch=$batch, step-name=${s.name}, target-num-records=${stepRecords.numRecordsPerBatch}, actual-num-records=$dfRecordCount")
           trackRecordsPerStep = trackRecordsPerStep ++ Map(recordStepName -> stepRecords.copy(currentNumRecords = dfRecordCount))
-
-          val df = if (s.gatherPrimaryKeys.nonEmpty && flagsConfig.enableUniqueCheck) uniqueFieldUtil.getUniqueFieldsValues(dataSourceStepName, genDf) else genDf
-          if (!df.storageLevel.useMemory) df.cache()
           (dataSourceStepName, df)
         })
       ).toMap

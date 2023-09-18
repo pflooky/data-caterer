@@ -32,7 +32,12 @@ object ValidationImplicits {
 
   implicit class ValidationOps(validation: Validation) {
 
-    def validate(df: DataFrame, dfCount: Long): ValidationResult = ValidationResult(validation)
+    def validate(df: DataFrame, dfCount: Long): ValidationResult = {
+      validation match {
+        case exp: ExpressionValidation => ExpressionValidationOps(exp).validate(df, dfCount)
+        case _ => ValidationResult(validation)
+      }
+    }
 
     def getIsSuccessAndSampleErrors(notEqualDf: Dataset[Row], dfCount: Long): (Boolean, Option[DataFrame]) = {
       val count = notEqualDf.count()
@@ -48,15 +53,15 @@ object ValidationImplicits {
     }
   }
 
-  implicit class ExpressionValidationOps(expressionValidation: ExpressionValidation) {
-    def validate(df: DataFrame, dfCount: Long): ValidationResult = {
+  implicit class ExpressionValidationOps(expressionValidation: ExpressionValidation) extends ValidationOps(expressionValidation) {
+    override def validate(df: DataFrame, dfCount: Long): ValidationResult = {
       val notEqualDf = df.where(s"!(${expressionValidation.expr})")
       val (isSuccess, sampleErrors) = ValidationOps(expressionValidation).getIsSuccessAndSampleErrors(notEqualDf, dfCount)
       ValidationResult(expressionValidation, isSuccess, sampleErrors)
     }
   }
 
-  implicit class WaitConditionOps(waitCondition: WaitCondition) {
+  implicit class WaitConditionOps(waitCondition: WaitCondition = PauseWaitCondition()) {
     def checkCondition(implicit sparkSession: SparkSession): Boolean = true
 
     def checkCondition(connectionConfigByName: Map[String, Map[String, String]])(implicit sparkSession: SparkSession): Boolean = true
@@ -100,8 +105,8 @@ object ValidationImplicits {
   implicit class DataExistsWaitConditionOps(dataExistsWaitCondition: DataExistsWaitCondition) extends WaitConditionOps(dataExistsWaitCondition) {
     override def checkCondition(connectionConfigByName: Map[String, Map[String, String]])(implicit sparkSession: SparkSession): Boolean = {
       val connectionOptions = connectionConfigByName(dataExistsWaitCondition.dataSourceName)
-      val loadData = sparkSession.read.
-        format(connectionOptions(FORMAT))
+      val loadData = sparkSession.read
+        .format(connectionOptions(FORMAT))
         .options(connectionOptions ++ dataExistsWaitCondition.options)
         .load()
         .where(dataExistsWaitCondition.expr)

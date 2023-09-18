@@ -45,6 +45,6 @@ case class DataCatererConfiguration(
                                      metadataConfig: MetadataConfig = MetadataConfig(),
                                      generationConfig: GenerationConfig = GenerationConfig(),
                                      connectionConfigByName: Map[String, Map[String, String]] = Map(),
-                                     runtimeConfig: Map[String, String] = DEFAULT_RUNTIME_CONFIG.asScala.toMap,
+                                     runtimeConfig: Map[String, String] = DEFAULT_RUNTIME_CONFIG,
                                      master: String = DEFAULT_MASTER
                                    )

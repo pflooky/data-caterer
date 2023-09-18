@@ -300,6 +300,10 @@ public abstract class PlanRun {
         execute(List.of(tasks), plan(), configuration(), Collections.emptyList());
     }
 
+    public void execute(DataCatererConfigurationBuilder configurationBuilder) {
+        execute(Collections.emptyList(), plan(), configurationBuilder, Collections.emptyList());
+    }
+
     public void execute(PlanBuilder plan, DataCatererConfigurationBuilder configuration) {
         execute(Collections.emptyList(), plan, configuration, Collections.emptyList());
     }

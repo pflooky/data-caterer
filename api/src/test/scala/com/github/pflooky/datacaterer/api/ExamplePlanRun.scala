@@ -41,32 +41,31 @@ class MinimalPlanWithManualTaskRun extends PlanRun {
 
 
 class LargeCountRun extends PlanRun {
-  val tasksBuilder = tasks.addTask("my_task", "mininal_json",
-    step
-      .option(("path", "app/src/test/resources/sample/json/large"))
-      .schema(schema.addFields(
-        field.name("account_id"),
-        field.name("year").`type`(IntegerType).min(2022),
-        field.name("name").expression("#{Name.name}"),
-        field.name("amount").`type`(DoubleType).max(1000.0),
-        field.name("date").`type`(DateType).min(Date.valueOf("2022-01-01")),
-        field.name("status").oneOf("open", "closed"),
-        field.name("txn_list")
-          .`type`(ArrayType)
-          .schema(schema.addFields(
-            field.name("id"),
-            field.name("date").`type`(DateType).min(Date.valueOf("2022-01-01")),
-            field.name("amount").`type`(DoubleType),
-          ))
-      ))
-      .count(count
-        .records(1000)
-        .recordsPerColumn(100, "account_id")
-      )
-  )
+  val jsonTask = json("mininal_json", "app/src/test/resources/sample/json/large")
+    .schema(schema.addFields(
+      field.name("account_id"),
+      field.name("year").`type`(IntegerType).min(2022),
+      field.name("name").expression("#{Name.name}"),
+      field.name("amount").`type`(DoubleType).max(1000.0),
+      field.name("date").`type`(DateType).min(Date.valueOf("2022-01-01")),
+      field.name("status").oneOf("open", "closed"),
+      field.name("txn_list")
+        .`type`(ArrayType)
+        .schema(schema.addFields(
+          field.name("id"),
+          field.name("date").`type`(DateType).min(Date.valueOf("2022-01-01")),
+          field.name("amount").`type`(DoubleType)
+        ))
+    ))
+    .count(count
+      .records(10000)
+      .recordsPerColumn(100, "account_id")
+    )
 
-  val conf = configuration.numRecordsPerBatch(1000000)
-  execute(List(tasksBuilder), configuration = conf)
+  val conf = configuration
+    .enableCount(true)
+    .generatedReportsFolderPath("app/src/test/resources/sample/report")
+  execute(conf, jsonTask)
 }
 
 class DocsPlanRun extends PlanRun {
@@ -118,7 +117,7 @@ class FullExamplePlanRun extends PlanRun {
           nameField,
           field.name("date").`type`(DateType).min(startDate),
           field.name("amount").`type`(DoubleType).max(10000),
-          field.name("credit_debit").sql("CASE WHEN amount < 0 THEN 'C' ELSE 'D' END"),
+          field.name("credit_debit").sql("CASE WHEN amount < 0 THEN 'C' ELSE 'D' END")
         )),
       step
         .name("account")
@@ -203,7 +202,7 @@ class ConnectionBasedApiPlanRun extends PlanRun {
     .count(count.records(100))
 
   val postgresGenerate = postgres("my_postgres")
-    .task(task.steps(
+    .task(
       step
         .jdbcTable("public.accounts")
         .schema(
@@ -217,11 +216,45 @@ class ConnectionBasedApiPlanRun extends PlanRun {
           field.name("amount").`type`(DoubleType).max(1000)
         )
         .count(count.recordsPerColumn(10, "account_id"))
-    ))
-    .schema(field.name("account_id"))
-    .count(count.records(2))
+    )
 
-  execute(csvGenerate, jsonGenerate)
+  val postgresAcc = postgres("my_postgres")
+    .table("public.accounts")
+    .schema(
+      field.name("account_id")
+    )
+  var jsonTask = json("my_json", "/tmp/json")
+    .schema(
+      field.name("account_id"),
+      field.name("customer_details")
+        .schema(
+          field.name("name").sql("_join_txn_name").`type`(DoubleType).enableEdgeCases(true).edgeCaseProbability(0.1)
+        ),
+      field.name("_join_txn_name").omit(true)
+    )
+  plan.addForeignKeyRelationship(
+    postgresAcc, List("account_id", ""),
+    List(jsonTask -> List("account_id", ""))
+  )
+  val csvTask = csv("my_csv", "s3a://my-bucket/csv/accounts")
+    .schema(
+      field.name("account_id"),
+  )
+  val conf = configuration
+    .generatedReportsFolderPath("s3a://my-bucket/data-caterer/generated")
+    .planFilePath("s3a://my-bucket/data-caterer/generated/plan/customer-create-plan.yaml")
+    .taskFolderPath("s3a://my-bucket/data-caterer/generated/task")
+    .runtimeConfig(Map(
+      "spark.hadoop.fs.s3a.directory.marker.retention" -> "keep",
+      "spark.hadoop.fs.s3a.bucket.all.committer.magic.enabled" -> "true",
+      "spark.hadoop.fs.defaultFS" -> "s3a://my-bucket",
+      //can change to other credential providers as shown here
+      //https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/index.html#Changing_Authentication_Providers
+      "spark.hadoop.fs.s3a.aws.credentials.provider" -> "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider",
+      "spark.hadoop.fs.s3a.access.key" -> "access_key",
+      "spark.hadoop.fs.s3a.secret.key" -> "secret_key"
+    ))
+  execute(conf, csvGenerate, jsonGenerate)
 }
 
 class DocumentationPlanRun extends PlanRun {

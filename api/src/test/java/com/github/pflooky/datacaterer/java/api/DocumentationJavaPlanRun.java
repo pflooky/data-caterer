@@ -22,13 +22,12 @@ public class DocumentationJavaPlanRun extends PlanRun {
                         field().name("year").type(IntegerType.instance()).sql("YEAR(date)"),
                         field().name("balance").type(DoubleType.instance()).min(10).max(1000),
                         field().name("date").type(DateType.instance()).min(Date.valueOf("2022-01-01")),
-                        field().name("status").oneOf(accountStatus),
+                        field().name("status").sql("element_at(sort_array(update_history.updated_time), 1)"),
                         field().name("update_history")
                                 .type(ArrayType.instance())
                                 .schema(
                                         field().name("updated_time").type(TimestampType.instance()).min(Timestamp.valueOf("2022-01-01 00:00:00")),
-                                        field().name("prev_status").oneOf(accountStatus),
-                                        field().name("new_status").oneOf(accountStatus)
+                                        field().name("status").oneOf(accountStatus)
                                 ),
                         field().name("customer_details")
                                 .schema(
@@ -59,6 +58,40 @@ public class DocumentationJavaPlanRun extends PlanRun {
                         jsonTask, List.of("account_id", "_join_txn_name"),
                         List.of(Map.entry(csvTxns, List.of("account_id", "name")))
                 );
+
+        var postgresAcc = postgres("my_postgres", "jdbc:...")
+                .table("public.accounts")
+                .schema(
+                        field().name("account_id")
+                );
+        var postgresTxn = postgres(postgresAcc)
+                .table("public.transactions")
+                .schema(
+                        field().name("account_id").type(DoubleType.instance()).enableEdgeCases(true).edgeCaseProbability(0.1)
+                );
+        plan().addForeignKeyRelationship(
+                postgresAcc, List.of("account_id", "name"),
+                List.of(Map.entry(postgresTxn, List.of("account_id", "name")))
+        );
+
+        var csvTask = csv("my_csv", "s3a://my-bucket/csv/accounts")
+                .schema(
+                        field().name("account_id")
+      );
+
+        var s3Configuration = configuration()
+                .runtimeConfig(Map.of(
+                        "spark.hadoop.fs.s3a.directory.marker.retention", "keep",
+                        "spark.hadoop.fs.s3a.bucket.all.committer.magic.enabled", "true",
+                        "spark.hadoop.fs.defaultFS", "s3a://my-bucket",
+                        //can change to other credential providers as shown here
+                        //https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/index.html#Changing_Authentication_Providers
+                        "spark.hadoop.fs.s3a.aws.credentials.provider", "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider",
+                        "spark.hadoop.fs.s3a.access.key", "access_key",
+                        "spark.hadoop.fs.s3a.secret.key", "secret_key"
+                ));
+
+        execute(s3Configuration, csvTask);
 
         execute(foreignKeySetup, configuration().generatedReportsFolderPath(baseFolder + "/report"), jsonTask, csvTxns);
     }

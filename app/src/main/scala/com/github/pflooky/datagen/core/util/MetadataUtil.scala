@@ -15,6 +15,7 @@ import org.apache.spark.sql.catalyst.catalog.CatalogColumnStat
 import org.apache.spark.sql.execution.command.AnalyzeColumnCommand
 import org.apache.spark.sql.types.{BinaryType, BooleanType, DataType, DateType, DecimalType, DoubleType, FloatType, IntegerType, LongType, Metadata, MetadataBuilder, ShortType, StringType, StructField, TimestampType}
 import org.apache.spark.sql.{DataFrame, Dataset, Encoder, Encoders, SparkSession}
+import org.apache.spark.storage.StorageLevel
 
 import scala.util.{Failure, Success, Try}
 

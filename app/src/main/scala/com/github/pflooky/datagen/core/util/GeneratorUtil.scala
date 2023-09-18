@@ -9,6 +9,7 @@ import net.datafaker.Faker
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types.{LongType, Metadata, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.storage.StorageLevel
 
 object GeneratorUtil {
 
@@ -72,7 +73,7 @@ object GeneratorUtil {
 
     val sqlExpressions = df.schema.fields.map(f => s"${getSqlExpr(f)} as `${f.name}`")
     val res = df.selectExpr(sqlExpressions: _*)
-    if (!res.storageLevel.useMemory) res.cache()
+//    if (!res.storageLevel.useMemory) res.cache()
     res
   }
 

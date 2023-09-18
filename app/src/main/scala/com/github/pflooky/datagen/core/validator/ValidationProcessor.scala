@@ -7,6 +7,7 @@ import com.github.pflooky.datagen.core.model.{DataSourceValidationResult, Valida
 import com.github.pflooky.datagen.core.parser.ValidationParser
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.storage.StorageLevel
 
 /*
 Given a list of validations, check and report on the success and failure of each

@@ -3,7 +3,7 @@ package com.github.pflooky.datagen.core.generator.delete
 import com.datastax.spark.connector.toRDDFunctions
 import com.github.pflooky.datacaterer.api.model.Constants.{CASSANDRA_KEYSPACE, CASSANDRA_TABLE}
 import org.apache.log4j.Logger
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, Encoder, Encoders, Row, SparkSession}
 
 class CassandraDeleteRecordService extends DeleteRecordService {
 
@@ -16,4 +16,8 @@ class CassandraDeleteRecordService extends DeleteRecordService {
     trackedRecords.rdd.deleteFromCassandra(keyspace, table)
   }
 
+  protected def deleteRecords(dataSourceName: String, trackedRecords: Seq[Row], options: Map[String, String])(implicit sparkSession: SparkSession): Unit = {
+    implicit val encoder: Encoder[Row] = Encoders.kryo[Row]
+    deleteRecords(dataSourceName, sparkSession.createDataset(trackedRecords), options)
+  }
 }

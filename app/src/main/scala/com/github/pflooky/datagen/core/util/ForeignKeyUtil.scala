@@ -9,6 +9,7 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types.{LongType, MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
+import org.apache.spark.storage.StorageLevel
 
 import scala.collection.mutable
 

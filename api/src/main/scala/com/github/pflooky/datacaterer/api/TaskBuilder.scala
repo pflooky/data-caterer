@@ -318,15 +318,10 @@ case class CountBuilder(count: Count = Count()) {
 
   def generator(generator: GeneratorBuilder): CountBuilder =
     this.modify(_.count.generator).setTo(Some(generator.generator))
-
-  def generator(generator: Generator): CountBuilder =
-    this.modify(_.count.generator).setTo(Some(generator))
+      .modify(_.count.records).setTo(None)
 
   def perColumn(perColumnCountBuilder: PerColumnCountBuilder): CountBuilder =
     this.modify(_.count.perColumn).setTo(Some(perColumnCountBuilder.perColumnCount))
-
-  def perColumn(perColumnCount: PerColumnCount): CountBuilder =
-    this.modify(_.count.perColumn).setTo(Some(perColumnCount))
 
   @varargs def columns(cols: String*): CountBuilder =
     this.modify(_.count.perColumn).setTo(Some(perColCount.columns(cols: _*).perColumnCount))

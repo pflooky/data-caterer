@@ -11,10 +11,15 @@ class SparkRecordListener(enableCount: Boolean = true) extends SparkListener {
   override def onTaskEnd(taskEnd: SparkListenerTaskEnd): Unit = {
     if (taskEnd.taskType.equalsIgnoreCase("resulttask") && enableCount) {
       synchronized {
-        outputRows.append(SparkTaskRecordSummary(taskEnd.taskInfo.finishTime, taskEnd.taskMetrics.outputMetrics.recordsWritten))
+
+        outputRows.append(SparkTaskRecordSummary(
+          taskEnd.taskInfo.finishTime,
+          taskEnd.taskMetrics.outputMetrics.recordsWritten,
+          taskEnd.taskExecutorMetrics.getMetricValue("OnHeapExecutionMemory")
+        ))
       }
     }
   }
 }
 
-case class SparkTaskRecordSummary(finishTime: Long, numRecords: Long)
+case class SparkTaskRecordSummary(finishTime: Long, numRecords: Long, onHeapExecutionMemory: Long)

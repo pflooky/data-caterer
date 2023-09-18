@@ -1,5 +1,6 @@
 package com.github.pflooky.datacaterer.api
 
+import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_CASSANDRA_PASSWORD, DEFAULT_CASSANDRA_USERNAME, DEFAULT_KAFKA_URL, DEFAULT_MYSQL_PASSWORD, DEFAULT_MYSQL_URL, DEFAULT_MYSQL_USERNAME, DEFAULT_POSTGRES_PASSWORD, DEFAULT_POSTGRES_URL, DEFAULT_POSTGRES_USERNAME, DEFAULT_SOLACE_CONNECTION_FACTORY, DEFAULT_SOLACE_INITIAL_CONTEXT_FACTORY, DEFAULT_SOLACE_PASSWORD, DEFAULT_SOLACE_URL, DEFAULT_SOLACE_USERNAME, DEFAULT_SOLACE_VPN_NAME}
 import com.github.pflooky.datacaterer.api.model.{FlagsConfig, FoldersConfig, GenerationConfig, MetadataConfig}
 import org.junit.runner.RunWith
 import org.scalatest.funsuite.AnyFunSuite
@@ -29,9 +30,9 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
     assert(result.size == 1)
     assert(result.contains("my_postgres"))
     val config = result("my_postgres")
-    assert(config("url") == "jdbc:postgresql://postgresserver:5432/customer")
-    assert(config("user") == "postgres")
-    assert(config("password") == "postgres")
+    assert(config("url") == DEFAULT_POSTGRES_URL)
+    assert(config("user") == DEFAULT_POSTGRES_USERNAME)
+    assert(config("password") == DEFAULT_POSTGRES_PASSWORD)
     assert(config("format") == "jdbc")
     assert(config("driver") == "org.postgresql.Driver")
   }
@@ -59,9 +60,9 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
     assert(result.size == 1)
     assert(result.contains("my_mysql"))
     val config = result("my_mysql")
-    assert(config("url") == "jdbc:mysql://mysqlserver:3306/customer")
-    assert(config("user") == "root")
-    assert(config("password") == "root")
+    assert(config("url") == DEFAULT_MYSQL_URL)
+    assert(config("user") == DEFAULT_MYSQL_USERNAME)
+    assert(config("password") == DEFAULT_MYSQL_PASSWORD)
     assert(config("format") == "jdbc")
     assert(config("driver") == "com.mysql.cj.jdbc.Driver")
   }
@@ -77,8 +78,8 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
     val config = result("my_cassandra")
     assert(config("spark.cassandra.connection.host") == "cassandraserver")
     assert(config("spark.cassandra.connection.port") == "9042")
-    assert(config("spark.cassandra.auth.username") == "cassandra")
-    assert(config("spark.cassandra.auth.password") == "cassandra")
+    assert(config("spark.cassandra.auth.username") == DEFAULT_CASSANDRA_USERNAME)
+    assert(config("spark.cassandra.auth.password") == DEFAULT_CASSANDRA_PASSWORD)
     assert(config("format") == "org.apache.spark.sql.cassandra")
   }
 
@@ -91,13 +92,13 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
     assert(result.size == 1)
     assert(result.contains("my_solace"))
     val config = result("my_solace")
-    assert(config("url") == "smf://solaceserver:55554")
-    assert(config("user") == "admin")
-    assert(config("password") == "admin")
+    assert(config("url") == DEFAULT_SOLACE_URL)
+    assert(config("user") == DEFAULT_SOLACE_USERNAME)
+    assert(config("password") == DEFAULT_SOLACE_PASSWORD)
     assert(config("format") == "jms")
-    assert(config("vpnName") == "default")
-    assert(config("connectionFactory") == "/jms/cf/default")
-    assert(config("initialContextFactory") == "com.solacesystems.jndi.SolJNDIInitialContextFactory")
+    assert(config("vpnName") == DEFAULT_SOLACE_VPN_NAME)
+    assert(config("connectionFactory") == DEFAULT_SOLACE_CONNECTION_FACTORY)
+    assert(config("initialContextFactory") == DEFAULT_SOLACE_INITIAL_CONTEXT_FACTORY)
   }
 
   test("Can create kafka connection configuration") {
@@ -109,7 +110,7 @@ class DataCatererConfigurationBuilderTest extends AnyFunSuite {
     assert(result.size == 1)
     assert(result.contains("my_kafka"))
     val config = result("my_kafka")
-    assert(config("kafka.bootstrap.servers") == "kafkaserver:9092")
+    assert(config("kafka.bootstrap.servers") == DEFAULT_KAFKA_URL)
     assert(config("format") == "kafka")
   }
 

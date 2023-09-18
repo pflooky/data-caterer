@@ -9,6 +9,7 @@ object RecordCountUtil {
   private val LOGGER = Logger.getLogger(getClass.getName)
 
   def calculateNumBatches(tasks: List[Task], generationConfig: GenerationConfig): (Int, Map[String, StepRecordCount]) = {
+    if (tasks.isEmpty) return (0, Map())
     val countPerStep = getCountPerStep(tasks, generationConfig).toMap
     val totalRecordsToGenerate = countPerStep.values.sum
     if (totalRecordsToGenerate <= generationConfig.numRecordsPerBatch) {
@@ -17,15 +18,15 @@ object RecordCountUtil {
 
     val numBatches = Math.max(Math.ceil(totalRecordsToGenerate / generationConfig.numRecordsPerBatch.toDouble).toInt, 1)
     LOGGER.info(s"Number of batches for data generation, num-batches=$numBatches, num-records-per-batch=${generationConfig.numRecordsPerBatch}, total-records=$totalRecordsToGenerate")
-    val trackRecordsPerStep = stepToRecordCountMap(tasks, numBatches)
+    val trackRecordsPerStep = stepToRecordCountMap(tasks, generationConfig, numBatches)
     (numBatches, trackRecordsPerStep)
   }
 
-  private def stepToRecordCountMap(tasks: List[Task], numBatches: Long): Map[String, StepRecordCount] = {
+  private def stepToRecordCountMap(tasks: List[Task], generationConfig: GenerationConfig, numBatches: Long): Map[String, StepRecordCount] = {
     tasks.flatMap(task =>
       task.steps
         .map(step => {
-          val stepRecords = step.count.numRecords
+          val stepRecords = generationConfig.numRecordsPerStep.map(r => step.count.copy(records = Some(r)).numRecords).getOrElse(step.count.numRecords)
           val averagePerCol = step.count.perColumn.map(_.averageCountPerColumn).getOrElse(1L)
           (
             s"${task.name}_${step.name}",
