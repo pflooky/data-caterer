@@ -1,6 +1,7 @@
 package com.github.pflooky.datagen.core.plan
 
 import com.github.pflooky.datacaterer.api.PlanRun
+import com.github.pflooky.datacaterer.api.converter.Converters.toScalaOption
 import com.github.pflooky.datacaterer.api.model.Constants.PLAN_CLASS
 import com.github.pflooky.datacaterer.api.model.DataCatererConfiguration
 import com.github.pflooky.datagen.core.config.ConfigParser
@@ -9,6 +10,7 @@ import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceM
 import com.github.pflooky.datagen.core.util.SparkProvider
 import org.apache.spark.sql.SparkSession
 
+import java.util.Optional
 import scala.util.{Success, Try}
 
 object PlanProcessor {
@@ -33,6 +35,9 @@ object PlanProcessor {
       )
   }
 
+  def determineAndExecutePlanJava(planRun: com.github.pflooky.datacaterer.java.api.PlanRun): Unit =
+    determineAndExecutePlan(Some(planRun.getPlan))
+
   private def executePlan(planRun: PlanRun): Unit = {
     val dataCatererConfiguration = planRun._configuration
     implicit val sparkSession: SparkSession = new SparkProvider(dataCatererConfiguration.master, dataCatererConfiguration.runtimeConfig).getSparkSession
@@ -51,8 +56,8 @@ object PlanProcessor {
     val optPlanWithTasks = new DataSourceMetadataFactory(dataCatererConfiguration).extractAllDataSourceMetadata()
     val dataGeneratorProcessor = new DataGeneratorProcessor(dataCatererConfiguration)
     (optPlanWithTasks, optPlan) match {
-      case (Some((genPlan, genTasks)), _) => dataGeneratorProcessor.generateData(genPlan, genTasks)
-      case (_, Some(plan)) => dataGeneratorProcessor.generateData(plan._plan, plan._tasks)
+      case (Some((genPlan, genTasks)), _) => dataGeneratorProcessor.generateData(genPlan, genTasks, None)
+      case (_, Some(plan)) => dataGeneratorProcessor.generateData(plan._plan, plan._tasks, Some(plan._validations))
       case _ => dataGeneratorProcessor.generateData()
     }
   }

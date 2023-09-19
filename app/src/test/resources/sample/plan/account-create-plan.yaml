@@ -14,10 +14,10 @@ tasks:
     dataSourceName: "httpbin"
     enabled: false
 
-#sinkOptions:
-#  foreignKeys:
-#    "solace.jms_account.account_id":
-#      - "json.file_account.account_id"
+sinkOptions:
+  foreignKeys:
+    - - "solace.jms_account.account_id"
+      - - "json.file_account.account_id"
 
 validations:
   - "account_checks"

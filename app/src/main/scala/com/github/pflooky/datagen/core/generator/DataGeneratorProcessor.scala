@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator
 
-import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, Plan, Task, TaskSummary}
+import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, Plan, Task, TaskSummary, ValidationConfiguration}
 import com.github.pflooky.datagen.core.config.ConfigParser
 import com.github.pflooky.datagen.core.generator.delete.DeleteRecordProcessor
 import com.github.pflooky.datagen.core.generator.result.DataGenerationResultWriter
@@ -27,7 +27,6 @@ class DataGeneratorProcessor(dataCatererConfiguration: DataCatererConfiguration)
   private val generationConfig = dataCatererConfiguration.generationConfig
   private lazy val deleteRecordProcessor = new DeleteRecordProcessor(connectionConfigsByName, foldersConfig.recordTrackingFolderPath)
   private lazy val dataGenerationResultWriter = new DataGenerationResultWriter(metadataConfig, foldersConfig, flagsConfig)
-  private lazy val validationProcessor = new ValidationProcessor(connectionConfigsByName, foldersConfig.validationFolderPath)
   private lazy val batchDataProcessor = new BatchDataProcessor(connectionConfigsByName, foldersConfig, metadataConfig, flagsConfig, generationConfig, applicationType)
   private lazy val sparkRecordListener = new SparkRecordListener(flagsConfig.enableCount)
   val applicationType: String = ConfigParser.applicationType
@@ -40,17 +39,17 @@ class DataGeneratorProcessor(dataCatererConfiguration: DataCatererConfiguration)
     val tasks = PlanParser.parseTasks(foldersConfig.taskFolderPath)
     val enabledTasks = tasks.filter(t => enabledTaskMap.contains(t.name)).toList
 
-    generateData(plan.copy(tasks = enabledPlannedTasks), enabledTasks)
+    generateData(plan.copy(tasks = enabledPlannedTasks), enabledTasks, None)
   }
 
-  def generateData(plan: Plan, tasks: List[Task]): Unit = {
+  def generateData(plan: Plan, tasks: List[Task], optValidations: Option[List[ValidationConfiguration]]): Unit = {
     val tasksByName = tasks.map(t => (t.name, t)).toMap
     val summaryWithTask = plan.tasks.map(t => (t, tasksByName(t.name)))
     val faker = getDataFaker(plan)
 
     (flagsConfig.enableGenerateData, flagsConfig.enableDeleteGeneratedRecords, applicationType) match {
       case (true, _, _) =>
-        generateData(plan, summaryWithTask, faker)
+        generateData(plan, summaryWithTask, optValidations, faker)
       case (_, true, ADVANCED_APPLICATION) =>
         val stepsByName = tasks.flatMap(_.steps).filter(_.enabled).map(s => (s.name, s)).toMap
         deleteRecordProcessor.deleteGeneratedRecords(plan, stepsByName, summaryWithTask)
@@ -61,7 +60,7 @@ class DataGeneratorProcessor(dataCatererConfiguration: DataCatererConfiguration)
     }
   }
 
-  private def generateData(plan: Plan, summaryWithTask: List[(TaskSummary, Task)], faker: Faker with Serializable): Unit = {
+  private def generateData(plan: Plan, summaryWithTask: List[(TaskSummary, Task)], optValidations: Option[List[ValidationConfiguration]], faker: Faker with Serializable): Unit = {
     if (flagsConfig.enableDeleteGeneratedRecords) {
       LOGGER.warn("Both enableGenerateData and enableDeleteGeneratedData are true. Please only enable one at a time. Will continue with generating data")
     }
@@ -77,7 +76,10 @@ class DataGeneratorProcessor(dataCatererConfiguration: DataCatererConfiguration)
       LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=$stepNames")
       val generationResult = batchDataProcessor.splitAndProcess(plan, summaryWithTask, faker)
 
-      val optValidationResults = if (flagsConfig.enableValidation) Some(validationProcessor.executeValidations) else None
+      val optValidationResults = if (flagsConfig.enableValidation) {
+        val validationProcessor = new ValidationProcessor(connectionConfigsByName, optValidations, foldersConfig.validationFolderPath)
+        Some(validationProcessor.executeValidations)
+      } else None
 
       if (flagsConfig.enableSaveReports) {
         dataGenerationResultWriter.writeResult(plan, generationResult, optValidationResults, sparkRecordListener)

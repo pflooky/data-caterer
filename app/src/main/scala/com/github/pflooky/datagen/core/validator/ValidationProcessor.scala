@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.validator
 
 import com.github.pflooky.datacaterer.api.model.Constants.FORMAT
-import com.github.pflooky.datacaterer.api.model.{DataSourceValidation, ExpressionValidation}
+import com.github.pflooky.datacaterer.api.model.{DataSourceValidation, ExpressionValidation, ValidationConfiguration}
 import com.github.pflooky.datagen.core.model.ValidationImplicits.{ValidationOps, WaitConditionOps}
 import com.github.pflooky.datagen.core.model.{DataSourceValidationResult, ValidationConfigResult}
 import com.github.pflooky.datagen.core.parser.ValidationParser
@@ -24,14 +24,16 @@ Different types of validations:
 - relationship (at least one account entry in history table per account in accounts table)
 - data profile (how close the generated data profile is compared to the expected data profile)
  */
-class ValidationProcessor(connectionConfigsByName: Map[String, Map[String, String]], validationFolderPath: String)
-                         (implicit sparkSession: SparkSession) {
+class ValidationProcessor(
+                           connectionConfigsByName: Map[String, Map[String, String]],
+                           optValidationConfigs: Option[List[ValidationConfiguration]],
+                           validationFolderPath: String
+                         )(implicit sparkSession: SparkSession) {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
-  private val validationConfig = ValidationParser.parseValidation(validationFolderPath)
 
   def executeValidations: List[ValidationConfigResult] = {
-    val validationResults = validationConfig.map(vc => {
+    val validationResults = getValidations.map(vc => {
       val dataSourceValidationResults = vc.dataSources.map(dataSource => {
         LOGGER.debug(s"Waiting for validation condition to be successful before running validations, name=${vc.name}," +
           s"data-source-name=${dataSource._1}, num-validations=${dataSource._2.validations.size}")
@@ -48,6 +50,10 @@ class ValidationProcessor(connectionConfigsByName: Map[String, Map[String, Strin
 
     logValidationErrors(validationResults)
     validationResults
+  }
+
+  private def getValidations: Array[ValidationConfiguration] = {
+    optValidationConfigs.map(_.toArray).getOrElse(ValidationParser.parseValidation(validationFolderPath))
   }
 
   private def getDataFrame(ds: (String, DataSourceValidation)) = {

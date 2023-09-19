@@ -27,4 +27,6 @@ trait SparkSuite extends AnyFunSuite with BeforeAndAfterAll with BeforeAndAfterE
   override protected def afterEach(): Unit = {
     sparkSession.catalog.clearCache()
   }
+
+  def getSparkSession: SparkSession = sparkSession
 }

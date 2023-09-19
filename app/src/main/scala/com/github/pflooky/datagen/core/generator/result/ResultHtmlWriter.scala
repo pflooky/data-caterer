@@ -17,7 +17,12 @@ class ResultHtmlWriter {
       "table.codegrid td { padding: 0!important; border: 0!important } " +
       "table td.linenumber { width: 40px!important; } " +
       "td { white-space:pre-line } " +
-      ".table thead th { position: sticky; top: 0; z-index: 1; } "
+      ".table thead th { position: sticky; top: 0; z-index: 1; } " +
+      ".outer-container { display: flex; flex-direction: column; height: 100vh; } " +
+      ".top-container { height: 50%; overflow: auto; resize: vertical; } " +
+      ".bottom-container { flex: 1; min-height: 0; height: 50%; overflow: auto; resize: vertical; } " +
+      ".slider { text-align: center; background-color: #dee2e6; cursor: row-resize; user-select: none; } " +
+      ".selected-row { background-color: lightgreen !important; } "
 
   def index: Node = {
     <html>
@@ -25,7 +30,7 @@ class ResultHtmlWriter {
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
         <title id='title'>Data Caterer</title>
       </head>
-      <iframe name="navBar" class="navbar" src="navbar.html" width="10%" height="100%"></iframe>
+      <iframe name="navBar" class="navbar" src="navbar.html" width="10%" height="100%" resize="horizontal" overflow="auto"></iframe>
       <iframe name="mainFrame" class="mainContainer" src="overview.html" width="89%" height="100%"></iframe>
     </html>
   }
@@ -302,52 +307,93 @@ class ResultHtmlWriter {
       </style>
       </head>
       <body>
-        <h1>Steps</h1>
-        <table class="tablesorter table table-striped" style="font-size: 13px">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Num Records</th>
-              <th>Success</th>
-              <th>Type</th>
-              <th>Enabled</th>
-              <th>Options</th>
-              <th>Count</th>
-              <th>Fields</th>
-            </tr>
-          </thead>
-          <tbody>
-            {stepResultSummary.map(res => {
-            <tr id={res.step.name}>
-              <td>
-                {res.step.name}
-              </td>
-              <td>
-                {res.numRecords}
-              </td>
-              <td>
-                {checkMark(res.isSuccess)}
-              </td>
-              <td>
-                {res.step.`type`}
-              </td>
-              <td>
-                {checkMark(res.step.enabled)}
-              </td>
-              <td>
-                {optionsString(res)}
-              </td>
-              <td>
-                {res.step.count.numRecordsString}
-              </td>
-              <td>
-                {fieldMetadata(res.step, res.dataSourceResults)}
-              </td>
-            </tr>
-          })}
-          </tbody>
-        </table>
+        <div class="outer-container">
+          <div class="top-container">
+            <h1>Steps</h1>
+            <table class="tablesorter table table-striped" style="font-size: 13px">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Num Records</th>
+                  <th>Success</th>
+                  <th>Type</th>
+                  <th>Enabled</th>
+                  <th>Options</th>
+                  <th>Count</th>
+                  <th>Fields</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stepResultSummary.map(res => {
+                val fieldMetadataOnClick = s"showFieldMetadata('${res.step.name}', this)"
+                <tr id={res.step.name}>
+                  <td>
+                    {res.step.name}
+                  </td>
+                  <td>
+                    {res.numRecords}
+                  </td>
+                  <td>
+                    {checkMark(res.isSuccess)}
+                  </td>
+                  <td>
+                    {res.step.`type`}
+                  </td>
+                  <td>
+                    {checkMark(res.step.enabled)}
+                  </td>
+                  <td>
+                    {optionsString(res)}
+                  </td>
+                  <td>
+                    {res.step.count.numRecordsString}
+                  </td>
+                  <td>
+                    <button id="field-metadata-button" onclick={fieldMetadataOnClick}>Fields</button>
+                    <div style="display: none;">
+                      {fieldMetadata(res.step, res.dataSourceResults)}
+                    </div>
+                  </td>
+                </tr>
+              })}
+              </tbody>
+            </table>
+          </div>
+          <div class="slider">...</div>
+          <div class="bottom-container" id="current-field-metadata">
+            {fieldMetadata(stepResultSummary.head.step, stepResultSummary.head.dataSourceResults)}
+          </div>
+        </div>
       </body>
+      <script type="text/javascript">{
+        xml.Unparsed(
+        s"""
+          |function showFieldMetadata(step, e) {
+          |  var newFieldMetadata = document.getElementById('field-metadata-' + step);
+          |  document.getElementById('current-field-metadata').innerHTML = newFieldMetadata.innerHTML;
+          |
+          |  var closestCell = e.parentElement,
+          |      activeCell = document.getElementsByClassName('selected-row');
+          |
+          |  if (activeCell !== null && activeCell.length !== 0) {
+          |    activeCell[0].classList.remove('selected-row');
+          |  }
+          |  closestCell.classList.add('selected-row');
+          |}
+          |
+          |let block = document.querySelector(".top-container"),
+          |  slider = document.querySelector(".slider");
+          |
+          |slider.onmousedown = function dragMouseDown(e) {
+          |  let dragX = e.clientY;
+          |  document.onmousemove = function onMouseMove(e) {
+          |    block.style.height = block.offsetHeight + e.clientY - dragX + "px";
+          |    dragX = e.clientY;
+          |  }
+          |  document.onmouseup = () => document.onmousemove = document.onmouseup = null;
+          |}
+          |""".stripMargin)
+        }</script>
     </html>
   }
 
@@ -362,49 +408,44 @@ class ResultHtmlWriter {
         .map(key => s"$key: ${originalMetadata.getOrElse(key, "")} -> ${genMetadata.getOrElse(key, "")}")
       (field.name, metadataCompare)
     }).toMap
-    <html>
-      <body>
-        <details>
-          <table class="tablesorter table table-striped" style="font-size: 13px">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Nullable</th>
-                <th>Generator Type</th>
-                <th>Metadata</th>
-                <th>Compare Generated Metadata</th>
-              </tr>
-            </thead>
-            <tbody>
-              {originalFields.map(field => {
-              val generator = field.generator.getOrElse(Generator())
-              <tr>
-                <td>
-                  {field.name}
-                </td>
-                <td>
-                  {field.`type`.getOrElse("string")}
-                </td>
-                <td>
-                  {checkMark(field.nullable)}
-                </td>
-                <td>
-                  {generator.`type`}
-                </td>
-                <td>
-                  {generator.options.mkString("\n")}
-                </td>
-                <td>
-                  {metadataMatch(field.name).mkString("\n")}
-                </td>
-              </tr>
-            })}
-            </tbody>
-          </table>
-        </details>
-      </body>
-    </html>
+    val fieldMetadataId = s"field-metadata-${step.name}"
+
+    <div id={fieldMetadataId}>
+      <h3>Field Details: {step.name}</h3>
+      <table class="tablesorter table table-striped" style="font-size: 13px">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Generator Type</th>
+            <th>Generated Records Metadata Comparison</th>
+          </tr>
+        </thead>
+        <tbody>
+          {originalFields.map(field => {
+          val generator = field.generator.getOrElse(Generator())
+          <tr>
+            <td>
+              {field.name}
+            </td>
+            <td>
+              {field.`type`.getOrElse("string")}
+            </td>
+            <td>
+              {checkMark(field.nullable)}
+            </td>
+            <td>
+              {generator.`type`}
+            </td>
+            <td>
+              {metadataMatch(field.name).mkString("\n")}
+            </td>
+          </tr>
+        })}
+        </tbody>
+      </table>
+    </div>
   }
 
   def dataSourceDetails(dataSourceResults: List[DataSourceResult]): Node = {
@@ -614,7 +655,15 @@ class ResultHtmlWriter {
 
   private def checkMark(isSuccess: Boolean): NodeSeq = if (isSuccess) xml.EntityRef("#9989") else xml.EntityRef("#10060")
 
-  private def optionsString(res: StepResultSummary) = res.step.options.map(s => s"${s._1} -> ${s._2}").mkString("\n")
+  private def optionsString(res: StepResultSummary) = {
+    val dataSourceResult = res.dataSourceResults
+    val baseOptions = if (dataSourceResult.nonEmpty) {
+      dataSourceResult.head.sinkResult.options
+    } else {
+      res.step.options
+    }
+    baseOptions.map(s => s"${s._1} -> ${s._2}").mkString("\n")
+  }
 
   private def toStepLinks(steps: List[Step]): Node = {
     {
