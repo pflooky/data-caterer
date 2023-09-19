@@ -15,6 +15,7 @@ import com.github.pflooky.datacaterer.api.TaskSummaryBuilder;
 import com.github.pflooky.datacaterer.api.TasksBuilder;
 import com.github.pflooky.datacaterer.api.ValidationBuilder;
 import com.github.pflooky.datacaterer.api.ValidationConfigurationBuilder;
+import com.github.pflooky.datacaterer.api.WaitConditionBuilder;
 import com.github.pflooky.datacaterer.api.connection.CassandraBuilder;
 import com.github.pflooky.datacaterer.api.connection.ConnectionTaskBuilder;
 import com.github.pflooky.datacaterer.api.connection.FileBuilder;
@@ -78,6 +79,10 @@ public abstract class PlanRun {
 
     public DataCatererConfigurationBuilder configuration() {
         return new DataCatererConfigurationBuilder();
+    }
+
+    public WaitConditionBuilder waitCondition() {
+        return new WaitConditionBuilder();
     }
 
     public ValidationBuilder validation() {

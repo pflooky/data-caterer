@@ -58,5 +58,5 @@ case class WebhookWaitCondition(
                                  dataSourceName: String,
                                  url: String,
                                  method: String = "GET",
-                                 statusCode: Int = 200,
+                                 statusCodes: List[Int] = List(200)
                                ) extends WaitCondition

@@ -137,6 +137,8 @@ case class ValidationBuilder(validation: Validation = ExpressionValidation()) {
 }
 
 case class WaitConditionBuilder(waitCondition: WaitCondition = PauseWaitCondition()) {
+  def this() = this(PauseWaitCondition())
+
   def pause(pauseInSeconds: Int): WaitConditionBuilder = this.modify(_.waitCondition).setTo(PauseWaitCondition(pauseInSeconds))
 
   def file(path: String): WaitConditionBuilder = this.modify(_.waitCondition).setTo(FileExistsWaitCondition(path))
@@ -144,9 +146,15 @@ case class WaitConditionBuilder(waitCondition: WaitCondition = PauseWaitConditio
   def dataExists(dataSourceName: String, options: Map[String, String], expr: String): WaitConditionBuilder =
     this.modify(_.waitCondition).setTo(DataExistsWaitCondition(dataSourceName, options, expr))
 
+  def webhook(url: String): WaitConditionBuilder =
+    webhook("tmp_http_data_source", url)
+
+  @varargs def webhook(url: String, method: String, statusCodes: Int*): WaitConditionBuilder =
+    webhook("tmp_http_data_source", url, method, statusCodes: _*)
+
   def webhook(dataSourceName: String, url: String): WaitConditionBuilder =
     this.modify(_.waitCondition).setTo(WebhookWaitCondition(dataSourceName, url))
 
-  def webhook(dataSourceName: String, url: String, method: String, statusCode: Int): WaitConditionBuilder =
-    this.modify(_.waitCondition).setTo(WebhookWaitCondition(dataSourceName, url, method, statusCode))
+  @varargs def webhook(dataSourceName: String, url: String, method: String, statusCode: Int*): WaitConditionBuilder =
+    this.modify(_.waitCondition).setTo(WebhookWaitCondition(dataSourceName, url, method, statusCode.toList))
 }

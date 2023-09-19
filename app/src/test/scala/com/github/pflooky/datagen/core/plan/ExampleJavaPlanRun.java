@@ -58,6 +58,7 @@ public class ExampleJavaPlanRun extends PlanRun {
                         count()
                                 .recordsPerColumnGenerator(100, generator().min(1).max(2), "account_id", "name")
                 )
+                .validationWait(waitCondition().pause(1))
                 .validations(
                         validation().expr("amount > 0").errorThreshold(0.01),
                         validation().expr("LENGTH(name) > 3").errorThreshold(5),

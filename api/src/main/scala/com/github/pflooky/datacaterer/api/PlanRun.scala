@@ -33,6 +33,8 @@ trait PlanRun {
 
   def configuration: DataCatererConfigurationBuilder = DataCatererConfigurationBuilder()
 
+  def waitCondition: WaitConditionBuilder = WaitConditionBuilder()
+
   def validation: ValidationBuilder = ValidationBuilder()
 
   def dataSourceValidation: DataSourceValidationBuilder = DataSourceValidationBuilder()

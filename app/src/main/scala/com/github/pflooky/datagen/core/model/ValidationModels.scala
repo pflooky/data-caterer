@@ -118,7 +118,7 @@ object ValidationImplicits {
     private val LOGGER = Logger.getLogger(getClass.getName)
 
     override def checkCondition(connectionConfigByName: Map[String, Map[String, String]])(implicit sparkSession: SparkSession): Boolean = {
-      val webhookOptions = connectionConfigByName(webhookWaitCondition.dataSourceName)
+      val webhookOptions = connectionConfigByName.getOrElse(webhookWaitCondition.dataSourceName, Map())
       val request = dispatch.url(webhookWaitCondition.url)
         .setMethod(webhookWaitCondition.method)
         .setHeaders(getAuthHeader(webhookOptions))
@@ -129,10 +129,11 @@ object ValidationImplicits {
           LOGGER.error(s"Failed to execute HTTP wait condition request, url=${webhookWaitCondition.url}", throwable)
           false
         case Right(value) =>
-          if (value.getStatusCode == webhookWaitCondition.statusCode) true
-          else {
+          if (webhookWaitCondition.statusCodes.contains(value.getStatusCode)) {
+            true
+          } else {
             LOGGER.debug(s"HTTP wait condition status code did not match expected status code, url=${webhookWaitCondition.url}, " +
-              s"expected-status-code=${webhookWaitCondition.statusCode}, actual-status-code=${value.getStatusCode}, " +
+              s"expected-status-code=${webhookWaitCondition.statusCodes}, actual-status-code=${value.getStatusCode}, " +
               s"response-body=${value.getResponseBody}")
             false
           }

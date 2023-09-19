@@ -2,7 +2,7 @@ package com.github.pflooky.datacaterer.api.connection
 
 import com.github.pflooky.datacaterer.api.model.Constants.FORMAT
 import com.github.pflooky.datacaterer.api.model.{Step, Task}
-import com.github.pflooky.datacaterer.api.{ConnectionConfigWithTaskBuilder, CountBuilder, FieldBuilder, GeneratorBuilder, SchemaBuilder, StepBuilder, TaskBuilder, TasksBuilder, ValidationBuilder}
+import com.github.pflooky.datacaterer.api.{ConnectionConfigWithTaskBuilder, CountBuilder, FieldBuilder, GeneratorBuilder, SchemaBuilder, StepBuilder, TaskBuilder, TasksBuilder, ValidationBuilder, WaitConditionBuilder}
 
 import scala.annotation.varargs
 
@@ -46,6 +46,18 @@ trait ConnectionTaskBuilder[T] {
 
   @varargs def validations(validationBuilders: ValidationBuilder*): ConnectionTaskBuilder[T] = {
     this.step = Some(getStep.validations(validationBuilders: _*))
+    this
+  }
+
+  def validationWait(waitConditionBuilder: WaitConditionBuilder): ConnectionTaskBuilder[T] = {
+    this.step = Some(getStep.wait(waitConditionBuilder))
+    this
+  }
+
+  def validationWaitDataExists(expr: String): ConnectionTaskBuilder[T] = {
+    val waitConditionBuilder = new WaitConditionBuilder()
+      .dataExists(this.connectionConfigWithTaskBuilder.dataSourceName, this.connectionConfigWithTaskBuilder.options, expr)
+    this.step = Some(getStep.wait(waitConditionBuilder))
     this
   }
 

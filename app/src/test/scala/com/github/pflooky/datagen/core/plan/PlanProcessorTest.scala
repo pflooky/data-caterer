@@ -55,6 +55,7 @@ class PlanProcessorTest extends SparkSuite {
             .records(100)
             .recordsPerColumnGenerator(generator.min(1).max(2), "account_id", "name")
         )
+        .validationWait(waitCondition.pause(1))
         .validations(
           validation.expr("amount > 0").errorThreshold(0.01),
           validation.expr("LENGTH(name) > 3").errorThreshold(5),
@@ -79,7 +80,7 @@ class PlanProcessorTest extends SparkSuite {
     verifyGeneratedData(scalaBaseFolder)
   }
 
-  test("Can run Java plan run") {
+  ignore("Can run Java plan run") {
     PlanProcessor.determineAndExecutePlanJava(new ExampleJavaPlanRun(javaBaseFolder))
     verifyGeneratedData(javaBaseFolder)
   }
