@@ -63,6 +63,8 @@ object Constants {
   lazy val SOURCE_MAXIMUM_LENGTH = "sourceMaxLen"
   lazy val MINIMUM = "min"
   lazy val MAXIMUM = "max"
+  lazy val STANDARD_DEVIATION = "stddev"
+  lazy val MEAN = "mean"
   lazy val ARRAY_TYPE = "arrayType"
   lazy val EXPRESSION = "expression"
   lazy val DISTINCT_COUNT = "distinctCount"

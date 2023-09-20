@@ -1,7 +1,8 @@
 package com.github.pflooky.datagen.core.generator.provider
 
-import com.github.pflooky.datacaterer.api.model.Constants.{ARRAY_MINIMUM_LENGTH, ENABLED_EDGE_CASE, ENABLED_NULL, EXPRESSION, IS_UNIQUE, MAXIMUM, MINIMUM, PROBABILITY_OF_EDGE_CASE, PROBABILITY_OF_NULL}
+import com.github.pflooky.datacaterer.api.model.Constants.{ARRAY_MINIMUM_LENGTH, DISTINCT_COUNT, ENABLED_EDGE_CASE, ENABLED_NULL, EXPRESSION, IS_UNIQUE, MAXIMUM, MEAN, MINIMUM, PROBABILITY_OF_EDGE_CASE, PROBABILITY_OF_NULL, ROW_COUNT, STANDARD_DEVIATION}
 import com.github.pflooky.datagen.core.generator.provider.RandomDataGenerator._
+import com.github.pflooky.datagen.core.model.Constants.INDEX_INC_COL
 import org.apache.spark.sql.types._
 import org.junit.runner.RunWith
 import org.scalatest.funsuite.AnyFunSuite
@@ -83,16 +84,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(intGenerator.edgeCases.nonEmpty)
     assert(sampleData >= 5)
     assert(sampleData <= 10)
-  }
-
-  ignore("Can create random int generator with metadata where minValue and maxValue take precedence over min and max") {
-    val metadata = new MetadataBuilder().putString(MAXIMUM, "10").putString(MINIMUM, "5").build()
-    val intGenerator = new RandomIntDataGenerator(StructField("random_int", IntegerType, false, metadata))
-    val sampleData = intGenerator.generate
-
-    assert(intGenerator.edgeCases.nonEmpty)
-    assert(sampleData >= 90)
-    assert(sampleData <= 100)
+    assert(intGenerator.generateSqlExpression == "CAST(ROUND(RAND() * 5 + 5, 0) AS INT)")
   }
 
   test("Can create random int generator") {
@@ -111,6 +103,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(longGenerator.edgeCases.nonEmpty)
     assert(sampleData >= 0)
     assert(sampleData <= Long.MaxValue)
+    assert(longGenerator.generateSqlExpression == "CAST(ROUND(RAND() * 100000 + 0, 0) AS LONG)")
   }
 
   test("Can create random long generator with custom min and max") {
@@ -130,6 +123,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(decimalGenerator.edgeCases.nonEmpty)
     assert(sampleData >= 0)
     assert(sampleData <= Long.MaxValue)
+    assert(decimalGenerator.generateSqlExpression == "CAST(RAND() * 100000 + 0 AS DECIMAL(22, 2))")
   }
 
   test("Can create random decimal generator with custom min and max") {
@@ -140,6 +134,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(decimalGenerator.edgeCases.nonEmpty)
     assert(sampleData >= 5)
     assert(sampleData <= 10)
+    assert(decimalGenerator.generateSqlExpression == "CAST(RAND() * 5 + 5 AS DECIMAL(22, 2))")
   }
 
   test("Can create random short generator") {
@@ -149,6 +144,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(shortGenerator.edgeCases.nonEmpty)
     assert(sampleData >= 0)
     assert(sampleData <= Short.MaxValue)
+    assert(shortGenerator.generateSqlExpression == "CAST(ROUND(RAND() * 1000 + 0, 0) AS SHORT)")
   }
 
   test("Can create random short generator with custom min and max") {
@@ -159,6 +155,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(shortGenerator.edgeCases.nonEmpty)
     assert(sampleData >= 5)
     assert(sampleData <= 10)
+    assert(shortGenerator.generateSqlExpression == "CAST(ROUND(RAND() * 5 + 5, 0) AS SHORT)")
   }
 
   test("Can create random double generator") {
@@ -168,6 +165,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(doubleGenerator.edgeCases.nonEmpty)
     assert(sampleData >= 0.0)
     assert(sampleData <= Double.MaxValue)
+    assert(doubleGenerator.generateSqlExpression == "CAST(RAND() * 100000.0 + 0.0 AS DOUBLE)")
   }
 
   test("Can create random double generator with custom min and max") {
@@ -178,6 +176,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(doubleGenerator.edgeCases.nonEmpty)
     assert(sampleData >= 5.0)
     assert(sampleData <= 10.0)
+    assert(doubleGenerator.generateSqlExpression == "CAST(RAND() * 5.0 + 5.0 AS DOUBLE)")
   }
 
   test("Can create random float generator") {
@@ -187,6 +186,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(floatGenerator.edgeCases.nonEmpty)
     assert(sampleData >= 0.0)
     assert(sampleData <= Float.MaxValue)
+    assert(floatGenerator.generateSqlExpression == "CAST(RAND() * 100000.0 + 0.0 AS FLOAT)")
   }
 
   test("Can create random float generator with custom min and max") {
@@ -197,6 +197,7 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     assert(floatGenerator.edgeCases.nonEmpty)
     assert(sampleData >= 5.0)
     assert(sampleData <= 10.0)
+    assert(floatGenerator.generateSqlExpression == "CAST(RAND() * 5.0 + 5.0 AS FLOAT)")
   }
 
   test("Can create random date generator") {
@@ -297,5 +298,35 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     val intGenerator = new RandomIntDataGenerator(StructField("random_int", IntegerType, false, metadata))
     intGenerator.generateWrapper()
     assertThrows[RuntimeException](intGenerator.generateWrapper())
+  }
+
+  test("Can create random int generator with standard deviation and mean defined") {
+    val metadata = new MetadataBuilder().putString(STANDARD_DEVIATION, "2.0").putString(MEAN, "1.0").build()
+    val intGenerator = new RandomIntDataGenerator(StructField("random_int", IntegerType, false, metadata))
+
+    assert(intGenerator.edgeCases.nonEmpty)
+    assert(intGenerator.generateSqlExpression == "CAST(ROUND(RANDN() * 2.0 + 1.0, 0) AS INT)")
+  }
+
+  test("Can create random int generator with uniform distribution if only one of standard deviation or mean is defined") {
+    val metadata = new MetadataBuilder().putString(STANDARD_DEVIATION, "2.0").build()
+    val intGenerator = new RandomIntDataGenerator(StructField("random_int", IntegerType, false, metadata))
+
+    assert(intGenerator.generateSqlExpression == "CAST(ROUND(RAND() * 100000 + 0, 0) AS INT)")
+
+    val metadataMean = new MetadataBuilder().putString(MEAN, "1.0").build()
+    val intGeneratorMean = new RandomIntDataGenerator(StructField("random_int", IntegerType, false, metadataMean))
+    val sampleDataMean = (1 to 10).map(_ => intGeneratorMean.generateWrapper())
+
+    assert(sampleDataMean.nonEmpty)
+    assert(intGeneratorMean.generateSqlExpression == "CAST(ROUND(RAND() * 100000 + 0, 0) AS INT)")
+  }
+
+  test("Can create random int generator that increments if distinct count is equal to count") {
+    val metadata = new MetadataBuilder().putString(DISTINCT_COUNT, "100").putString(ROW_COUNT, "100").putString(MAXIMUM, "100").build()
+    val intGenerator = new RandomIntDataGenerator(StructField("random_int", IntegerType, false, metadata))
+
+    assert(intGenerator.edgeCases.nonEmpty)
+    assert(intGenerator.generateSqlExpression == s"CAST(100 + $INDEX_INC_COL AS INT)")
   }
 }

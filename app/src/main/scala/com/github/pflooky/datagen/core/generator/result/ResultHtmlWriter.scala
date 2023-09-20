@@ -109,7 +109,7 @@ class ResultHtmlWriter {
           <th>Generate Data</th>
           <th>Record Tracking</th>
           <th>Delete Data</th>
-          <th>Calculate Generated Metadata</th>
+          <th>Calculate Generated Records Metadata</th>
           <th>Validate Data</th>
           <th>Unique Check</th>
         </tr>
@@ -536,7 +536,7 @@ class ResultHtmlWriter {
                     </a>
                   </td>
                   <td>
-                    {dataSourceValidationRes.options.mkString("\n")}
+                    {formatOptions(dataSourceValidationRes.options)}
                   </td>
                   <td>
                     {checkMark(validationRes.isSuccess)}
@@ -662,8 +662,10 @@ class ResultHtmlWriter {
     } else {
       res.step.options
     }
-    baseOptions.map(s => s"${s._1} -> ${s._2}").mkString("\n")
+    formatOptions(baseOptions)
   }
+
+  private def formatOptions(options: Map[String, String]): String = options.map(s => s"${s._1} -> ${s._2}").mkString("\n")
 
   private def toStepLinks(steps: List[Step]): Node = {
     {

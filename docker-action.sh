@@ -5,7 +5,7 @@ sparkVersion=$(grep spark gradle.properties | cut -d= -f2)
 platforms="linux/amd64,linux/arm64"
 
 echo "Creating API jars and uploading to Github packages"
-gradle clean :api:shadowJar :api:publish
+./gradlew clean :api:shadowJar :api:publish
 publish_res=$?
 if [[ "$publish_res" -ne 0 ]] ; then
   echo "Publish API jar failed, exiting"
@@ -13,7 +13,7 @@ if [[ "$publish_res" -ne 0 ]] ; then
 fi
 
 echo "Creating data caterer basic jar, version=$version"
-gradle -PapplicationType=basic build basicJar -x shadowJar
+./gradlew -PapplicationType=basic build basicJar -x shadowJar
 build_app=$?
 if [[ "$build_app" -ne 0 ]] ; then
   echo "Failed to build app, exiting"
@@ -21,7 +21,7 @@ if [[ "$build_app" -ne 0 ]] ; then
 fi
 
 echo "Creating advanced jar"
-gradle -PapplicationType=advanced advancedJar -x shadowJar
+./gradlew -PapplicationType=advanced advancedJar -x shadowJar
 
 docker run --privileged --rm tonistiigi/binfmt --install all
 docker buildx create --use --name builder

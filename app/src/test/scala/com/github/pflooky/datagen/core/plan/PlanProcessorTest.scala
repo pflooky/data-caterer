@@ -70,6 +70,7 @@ class PlanProcessorTest extends SparkSuite {
       val conf = configuration
         .generatedReportsFolderPath(s"$scalaBaseFolder/report")
         .enableValidation(true)
+        .enableSinkMetadata(true)
 
       execute(foreignKeySetup, conf, jsonTask, csvTxns)
     }
