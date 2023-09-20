@@ -8,9 +8,12 @@ import org.scoverage.ScoverageExtension
  * User Manual available at https://docs.gradle.org/7.5.1/userguide/building_java_projects.html
  * This project uses @Incubating APIs which are subject to change.
  */
+val apiGroupId: String by project
+val apiArtifactId: String by project
 val scalaVersion: String by project
 val scalaSpecificVersion: String by project
 
+project.base.archivesName.set(apiArtifactId)
 
 plugins {
     scala
@@ -132,9 +135,11 @@ publishing {
     }
     publications {
         create<MavenPublication>("mavenScala") {
-            setArtifacts(listOf(tasks.shadowJar, tasks.javadoc, tasks.getByName("sourcesJar")))
-            groupId = "org.data-catering"
-            artifactId = "data-caterer-api"
+            artifact(tasks.shadowJar)
+            artifact(tasks["sourcesJar"])
+            artifact(tasks["javadocJar"])
+            groupId = apiGroupId
+            artifactId = apiArtifactId
             pom {
                 name.set("Data Caterer API - Scala")
                 description.set("API for discovering, generating and validating data using Data Caterer")
