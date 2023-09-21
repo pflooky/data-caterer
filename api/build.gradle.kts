@@ -19,7 +19,7 @@ plugins {
     scala
     `java-library`
     `maven-publish`
-//    signing
+    signing
 
     id("org.scoverage") version "8.0.3"
     id("com.github.johnrengelman.shadow") version "8.1.1"
@@ -119,18 +119,18 @@ configure<ScoverageExtension> {
 publishing {
     repositories {
         maven {
-//            name = "OSSRH"
-//            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-//            credentials {
-//                username = System.getenv("MAVEN_USERNAME")
-//                password = System.getenv("MAVEN_PASSWORD")
-//            }
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/pflooky/data-caterer")
+            name = "OSSRH"
+            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
             credentials {
-                username = "pflooky"
-                password = System.getenv("PACKAGE_TOKEN")
+                username = System.getenv("MAVEN_USERNAME")
+                password = System.getenv("MAVEN_PASSWORD")
             }
+//            name = "GitHubPackages"
+//            url = uri("https://maven.pkg.github.com/pflooky/data-caterer")
+//            credentials {
+//                username = "pflooky"
+//                password = System.getenv("PACKAGE_TOKEN")
+//            }
         }
     }
     publications {
@@ -140,14 +140,15 @@ publishing {
             artifact(tasks["javadocJar"])
             groupId = apiGroupId
             artifactId = apiArtifactId
+
             pom {
-                name.set("Data Caterer API - Scala")
+                name.set("Data Caterer API")
                 description.set("API for discovering, generating and validating data using Data Caterer")
                 url.set("https://pflooky.github.io/data-caterer-docs/")
-//                scm {
-//                    url.set("https://github.com/pflooky/data-caterer-example")
-//                    developerConnection.set("git@github.com:pflooky/data-caterer-example.git")
-//                }
+                scm {
+                    url.set("https://github.com/pflooky/data-caterer-example")
+                    developerConnection.set("git@github.com:pflooky/data-caterer-example.git")
+                }
                 developers {
                     developer {
                         id.set("pflooky")
@@ -155,14 +156,21 @@ publishing {
                         email.set("peter.flook@data.catering")
                     }
                 }
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("https://opensource.org/license/mit/")
+                    }
+                }
             }
         }
     }
 }
 
-//signing {
-//    val signingKey: String? by project
-//    val signingPassword: String? by project
-//    useInMemoryPgpKeys(signingKey, signingPassword)
-//    sign(publishing.publications["mavenScala"])
-//}
+signing {
+    val signingKey: String? by project
+    val signingKeyId: String? by project
+    val signingPassword: String? by project
+    useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+    sign(publishing.publications["mavenScala"])
+}
