@@ -53,7 +53,7 @@ dependencies {
 
     // connectors
     // jdbc
-    basicImpl("org.postgresql:postgresql:42.5.4")
+    basicImpl("org.postgresql:postgresql:42.6.0")
     advancedImpl("mysql:mysql-connector-java:8.0.33")
     // cassandra
     advancedImpl("com.datastax.spark:spark-cassandra-connector_$scalaVersion:3.3.0")
