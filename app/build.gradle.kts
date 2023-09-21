@@ -65,7 +65,7 @@ dependencies {
     // jms
     //TODO advancedImpl("jakarta.jms:jakarta.jms-api:3.1.0") jms 3.x
     advancedImpl("javax.jms:javax.jms-api:2.0.1")
-    advancedImpl("com.solacesystems:sol-jms:10.20.0")
+    advancedImpl("com.solacesystems:sol-jms:10.21.0")
 
     // data generation helpers
     basicImpl("net.datafaker:datafaker:1.9.0")
