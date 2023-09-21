@@ -68,7 +68,7 @@ dependencies {
     advancedImpl("com.solacesystems:sol-jms:10.21.0")
 
     // data generation helpers
-    basicImpl("net.datafaker:datafaker:2.0.1")
+    basicImpl("net.datafaker:datafaker:1.9.0")
     basicImpl("org.reflections:reflections:0.10.2")
 
     // misc
