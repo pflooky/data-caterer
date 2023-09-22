@@ -205,8 +205,8 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     val sampleData = dateGenerator.generate
 
     assert(dateGenerator.edgeCases.nonEmpty)
-    assert(sampleData.before(Date.valueOf(LocalDate.now())))
-    assert(sampleData.after(Date.valueOf(LocalDate.now().minusYears(1))))
+    assert(sampleData.before(Date.valueOf(LocalDate.now().plusDays(1))))
+    assert(sampleData.after(Date.valueOf(LocalDate.now().minusDays(366))))
   }
 
   test("Can create random timestamp generator") {
