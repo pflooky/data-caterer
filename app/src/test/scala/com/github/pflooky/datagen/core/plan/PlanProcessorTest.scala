@@ -49,6 +49,8 @@ class PlanProcessorTest extends SparkSuite {
           field.name("name"),
           field.name("amount").`type`(DoubleType).min(10).max(100),
           field.name("merchant").expression("#{Company.name}"),
+          field.name("time").`type`(TimestampType),
+          field.name("date").`type`(DateType).sql("DATE(time)"),
         )
         .count(
           count
@@ -98,6 +100,7 @@ class PlanProcessorTest extends SparkSuite {
     val csvMatchCount = csvMatchAccount.length
     assert(csvMatchCount >= 1 && csvMatchCount <= 2)
     assert(csvMatchAccount.forall(r => r.getAs[String]("name").equalsIgnoreCase(jsonRecord.getAs[String]("name"))))
+    assert(csvData.forall(r => r.getAs[String]("time").substring(0, 10) == r.getAs[String]("date")))
   }
 
   ignore("Write YAML for plan") {

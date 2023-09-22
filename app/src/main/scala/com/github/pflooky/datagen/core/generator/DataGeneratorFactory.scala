@@ -52,12 +52,16 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
 
     val genSqlExpression = dataGenerators.map(dg => s"${dg.generateSqlExpressionWrapper} AS `${dg.structField.name}`")
     val df = indexedDf.selectExpr(genSqlExpression: _*)
-    val dfWithMetadata = sparkSession.createDataFrame(df.selectExpr(structType.fieldNames: _*).rdd, structType)
-    val dfAllFields = applySqlExpressions(dfWithMetadata)
 
-    step.count.perColumn
-      .map(perCol => generateRecordsPerColumn(dataGenerators, step, perCol, dfAllFields))
-      .getOrElse(dfAllFields)
+    val perColDf = step.count.perColumn
+      .map(perCol => generateRecordsPerColumn(dataGenerators, step, perCol, df))
+      .getOrElse(df)
+    if (!perColDf.storageLevel.useMemory) perColDf.cache()
+
+    val dfWithMetadata = sparkSession.createDataFrame(perColDf.selectExpr(structType.fieldNames: _*).rdd, structType)
+    val dfAllFields = applySqlExpressions(dfWithMetadata)
+    if (!dfAllFields.storageLevel.useMemory) dfAllFields.cache()
+    dfAllFields
   }
 
   def generateData(dataGenerators: List[DataGenerator[_]], step: Step): DataFrame = {

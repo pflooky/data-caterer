@@ -73,7 +73,6 @@ object GeneratorUtil {
 
     val sqlExpressions = df.schema.fields.map(f => s"${getSqlExpr(f)} as `${f.name}`")
     val res = df.selectExpr(sqlExpressions: _*)
-//    if (!res.storageLevel.useMemory) res.cache()
     res
   }
 
