@@ -283,9 +283,9 @@ object RandomDataGenerator {
       val nestedSqlExpressions = dataType match {
         case structType: StructType =>
           val structGen = new RandomStructTypeDataGenerator(StructField(structField.name, structType))
-          structGen.generateSqlExpression
+          structGen.generateSqlExpressionWrapper
         case _ =>
-          getGeneratorForStructField(structField.copy(dataType = dataType)).generateSqlExpression
+          getGeneratorForStructField(structField.copy(dataType = dataType)).generateSqlExpressionWrapper
       }
       s"TRANSFORM(ARRAY_REPEAT(1, CAST($sqlRandom * ${arrayMaxSize - arrayMinSize} + $arrayMinSize AS INT)), x -> $nestedSqlExpressions)"
     }
@@ -307,13 +307,13 @@ object RandomDataGenerator {
       val nestedSqlExpression = structField.dataType match {
         case ArrayType(dt, _) =>
           val listGenerator = new RandomArrayDataGenerator(structField, dt)
-          listGenerator.generateSqlExpression
+          listGenerator.generateSqlExpressionWrapper
         case StructType(fields) =>
           fields.map(f => GeneratorUtil.getDataGenerator(f, faker))
-            .map(f => s"'${f.structField.name}', ${f.generateSqlExpression}")
+            .map(f => s"'${f.structField.name}', ${f.generateSqlExpressionWrapper}")
             .mkString(",")
         case _ =>
-          getGeneratorForStructField(structField).generateSqlExpression
+          getGeneratorForStructField(structField).generateSqlExpressionWrapper
       }
       s"NAMED_STRUCT($nestedSqlExpression)"
     }

@@ -73,6 +73,8 @@ object GeneratorUtil {
 
     val sqlExpressions = df.schema.fields.map(f => s"${getSqlExpr(f)} as `${f.name}`")
     val res = df.selectExpr(sqlExpressions: _*)
+      .selectExpr(sqlExpressions: _*) //fix for nested SQL references but I don't think it would work longer term
+    //TODO have to figure out the order of the SQL expressions and execute accordingly
     res
   }
 
