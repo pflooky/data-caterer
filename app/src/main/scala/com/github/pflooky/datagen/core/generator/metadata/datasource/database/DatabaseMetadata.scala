@@ -3,7 +3,7 @@ package com.github.pflooky.datagen.core.generator.metadata.datasource.database
 import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_VALUE, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_QUERY, JDBC_TABLE, MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE, PRIMARY_KEY_POSITION, SOURCE_COLUMN_DATA_TYPE}
 import com.github.pflooky.datacaterer.api.model.ForeignKeyRelation
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
-import com.github.pflooky.datagen.core.model.Constants.{METADATA_FILTER_SCHEMA, METADATA_FILTER_TABLE}
+import com.github.pflooky.datagen.core.model.Constants.{METADATA_FILTER_OUT_SCHEMA, METADATA_FILTER_OUT_TABLE}
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
 trait DatabaseMetadata extends DataSourceMetadata {
@@ -15,12 +15,12 @@ trait DatabaseMetadata extends DataSourceMetadata {
   def getTableDataOptions(schema: String, table: String): Map[String, String]
 
   def createFilterQuery: Option[String] = {
-    val filterSchema = if (connectionConfig.contains(METADATA_FILTER_SCHEMA)) {
-      val configFilterSchema = connectionConfig(METADATA_FILTER_SCHEMA).split(",").map(_.trim).toList
+    val filterSchema = if (connectionConfig.contains(METADATA_FILTER_OUT_SCHEMA)) {
+      val configFilterSchema = connectionConfig(METADATA_FILTER_OUT_SCHEMA).split(",").map(_.trim).toList
       configFilterSchema ++ baseFilterSchema
     } else baseFilterSchema
-    val filterTable = if (connectionConfig.contains(METADATA_FILTER_TABLE)) {
-      val configFilterTable = connectionConfig(METADATA_FILTER_TABLE).split(",").map(_.trim).toList
+    val filterTable = if (connectionConfig.contains(METADATA_FILTER_OUT_TABLE)) {
+      val configFilterTable = connectionConfig(METADATA_FILTER_OUT_TABLE).split(",").map(_.trim).toList
       configFilterTable ++ baseFilterTable
     } else baseFilterTable
 

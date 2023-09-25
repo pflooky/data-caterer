@@ -16,8 +16,8 @@ object Constants {
   lazy val DEFAULT_HTTP_CONTENT_TYPE = "application/json"
 
   //custom spark options
-  lazy val METADATA_FILTER_SCHEMA = "filterSchema"
-  lazy val METADATA_FILTER_TABLE = "filterTable"
+  lazy val METADATA_FILTER_OUT_SCHEMA = "filterOutSchema"
+  lazy val METADATA_FILTER_OUT_TABLE = "filterOutTable"
 
   //supported data formats
   lazy val SUPPORTED_CONNECTION_FORMATS: List[String] = List(CSV, JSON, ORC, PARQUET, CASSANDRA, JDBC, HTTP, JMS, KAFKA)

@@ -109,4 +109,23 @@ class PlanProcessorTest extends SparkSuite {
     println(planWrite)
   }
 
+  class TestPostgres extends PlanRun {
+    val postgresTask = postgres("my_postgres", "jdbc:postgresql://localhost:5432/customer")
+
+    val autoRun = configuration
+      .enableGeneratePlanAndTasks(true)
+      .enableRecordTracking(true)
+      .enableDeleteGeneratedRecords(false)
+      .enableUniqueCheck(true)
+      .generatedPlanAndTaskFolderPath("/tmp/data/generated")
+      .recordTrackingFolderPath("/tmp/data/recordTracking")
+      .generatedReportsFolderPath("/tmp/data/report")
+      .enableGenerateData(true)
+
+    execute(autoRun, postgresTask)
+  }
+
+  ignore("Can run Postgres plan run") {
+    PlanProcessor.determineAndExecutePlan(Some(new TestPostgres()))
+  }
 }

@@ -518,6 +518,12 @@ case class FieldBuilder(field: Field = Field()) {
   def clusteringPosition(position: Int): FieldBuilder =
     this.modify(_.field.generator).setTo(Some(getGenBuilder.clusteringPosition(position).generator))
 
+  def standardDeviation(stddev: Double): FieldBuilder =
+    this.modify(_.field.generator).setTo(Some(getGenBuilder.standardDeviation(stddev).generator))
+
+  def mean(mean: Double): FieldBuilder =
+    this.modify(_.field.generator).setTo(Some(getGenBuilder.mean(mean).generator))
+
   private def getGenBuilder: GeneratorBuilder = {
     field.generator match {
       case Some(gen) => GeneratorBuilder(gen)
@@ -822,4 +828,22 @@ case class GeneratorBuilder(generator: Generator = Generator()) {
    */
   def clusteringPosition(position: Int): GeneratorBuilder =
     this.modify(_.generator.options)(_ ++ Map(CLUSTERING_POSITION -> position.toString))
+
+  /**
+   * The standard deviation of the data if it follows a normal distribution.
+   *
+   * @param stddev Standard deviation
+   * @return GeneratorBuilder
+   */
+  def standardDeviation(stddev: Double): GeneratorBuilder =
+    this.modify(_.generator.options)(_ ++ Map(STANDARD_DEVIATION -> stddev.toString))
+
+  /**
+   * The mean of the data if it follows a normal distribution.
+   *
+   * @param mean Mean
+   * @return GeneratorBuilder
+   */
+  def mean(mean: Double): GeneratorBuilder =
+    this.modify(_.generator.options)(_ ++ Map(MEAN -> mean.toString))
 }

@@ -365,7 +365,7 @@ object RandomDataGenerator {
     val count = tryGetValue(metadata, ROW_COUNT, 0)
 
     val baseFormula = if (defaultValue.toLowerCase.startsWith("nextval") || (distinctCount == count && distinctCount > 0)) {
-      s"$max + $INDEX_INC_COL"
+      s"$max + $INDEX_INC_COL + 1"  //index col starts at 0
     } else if (metadata.contains(STANDARD_DEVIATION) && metadata.contains(MEAN)) {
       val randNormal = sqlRand.replace("RAND", "RANDN")
       s"$randNormal * $standardDeviation + $mean"

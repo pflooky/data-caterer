@@ -92,6 +92,13 @@ case class DataCatererConfigurationBuilder(build: DataCatererConfiguration = Dat
 
   def postgres(
                 name: String,
+                url: String,
+                options: java.util.Map[String, String]
+              ): DataCatererConfigurationBuilder =
+    postgres(name, url, options = toScalaMap(options))
+
+  def postgres(
+                name: String,
                 url: String
               ): DataCatererConfigurationBuilder =
     postgres(name, url, DEFAULT_POSTGRES_USERNAME)
@@ -113,6 +120,13 @@ case class DataCatererConfigurationBuilder(build: DataCatererConfiguration = Dat
              options: java.util.Map[String, String]
            ): DataCatererConfigurationBuilder =
     mysql(name, url, username, password, toScalaMap(options))
+
+  def mysql(
+             name: String,
+             url: String,
+             options: java.util.Map[String, String]
+           ): DataCatererConfigurationBuilder =
+    mysql(name, url, options = toScalaMap(options))
 
   def mysql(
              name: String,
@@ -146,6 +160,13 @@ case class DataCatererConfigurationBuilder(build: DataCatererConfiguration = Dat
                  options: java.util.Map[String, String]
                ): DataCatererConfigurationBuilder =
     cassandra(name, url, username, password, toScalaMap(options))
+
+  def cassandra(
+                 name: String,
+                 url: String,
+                 options: java.util.Map[String, String]
+               ): DataCatererConfigurationBuilder =
+    cassandra(name, url, options = toScalaMap(options))
 
   def cassandra(
                  name: String,

@@ -201,7 +201,7 @@ class SinkFactory(
   private def mapToSinkResult(dataSourceName: String, df: DataFrame, saveMode: SaveMode, connectionConfig: Map[String, String],
                               stepOptions: Map[String, String], count: String, format: String, isSuccess: Boolean, startTime: LocalDateTime,
                               optException: Option[Throwable]): SinkResult = {
-    val cleansedOptions = (connectionConfig ++ stepOptions).filter(o => !o._1.toLowerCase.contains("password") || !o._2.toLowerCase.contains("password"))
+    val cleansedOptions = (connectionConfig ++ stepOptions).filter(o => !(o._1.toLowerCase.contains("password") || o._2.toLowerCase.contains("password")))
     val sinkResult = SinkResult(dataSourceName, format, saveMode.name(), cleansedOptions, count.toLong, isSuccess, Array(), startTime, exception = optException)
 
     if (flagsConfig.enableSinkMetadata) {

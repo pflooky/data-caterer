@@ -3,7 +3,7 @@ package com.github.pflooky.datagen.core.generator.metadata.datasource
 import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, Plan, Task}
 import com.github.pflooky.datagen.core.config.ConfigParser
 import com.github.pflooky.datagen.core.generator.metadata.PlanGenerator.writePlanAndTasksToFiles
-import com.github.pflooky.datagen.core.generator.metadata.datasource.database.{DatabaseMetadata, DatabaseMetadataProcessor}
+import com.github.pflooky.datagen.core.generator.metadata.datasource.database.{ColumnMetadata, DatabaseMetadata, DatabaseMetadataProcessor}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.file.{FileMetadata, FileMetadataProcessor}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.http.{HttpMetadata, HttpMetadataProcessor}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.jms.{JmsMetadata, JmsMetadataProcessor}
@@ -12,8 +12,8 @@ import com.github.pflooky.datagen.core.model.TaskHelper
 import com.github.pflooky.datagen.core.util.MetadataUtil.getMetadataFromConnectionConfig
 import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, MetadataUtil}
 import org.apache.log4j.Logger
-import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.{Dataset, SparkSession}
 
 class DataSourceMetadataFactory(dataCatererConfiguration: DataCatererConfiguration)(implicit sparkSession: SparkSession) {
 
@@ -57,6 +57,15 @@ class DataSourceMetadataFactory(dataCatererConfiguration: DataCatererConfigurati
     val additionalColumnMetadata = dataSourceMetadata.getAdditionalColumnMetadata
 
     allDataSourceReadOptions.map(dataSourceReadOptions => {
+      getFieldLevelMetadata(dataSourceMetadata, additionalColumnMetadata, dataSourceReadOptions)
+    }).toList
+  }
+
+  private def getFieldLevelMetadata(dataSourceMetadata: DataSourceMetadata, additionalColumnMetadata: Dataset[ColumnMetadata], dataSourceReadOptions: Map[String, String]) = {
+    if (flagsConfig.enableDeleteGeneratedRecords) {
+      LOGGER.debug(s"Delete records is enabled, skipping field level metadata analysis of data source, name=${dataSourceMetadata.name}")
+      DataSourceDetail(dataSourceMetadata, dataSourceReadOptions, StructType(Seq()))
+    } else {
       LOGGER.debug(s"Reading in records from data source for metadata analysis, name=${dataSourceMetadata.name}, options=$dataSourceReadOptions, " +
         s"num-records-from-data-source=${metadataConfig.numRecordsFromDataSource}, num-records-for-analysis=${metadataConfig.numRecordsForAnalysis}")
       val data = sparkSession.read
@@ -69,7 +78,7 @@ class DataSourceMetadataFactory(dataCatererConfiguration: DataCatererConfigurati
       val fieldsWithDataProfilingMetadata = MetadataUtil.getFieldDataProfilingMetadata(data, dataSourceReadOptions, dataSourceMetadata, metadataConfig)
       val structFields = MetadataUtil.mapToStructFields(data, dataSourceReadOptions, fieldsWithDataProfilingMetadata, additionalColumnMetadata)
       DataSourceDetail(dataSourceMetadata, dataSourceReadOptions, StructType(structFields))
-    }).toList
+    }
   }
 }
 

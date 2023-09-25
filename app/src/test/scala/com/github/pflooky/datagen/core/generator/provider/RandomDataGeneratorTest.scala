@@ -327,6 +327,6 @@ class RandomDataGeneratorTest extends AnyFunSuite {
     val intGenerator = new RandomIntDataGenerator(StructField("random_int", IntegerType, false, metadata))
 
     assert(intGenerator.edgeCases.nonEmpty)
-    assert(intGenerator.generateSqlExpression == s"CAST(100 + $INDEX_INC_COL AS INT)")
+    assert(intGenerator.generateSqlExpression == s"CAST(100 + $INDEX_INC_COL + 1 AS INT)")
   }
 }

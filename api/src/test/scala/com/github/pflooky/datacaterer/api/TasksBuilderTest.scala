@@ -207,6 +207,8 @@ class TasksBuilderTest extends AnyFunSuite {
       .primaryKey(true)
       .primaryKeyPosition(1)
       .clusteringPosition(1)
+      .standardDeviation(0.1)
+      .mean(5.1)
       .options(Map("customMetadata" -> "yes"))
       .option("data" -> "big")
       .field
@@ -241,6 +243,8 @@ class TasksBuilderTest extends AnyFunSuite {
     assert(gen("clusteringPos") == "1")
     assert(gen("customMetadata") == "yes")
     assert(gen("data") == "big")
+    assert(gen("stddev") == "0.1")
+    assert(gen("mean") == "5.1")
   }
 
 }
