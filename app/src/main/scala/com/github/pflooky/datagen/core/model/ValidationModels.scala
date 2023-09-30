@@ -4,11 +4,12 @@ import com.github.pflooky.datacaterer.api.model.Constants.FORMAT
 import com.github.pflooky.datacaterer.api.model.{DataExistsWaitCondition, ExpressionValidation, FileExistsWaitCondition, PauseWaitCondition, Validation, WaitCondition, WebhookWaitCondition}
 import com.github.pflooky.datagen.core.exception.InvalidWaitConditionException
 import com.github.pflooky.datagen.core.util.HttpUtil.getAuthHeader
-import dispatch.Defaults.executor
-import dispatch._
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
+import org.asynchttpclient.Dsl.asyncHttpClient
+
+import scala.util.{Failure, Success, Try}
 
 case class ValidationConfigResult(
                                    name: String = "default_validation_result",
@@ -119,16 +120,17 @@ object ValidationImplicits {
 
     override def checkCondition(connectionConfigByName: Map[String, Map[String, String]])(implicit sparkSession: SparkSession): Boolean = {
       val webhookOptions = connectionConfigByName.getOrElse(webhookWaitCondition.dataSourceName, Map())
-      val request = dispatch.url(webhookWaitCondition.url)
-        .setMethod(webhookWaitCondition.method)
-        .setHeaders(getAuthHeader(webhookOptions))
-      val responseEither = Http.default(request OK identity).either
+      val request = asyncHttpClient().prepare(webhookWaitCondition.method, webhookWaitCondition.url)
+      val authHeader = getAuthHeader(webhookOptions)
+      val requestWithAuth = if (authHeader.nonEmpty) request.setHeader(authHeader.head._1, authHeader.head._2) else request
 
-      responseEither() match {
-        case Left(throwable) =>
-          LOGGER.error(s"Failed to execute HTTP wait condition request, url=${webhookWaitCondition.url}", throwable)
+      val tryResponse = Try(request.execute().get())
+
+      tryResponse match {
+        case Failure(exception) =>
+          LOGGER.error(s"Failed to execute HTTP wait condition request, url=${webhookWaitCondition.url}", exception)
           false
-        case Right(value) =>
+        case Success(value) =>
           if (webhookWaitCondition.statusCodes.contains(value.getStatusCode)) {
             true
           } else {

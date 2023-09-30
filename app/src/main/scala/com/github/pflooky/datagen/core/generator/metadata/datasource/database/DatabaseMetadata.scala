@@ -12,6 +12,25 @@ trait DatabaseMetadata extends DataSourceMetadata {
   val baseFilterSchema: List[String] = List()
   val baseFilterTable: List[String] = List()
 
+  override val hasSourceData: Boolean = true
+
+  override def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[Map[String, String]] = {
+    val allDatabaseSchemasWithTableName = sparkSession.read
+      .format(format)
+      .options(connectionConfig ++ metadataTable)
+      .load()
+      .selectExpr(selectExpr: _*)
+    val baseTableFilter = "table_type = 'BASE TABLE'"
+    val filteredSchemasAndTables = createFilterQuery
+      .map(f => s"$f AND $baseTableFilter")
+      .orElse(Some(baseTableFilter))
+      .map(fq => allDatabaseSchemasWithTableName.filter(fq))
+      .getOrElse(allDatabaseSchemasWithTableName)
+    // have to collect here due to being unable to use encoder for DataType and Metadata from Spark. Should be okay given data size is small
+    filteredSchemasAndTables.collect()
+      .map(r => getTableDataOptions(r.getAs[String]("schema"), r.getAs[String]("table")))
+  }
+
   def getTableDataOptions(schema: String, table: String): Map[String, String]
 
   def createFilterQuery: Option[String] = {

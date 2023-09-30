@@ -1,19 +1,20 @@
 package com.github.pflooky.datagen.core.generator
 
-import com.github.pflooky.datacaterer.api.model.Constants.SQL_GENERATOR
+import com.github.pflooky.datacaterer.api.model.Constants.{METADATA_SOURCE_TYPE, SQL_GENERATOR}
 import com.github.pflooky.datacaterer.api.model.{Field, PerColumnCount, Step}
 import com.github.pflooky.datagen.core.exception.InvalidStepCountGeneratorConfigurationException
+import com.github.pflooky.datagen.core.generator.metadata.datasource.openlineage.OpenLineageMetadata
 import com.github.pflooky.datagen.core.generator.provider.DataGenerator
 import com.github.pflooky.datagen.core.model.Constants._
-import com.github.pflooky.datagen.core.model.PlanImplicits.{CountOps, FieldOps, PerColumnCountOps}
+import com.github.pflooky.datagen.core.model.PlanImplicits.FieldOps
 import com.github.pflooky.datagen.core.util.GeneratorUtil.{applySqlExpressions, getDataGenerator}
+import com.github.pflooky.datagen.core.util.MetadataUtil.mapToStructFields
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import net.datafaker.Faker
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
-import org.apache.spark.storage.StorageLevel
 
 import scala.util.Random
 
@@ -24,23 +25,18 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
 
   private val OBJECT_MAPPER = ObjectMapperUtil.jsonObjectMapper
   private val RANDOM = new Random()
-  sparkSession.udf.register(GENERATE_REGEX_UDF, udf((s: String) => faker.regexify(s)))
-  sparkSession.udf.register(GENERATE_FAKER_EXPRESSION_UDF, udf((s: String) => faker.expression(s)))
-  sparkSession.udf.register(GENERATE_RANDOM_ALPHANUMERIC_STRING_UDF, udf((minLength: Int, maxLength: Int) => {
-    val length = RANDOM.nextInt(maxLength + 1) + minLength
-    RANDOM.alphanumeric.take(length).mkString("")
-  }))
-
-  def generateDataForStep(step: Step, dataSourceName: String): DataFrame = {
-    val structFieldsWithDataGenerators = step.schema.fields.map(getStructWithGenerators).getOrElse(List())
-    val recordCount = step.count.numRecords.toInt
-    val averagePerCol = step.count.perColumn.map(perCol => perCol.averageCountPerColumn).getOrElse(1L)
-    val indexedDf = sparkSession.createDataFrame(Seq.range(0L, recordCount / averagePerCol).map(Holder))
-    generateDataViaSql(structFieldsWithDataGenerators, step, indexedDf)
-      .alias(s"$dataSourceName.${step.name}")
-  }
+  registerSparkFunctions
 
   def generateDataForStep(step: Step, dataSourceName: String, startIndex: Long, endIndex: Long): DataFrame = {
+//    val structFieldsWithDataGenerators = if (step.schema.fields.isEmpty && step.options.contains(METADATA_SOURCE_TYPE)) {
+//      //we can try populate the schema via the metadata source (i.e. data catalog, data lineage source)
+//      //TODO move out into separate class and include ExpressionPredictor
+//      val columnMetadata = MarquezMetadata(step.name, step.`type`, step.options).getAdditionalColumnMetadata
+//      val schema = mapToStructFields(columnMetadata)
+//      getStructWithGenerators(schema)
+//    } else {
+//      step.schema.fields.map(getStructWithGenerators).getOrElse(List())
+//    }
     val structFieldsWithDataGenerators = step.schema.fields.map(getStructWithGenerators).getOrElse(List())
     val indexedDf = sparkSession.createDataFrame(Seq.range(startIndex, endIndex).map(Holder))
     generateDataViaSql(structFieldsWithDataGenerators, step, indexedDf)
@@ -81,7 +77,6 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
 
     val rddGeneratedData = sparkSession.sparkContext.parallelize(generatedData)
     val df = sparkSession.createDataFrame(rddGeneratedData, structType)
-//    if (!df.storageLevel.useMemory) df.cache()
 
     var dfPerCol = count.perColumn
       .map(perCol => generateRecordsPerColumn(dataGenerators, step, perCol, df))
@@ -133,9 +128,20 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
   }
 
   private def getStructWithGenerators(fields: List[Field]): List[DataGenerator[_]] = {
-    val structFieldsWithDataGenerators = fields
-      .map(field => getDataGenerator(field.generator, field.toStructField, faker))
-    structFieldsWithDataGenerators
+    fields.map(field => getDataGenerator(field.generator, field.toStructField, faker))
   }
 
+  private def getStructWithGenerators(fields: Array[StructField]): List[DataGenerator[_]] = {
+    fields.map(field => getDataGenerator(field, faker)).toList
+  }
+
+
+  private def registerSparkFunctions = {
+    sparkSession.udf.register(GENERATE_REGEX_UDF, udf((s: String) => faker.regexify(s)))
+    sparkSession.udf.register(GENERATE_FAKER_EXPRESSION_UDF, udf((s: String) => faker.expression(s)))
+    sparkSession.udf.register(GENERATE_RANDOM_ALPHANUMERIC_STRING_UDF, udf((minLength: Int, maxLength: Int) => {
+      val length = RANDOM.nextInt(maxLength + 1) + minLength
+      RANDOM.alphanumeric.take(length).mkString("")
+    }))
+  }
 }

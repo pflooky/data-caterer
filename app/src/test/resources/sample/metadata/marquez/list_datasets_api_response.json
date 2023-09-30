@@ -1,0 +1,90 @@
+{
+  "totalCount": 1,
+  "datasets": [
+    {
+      "id": {
+        "namespace": "food_delivery",
+        "name": "public.categories"
+      },
+      "type": "DB_TABLE",
+      "name": "public.categories",
+      "physicalName": "public.categories",
+      "createdAt": "2020-02-22T22:42:42Z",
+      "updatedAt": "2020-02-22T22:42:42Z",
+      "namespace": "food_delivery",
+      "sourceName": "food_delivery_db",
+      "fields": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "tags": [],
+          "description": "The unique ID of the category."
+        },
+        {
+          "name": "name",
+          "type": "VARCHAR",
+          "tags": [],
+          "description": "The name of the category."
+        },
+        {
+          "name": "menu_id",
+          "type": "INTEGER",
+          "tags": [],
+          "description": "The ID of the menu related to the category."
+        },
+        {
+          "name": "description",
+          "type": "TEXT",
+          "tags": [],
+          "description": "The description of the category."
+        }
+      ],
+      "tags": [],
+      "lastModifiedAt": null,
+      "lastLifecycleState": "",
+      "description": null,
+      "currentVersion": "5d81c700-d0ae-45dc-b3a9-e7db35f75e63",
+      "columnLineage": null,
+      "facets": {
+        "schema": {
+          "fields": [
+            {
+              "name": "id",
+              "type": "INTEGER",
+              "description": "The unique ID of the category."
+            },
+            {
+              "name": "name",
+              "type": "VARCHAR",
+              "description": "The name of the category."
+            },
+            {
+              "name": "menu_id",
+              "type": "INTEGER",
+              "description": "The ID of the menu related to the category."
+            },
+            {
+              "name": "description",
+              "type": "TEXT",
+              "description": "The description of the category."
+            }
+          ],
+          "_producer": "https://github.com/MarquezProject/marquez/blob/main/docker/metadata.json",
+          "_schemaURL": "https://openlineage.io/spec/facets/1-0-0/SchemaDatasetFacet.json"
+        },
+        "documentation": {
+          "_producer": "https://github.com/MarquezProject/marquez/blob/main/docker/metadata.json",
+          "_schemaURL": "https://openlineage.io/spec/facets/1-0-0/DocumentationDatasetFacet.json",
+          "description": "A table for categories."
+        },
+        "dataSource": {
+          "uri": "postgres://food_delivery:food_delivery@postgres:5432/food_delivery",
+          "name": "food_delivery_db",
+          "_producer": "https://github.com/MarquezProject/marquez/blob/main/docker/metadata.json",
+          "_schemaURL": "https://openlineage.io/spec/facets/1-0-0/DatasourceDatasetFacet.json"
+        }
+      },
+      "deleted": false
+    }
+  ]
+}

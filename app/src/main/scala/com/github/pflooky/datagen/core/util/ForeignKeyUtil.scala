@@ -85,7 +85,7 @@ object ForeignKeyUtil {
   }
 
   private def applyForeignKeysToTargetDf(sourceDf: DataFrame, targetDf: DataFrame, sourceColumns: List[String], targetColumns: List[String]): DataFrame = {
-    if (!sourceDf.storageLevel.useMemory) sourceDf.cache()
+    if (!sourceDf.storageLevel.useMemory) sourceDf.cache()  //TODO do we checkpoint instead of cache? checkpoint based on total number of records?
     if (!targetDf.storageLevel.useMemory) targetDf.cache()
     val sourceColRename = sourceColumns.map(c => (c, s"_src_$c")).toMap
     val distinctSourceKeys = zipWithIndex(

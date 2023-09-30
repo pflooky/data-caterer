@@ -2,7 +2,7 @@ package com.github.pflooky.datacaterer.api
 
 import com.github.pflooky.datacaterer.api.connection.{CassandraBuilder, ConnectionTaskBuilder, FileBuilder, HttpBuilder, KafkaBuilder, MySqlBuilder, PostgresBuilder, SolaceBuilder}
 import com.github.pflooky.datacaterer.api.model.Constants._
-import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, ForeignKeyRelation, Plan, Task, ValidationConfiguration}
+import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, ForeignKeyRelation, MetadataSource, Plan, Task, ValidationConfiguration}
 
 import scala.annotation.varargs
 
@@ -12,6 +12,7 @@ trait PlanRun {
   var _tasks: List[Task] = List()
   var _configuration: DataCatererConfiguration = DataCatererConfiguration()
   var _validations: List[ValidationConfiguration] = List()
+  var _connectionTaskBuilders: Seq[ConnectionTaskBuilder[_]] = Seq()
 
   def plan: PlanBuilder = PlanBuilder()
 
@@ -44,6 +45,8 @@ trait PlanRun {
   def foreignField(dataSource: String, step: String, column: String): ForeignKeyRelation = new ForeignKeyRelation(dataSource, step, column)
 
   def foreignField(dataSource: String, step: String, columns: List[String]): ForeignKeyRelation = ForeignKeyRelation(dataSource, step, columns)
+
+  def metadataSource: MetadataSourceBuilder =  MetadataSourceBuilder()
 
   /**
    * Create new CSV generation step with configurations
@@ -394,6 +397,7 @@ trait PlanRun {
     val allValidations = validations ++ getValidations(allConnectionTasks)
     val allTasks = allConnectionTasks.map(_.toTasksBuilder).filter(_.isDefined).map(_.get).toList
 
+    _connectionTaskBuilders = allConnectionTasks
     execute(allTasks, planBuilder, withConnectionConfig, allValidations)
   }
 

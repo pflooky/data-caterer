@@ -84,6 +84,7 @@ object Constants {
   lazy val CONSTRAINT_TYPE = "constraintType"
   lazy val STATIC = "static"
   lazy val CLUSTERING_POSITION = "clusteringPos"
+  lazy val METADATA_IDENTIFIER = "metadataIdentifier"
 
   //generator types
   lazy val RANDOM_GENERATOR = "random"
@@ -191,5 +192,27 @@ object Constants {
   //validation defaults
   lazy val DEFAULT_VALIDATION_CONFIG_NAME = "default_validation"
   lazy val DEFAULT_VALIDATION_DESCRIPTION = "Validation of data sources after generating data"
+
+  //metadata source
+  lazy val METADATA_SOURCE_TYPE = "metadata_source_type"
+  lazy val METADATA_SOURCE_NAME = "metadata_source_name"
+  lazy val METADATA_SOURCE_HAS_OPEN_LINEAGE_SUPPORT = "metadata_source_has_open_lineage_support"
+  lazy val METADATA_SOURCE_URL = "metadata_source_url"
+  lazy val MARQUEZ = "marquez"
+  lazy val AMUNDSEN = "amundsen"
+  lazy val DATAHUB = "datahub"
+  lazy val DEFAULT_METADATA_SOURCE_NAME = "default_metadata_source"
+
+  //openlineage
+  lazy val OPEN_LINEAGE_NAMESPACE = "namespace"
+  lazy val OPEN_LINEAGE_DATASET = "dataset"
+  lazy val DATASET_NAME = "name"
+  lazy val FIELD_DATA_TYPE = "type"
+  lazy val FIELD_DESCRIPTION = "description"
+  lazy val FACET_DATA_SOURCE = "dataSource"
+  lazy val DATA_SOURCE_NAME = "dataSourceName"
+  lazy val URI = "uri"
+  lazy val FACET_DATA_QUALITY_METRICS = "dataQualityMetrics"
+  lazy val FACET_DATA_QUALITY_ASSERTIONS = "dataQualityAssertions"
 
 }

@@ -10,6 +10,9 @@ trait DataSourceMetadata {
   val name: String
   val format: String
   val connectionConfig: Map[String, String]
+  val hasSourceData: Boolean
+
+  def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[Map[String, String]]
 
   def getAdditionalColumnMetadata(implicit sparkSession: SparkSession): Dataset[ColumnMetadata] = {
     sparkSession.emptyDataset[ColumnMetadata]

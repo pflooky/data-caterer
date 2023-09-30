@@ -8,6 +8,7 @@ import com.github.pflooky.datagen.core.generator.metadata.datasource.database.{C
 import com.github.pflooky.datagen.core.generator.metadata.datasource.file.FileMetadata
 import com.github.pflooky.datagen.core.generator.metadata.datasource.http.HttpMetadata
 import com.github.pflooky.datagen.core.generator.metadata.datasource.jms.JmsMetadata
+import com.github.pflooky.datagen.core.generator.metadata.datasource.openlineage.OpenLineageMetadata
 import com.github.pflooky.datagen.core.model.FieldHelper
 import org.apache.log4j.Logger
 import org.apache.spark.sql.catalyst.TableIdentifier
@@ -15,7 +16,6 @@ import org.apache.spark.sql.catalyst.catalog.CatalogColumnStat
 import org.apache.spark.sql.execution.command.AnalyzeColumnCommand
 import org.apache.spark.sql.types.{BinaryType, BooleanType, DataType, DateType, DecimalType, DoubleType, FloatType, IntegerType, LongType, Metadata, MetadataBuilder, ShortType, StringType, StructField, TimestampType}
 import org.apache.spark.sql.{DataFrame, Dataset, Encoder, Encoders, SparkSession}
-import org.apache.spark.storage.StorageLevel
 
 import scala.util.{Failure, Success, Try}
 
@@ -72,6 +72,17 @@ object MetadataUtil {
       sparkSession.catalog.uncacheTable(TEMP_CACHED_TABLE_NAME)
     }
     fieldsWithMetadata
+  }
+
+  def mapToStructFields(additionalColumnMetadata: Dataset[ColumnMetadata], dataSourceReadOptions: Map[String, String]): Array[StructField] = {
+    val colsMetadata = additionalColumnMetadata.collect()
+    val matchedColMetadata = colsMetadata.filter(_.dataSourceReadOptions.getOrElse(METADATA_IDENTIFIER, "").equals(dataSourceReadOptions(METADATA_IDENTIFIER)))
+    matchedColMetadata.map(colMetadata => {
+      val dataType = DataType.fromDDL(colMetadata.metadata(FIELD_DATA_TYPE))
+      val nullable = colMetadata.metadata.get(IS_NULLABLE).map(_.toBoolean).getOrElse(DEFAULT_FIELD_NULLABLE)
+      val metadata = mapToMetadata(colMetadata.metadata)
+      StructField(colMetadata.column, dataType, nullable, metadata)
+    })
   }
 
   def getFieldDataProfilingMetadata(sourceData: DataFrame, dataSourceReadOptions: Map[String, String],
@@ -180,24 +191,32 @@ object MetadataUtil {
   }
 
   def getMetadataFromConnectionConfig(connectionConfig: (String, Map[String, String])): Option[DataSourceMetadata] = {
-    val format = connectionConfig._2(FORMAT)
-    val connection = format match {
-      case CASSANDRA => Some(CassandraMetadata(connectionConfig._1, connectionConfig._2))
-      case JDBC =>
+    val optExternalMetadataSource = connectionConfig._2.get(METADATA_SOURCE_TYPE)
+    val format = connectionConfig._2(FORMAT).toLowerCase
+    (optExternalMetadataSource, format) match {
+      case (Some(metadataSourceType), _) =>
+        metadataSourceType.toLowerCase match {
+          case MARQUEZ => Some(OpenLineageMetadata(connectionConfig._1, format, connectionConfig._2))
+          case metadataSourceType =>
+            LOGGER.warn(s"Unsupported external metadata source, connection-name=${connectionConfig._1}, metadata-source-type=$metadataSourceType")
+            None
+        }
+      case (_, CASSANDRA) => Some(CassandraMetadata(connectionConfig._1, connectionConfig._2))
+      case (_, JDBC) =>
         connectionConfig._2(DRIVER) match {
           case POSTGRES_DRIVER => Some(PostgresMetadata(connectionConfig._1, connectionConfig._2))
           case MYSQL_DRIVER => Some(MysqlMetadata(connectionConfig._1, connectionConfig._2))
-          case _ => None
+          case driver =>
+            LOGGER.warn(s"Metadata extraction not supported for JDBC driver type '$driver', connection-name=${connectionConfig._1}")
+            None
         }
-      case CSV | JSON | PARQUET | DELTA | ORC => Some(FileMetadata(connectionConfig._1, format, connectionConfig._2))
-      case HTTP => Some(HttpMetadata(connectionConfig._1, format, connectionConfig._2))
-      case JMS => Some(JmsMetadata(connectionConfig._1, format, connectionConfig._2))
-      case _ => None
+      case (_, CSV | JSON | PARQUET | DELTA | ORC) => Some(FileMetadata(connectionConfig._1, format, connectionConfig._2))
+      case (_, HTTP) => Some(HttpMetadata(connectionConfig._1, format, connectionConfig._2))
+      case (_, JMS) => Some(JmsMetadata(connectionConfig._1, format, connectionConfig._2))
+      case _ =>
+        LOGGER.warn(s"Metadata extraction not supported for connection type '${connectionConfig._2(FORMAT)}', connection-name=${connectionConfig._1}")
+        None
     }
-    if (connection.isEmpty) {
-      LOGGER.warn(s"Metadata extraction not supported for connection type '${connectionConfig._2(FORMAT)}', connection-name=${connectionConfig._1}")
-    }
-    connection
   }
 
   def getFieldMetadata(dataSourceName: String, df: DataFrame, connectionConfig: Map[String, String], metadataConfig: MetadataConfig)(implicit sparkSession: SparkSession): Array[Field] = {
@@ -207,5 +226,6 @@ object MetadataUtil {
     structFields.map(FieldHelper.fromStructField)
   }
 }
+
 
 case class DataProfilingMetadata(columnName: String, metadata: Map[String, Any])

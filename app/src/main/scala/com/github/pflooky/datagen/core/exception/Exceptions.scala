@@ -58,5 +58,5 @@ class InvalidDataSourceOptions(dataSourceName: String, missingConfig: String) ex
 }
 
 class InvalidWaitConditionException(waitCondition: String) extends RuntimeException {
-  override def getMessage: String = s"Invalid wait condition for validation, "
+  override def getMessage: String = s"Invalid wait condition for validation, wait-condition=$waitCondition"
 }

@@ -2,7 +2,7 @@ package com.github.pflooky.datacaterer.api.connection
 
 import com.github.pflooky.datacaterer.api.model.Constants.FORMAT
 import com.github.pflooky.datacaterer.api.model.{Step, Task}
-import com.github.pflooky.datacaterer.api.{ConnectionConfigWithTaskBuilder, CountBuilder, FieldBuilder, GeneratorBuilder, SchemaBuilder, StepBuilder, TaskBuilder, TasksBuilder, ValidationBuilder, WaitConditionBuilder}
+import com.github.pflooky.datacaterer.api.{ConnectionConfigWithTaskBuilder, CountBuilder, FieldBuilder, GeneratorBuilder, MetadataSourceBuilder, SchemaBuilder, StepBuilder, TaskBuilder, TasksBuilder, ValidationBuilder, WaitConditionBuilder}
 
 import scala.annotation.varargs
 
@@ -26,6 +26,12 @@ trait ConnectionTaskBuilder[T] {
 
   def schema(schemaBuilder: SchemaBuilder): ConnectionTaskBuilder[T] = {
     this.step = Some(getStep.schema(schemaBuilder))
+    this
+  }
+
+  def schema(metadataSourceBuilder: MetadataSourceBuilder): ConnectionTaskBuilder[T] = {
+    this.connectionConfigWithTaskBuilder = this.connectionConfigWithTaskBuilder.metadataSource(metadataSourceBuilder)
+    this.step = Some(getStep.options(metadataSourceBuilder.metadataSource.allOptions))
     this
   }
 

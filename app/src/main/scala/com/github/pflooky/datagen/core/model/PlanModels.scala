@@ -1,10 +1,12 @@
 package com.github.pflooky.datagen.core.model
 
-import com.github.pflooky.datacaterer.api.model.Constants.{IS_PRIMARY_KEY, IS_UNIQUE, MAXIMUM, MINIMUM, ONE_OF_GENERATOR, PRIMARY_KEY_POSITION, RANDOM_GENERATOR, STATIC}
+import com.github.pflooky.datacaterer.api.PlanRun
+import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_FIELD_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, MAXIMUM, MINIMUM, ONE_OF_GENERATOR, PRIMARY_KEY_POSITION, RANDOM_GENERATOR, STATIC}
 import com.github.pflooky.datacaterer.api.model.{Count, Field, ForeignKeyRelation, Generator, PerColumnCount, Schema, SinkOptions, Step, Task}
 import com.github.pflooky.datagen.core.exception.InvalidFieldConfigurationException
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceDetail
 import com.github.pflooky.datagen.core.util.{MetadataUtil, ObjectMapperUtil}
+import org.apache.log4j.Logger
 import org.apache.spark.sql.types.{ArrayType, DataType, Metadata, MetadataBuilder, StructField, StructType}
 
 import scala.language.implicitConversions
@@ -22,19 +24,149 @@ object ForeignKeyRelationHelper {
 }
 
 object TaskHelper {
-  def fromMetadata(name: String, stepType: String, structTypes: List[DataSourceDetail]): Task = {
-    val steps = structTypes.zipWithIndex.map(structType => {
-      Step(structType._1.dataSourceMetadata.toStepName(structType._1.sparkOptions), stepType, Count(), structType._1.sparkOptions, SchemaHelper.fromStructType(structType._1.structType))
-    })
+  private val LOGGER = Logger.getLogger(getClass.getName)
+
+  def fromMetadata(optPlanRun: Option[PlanRun], name: String, stepType: String, structTypes: List[DataSourceDetail]): Task = {
+    val steps = structTypes.zipWithIndex.map(structType => enrichWithUserDefinedOptions(name, stepType, structType._1, optPlanRun))
     Task(name, steps)
+  }
+
+  private def enrichWithUserDefinedOptions(name: String, stepType: String, generatedDetails: DataSourceDetail, optPlanRun: Option[PlanRun]): Step = {
+    val stepName = generatedDetails.dataSourceMetadata.toStepName(generatedDetails.sparkOptions)
+    //check if there is any user defined step attributes that need to be used
+    val optUserConf = if (optPlanRun.isDefined) {
+      val matchingDataSourceConfig = optPlanRun.get._connectionTaskBuilders.filter(_.connectionConfigWithTaskBuilder.dataSourceName == name)
+      if (matchingDataSourceConfig.size == 1) {
+        Some(matchingDataSourceConfig.head)
+      } else if (matchingDataSourceConfig.size > 1) {
+        //multiple matches, so have to match against step options as well if defined
+        val matchingStepOptions = matchingDataSourceConfig.filter(dsConf => dsConf.step.isDefined && dsConf.step.get.step.options == generatedDetails.sparkOptions)
+        if (matchingStepOptions.size == 1) {
+          Some(matchingStepOptions.head)
+        } else {
+          val head = matchingStepOptions.head
+          LOGGER.warn(s"Multiple definitions of same sub data source found. Will default to taking first definition, data-source-name=$name, step-name=$stepName")
+          Some(head)
+        }
+      } else {
+        None
+      }
+    } else {
+      None
+    }
+
+    val count = optUserConf.flatMap(_.step.map(_.step.count)).getOrElse(Count())
+    val optUserSchema = optUserConf.flatMap(_.step.map(_.step.schema))
+    val generatedSchema = SchemaHelper.fromStructType(generatedDetails.structType)
+    val mergedSchema = optUserSchema.map(userSchema => SchemaHelper.mergeSchemaInfo(generatedSchema, userSchema)).getOrElse(generatedSchema)
+    Step(stepName, stepType, count, generatedDetails.sparkOptions, mergedSchema)
   }
 }
 
 object SchemaHelper {
+  private val LOGGER = Logger.getLogger(getClass.getName)
 
   def fromStructType(structType: StructType): Schema = {
     val fields = structType.fields.map(FieldHelper.fromStructField).toList
     Schema(Some(fields))
+  }
+
+  /**
+   * Merge the field definitions together, taking schema2 field definition as preference
+   *
+   * @param schema1 First schema all fields defined
+   * @param schema2 Second schema which may have all or subset of fields defined where it will override if same
+   *                options defined in schema1
+   * @return Merged schema
+   */
+  def mergeSchemaInfo(schema1: Schema, schema2: Schema): Schema = {
+    (schema1.fields, schema2.fields) match {
+      case (Some(fields1), Some(fields2)) =>
+        val mergedFields = fields1.map(field => {
+          val filterInSchema2 = fields2.filter(f2 => f2.name == field.name)
+          val optFieldToMerge = if (filterInSchema2.nonEmpty) {
+            if (filterInSchema2.size > 1) {
+              LOGGER.warn(s"Multiple field definitions found. Only taking the first definition, field-name=${field.name}")
+            }
+            Some(filterInSchema2.head)
+          } else {
+            None
+          }
+          optFieldToMerge.map(f2 => {
+            val fieldSchema = (field.schema, f2.schema) match {
+              case (Some(fSchema), Some(f2Schema)) => Some(mergeSchemaInfo(fSchema, f2Schema))
+              case (Some(fSchema), None) => Some(fSchema)
+              case (None, Some(_)) =>
+                LOGGER.warn(s"Schema from metadata source or from data source has no nested schema for field but has nested schema defined by user. " +
+                  s"Ignoring user defined nested schema, field-name=${field.name}")
+                None
+              case _ => None
+            }
+            val fieldType = mergeFieldType(field, f2)
+            val fieldGenerator = mergeGenerator(field, f2)
+            val fieldNullable = mergeNullable(field, f2)
+            val fieldStatic = mergeStaticValue(field, f2)
+            Field(field.name, fieldType, fieldGenerator, fieldNullable, fieldStatic, fieldSchema)
+          }).getOrElse(field)
+        })
+        Schema(Some(mergedFields))
+      case (Some(_), None) => schema1
+      case (None, Some(_)) => schema2
+      case _ =>
+        throw new RuntimeException("Schema not defined from auto generation, metadata source or from user")
+    }
+  }
+
+  private def mergeStaticValue(field: Field, f2: Field) = {
+    (field.static, f2.static) match {
+      case (Some(fStatic), Some(f2Static)) =>
+        if (fStatic.equalsIgnoreCase(f2Static)) {
+          field.static
+        } else {
+          LOGGER.warn(s"User has defined static value different to metadata source or from data source. " +
+            s"Using user defined static value, field-name=${field.name}, user-static-value=$f2Static, data-static-value=$fStatic")
+          f2.static
+        }
+      case (Some(_), None) => field.static
+      case (None, Some(_)) => f2.static
+      case _ => None
+    }
+  }
+
+  private def mergeNullable(field: Field, f2: Field) = {
+    (field.nullable, f2.nullable) match {
+      case (false, _) => false
+      case (true, false) => false
+      case _ => DEFAULT_FIELD_NULLABLE
+    }
+  }
+
+  private def mergeGenerator(field: Field, f2: Field) = {
+    (field.generator, f2.generator) match {
+      case (Some(fGen), Some(f2Gen)) =>
+        val genType = if (fGen.`type`.equalsIgnoreCase(f2Gen.`type`)) fGen.`type` else f2Gen.`type`
+        val options = fGen.options ++ f2Gen.options
+        Some(Generator(genType, options))
+      case (Some(_), None) => field.generator
+      case (None, Some(_)) => f2.generator
+      case _ => None
+    }
+  }
+
+  private def mergeFieldType(field: Field, f2: Field) = {
+    (field.`type`, f2.`type`) match {
+      case (Some(fType), Some(f2Type)) =>
+        if (fType.equalsIgnoreCase(f2Type)) {
+          field.`type`
+        } else {
+          LOGGER.warn(s"User has defined data type different to metadata source or from data source. " +
+            s"Using user defined type, field-name=${field.name}, user-type=$f2Type, data-source-type=$fType")
+          f2.`type`
+        }
+      case (Some(_), None) => field.`type`
+      case (None, Some(_)) => f2.`type`
+      case _ => field.`type`
+    }
   }
 }
 

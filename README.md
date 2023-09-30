@@ -4,7 +4,7 @@
 
 Generator data for databases, files, JMS or HTTP request through a YAML based input and executed via Spark.
   
-Full docs can be found [here](https://pflooky.github.io/data-caterer-docs/).
+Full docs can be found [**here**](https://pflooky.github.io/data-caterer-docs/).
 
 ## Flow
 
@@ -266,6 +266,9 @@ Data Caterer is able to support the following data sinks:
   - Auto increment
   - On update current_timestamp
   - Omit generating columns (only if they are not used as foreign keys)
+- Metadata storage and referencing
+  - How will it interact with a data dictionary?
+  - Updated schema/metadata
 
 ## Resources
 

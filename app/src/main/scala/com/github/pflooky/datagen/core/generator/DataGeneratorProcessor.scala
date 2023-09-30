@@ -1,5 +1,6 @@
 package com.github.pflooky.datagen.core.generator
 
+import com.github.pflooky.datacaterer.api.PlanRun
 import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, Plan, Task, TaskSummary, ValidationConfiguration}
 import com.github.pflooky.datagen.core.config.ConfigParser
 import com.github.pflooky.datagen.core.generator.delete.DeleteRecordProcessor

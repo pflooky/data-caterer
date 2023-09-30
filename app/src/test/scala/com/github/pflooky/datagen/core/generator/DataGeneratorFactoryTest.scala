@@ -26,7 +26,7 @@ class DataGeneratorFactoryTest extends SparkSuite {
   test("Can generate data for basic step") {
     val step = Step("transaction", "parquet", Count(records = Some(10)), Map("path" -> "sample/output/parquet/transactions"), schema)
 
-    val df = dataGeneratorFactory.generateDataForStep(step, "parquet")
+    val df = dataGeneratorFactory.generateDataForStep(step, "parquet", 0, 10)
     df.cache()
 
     assert(df.count() == 10L)
@@ -52,7 +52,7 @@ class DataGeneratorFactoryTest extends SparkSuite {
       Count(records = Some(10), perColumn = Some(PerColumnCount(List("id"), Some(2)))),
       Map("path" -> "sample/output/parquet/transactions"), simpleSchema)
 
-    val df = dataGeneratorFactory.generateDataForStep(step, "parquet")
+    val df = dataGeneratorFactory.generateDataForStep(step, "parquet", 0, 10)
     df.cache()
 
     assert(df.count() == 20L)
@@ -66,7 +66,7 @@ class DataGeneratorFactoryTest extends SparkSuite {
       perColumn = Some(PerColumnCount(List("id"), None, Some(Generator("random", Map("min" -> "1", "max" -> "2"))))), None),
       Map("path" -> "sample/output/parquet/transactions"), simpleSchema)
 
-    val df = dataGeneratorFactory.generateDataForStep(step, "parquet")
+    val df = dataGeneratorFactory.generateDataForStep(step, "parquet", 0, 10)
     df.cache()
 
     assert(df.count() >= 10L)
@@ -83,7 +83,7 @@ class DataGeneratorFactoryTest extends SparkSuite {
       generator = Some(Generator("random", Map("min" -> "10", "max" -> "20")))),
       Map("path" -> "sample/output/parquet/transactions"), simpleSchema)
 
-    val df = dataGeneratorFactory.generateDataForStep(step, "parquet")
+    val df = dataGeneratorFactory.generateDataForStep(step, "parquet", 0, 15)
     df.cache()
 
     assert(df.count() >= 10L)

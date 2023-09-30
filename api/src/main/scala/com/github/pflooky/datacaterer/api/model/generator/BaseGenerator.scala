@@ -7,6 +7,6 @@ trait BaseGenerator[T] {
 
   def generateSqlExpression: String = ""
 
-  //TODO how to set default fore generic trait method
+  //TODO how to set default for generic trait method
   def generate: T
 }

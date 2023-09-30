@@ -3,7 +3,7 @@ package com.github.pflooky.datacaterer.api
 import com.github.pflooky.datacaterer.api.connection.{CassandraBuilder, ConnectionTaskBuilder, FileBuilder, HttpBuilder, KafkaBuilder, MySqlBuilder, PostgresBuilder, SolaceBuilder}
 import com.github.pflooky.datacaterer.api.converter.Converters.toScalaMap
 import com.github.pflooky.datacaterer.api.model.Constants._
-import com.github.pflooky.datacaterer.api.model.DataCatererConfiguration
+import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, MetadataSource}
 import com.softwaremill.quicklens.ModifyPimp
 
 case class DataCatererConfigurationBuilder(build: DataCatererConfiguration = DataCatererConfiguration()) {
@@ -396,6 +396,10 @@ final case class ConnectionConfigWithTaskBuilder(
 
   def options(options: Map[String, String]): ConnectionConfigWithTaskBuilder = {
     this.modify(_.options)(_ ++ options)
+  }
+
+  def metadataSource(metadataSourceBuilder: MetadataSourceBuilder): ConnectionConfigWithTaskBuilder = {
+    this.modify(_.options)(_ ++ metadataSourceBuilder.metadataSource.allOptions)
   }
 
   private def setConnectionConfig[T <: ConnectionTaskBuilder[_]](name: String, configBuilder: DataCatererConfigurationBuilder, connectionBuilder: T): T = {

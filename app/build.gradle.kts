@@ -39,6 +39,11 @@ configurations {
         extendsFrom(basicImpl)
         extendsFrom(advancedImpl)
     }
+    all {
+        resolutionStrategy {
+            force("com.fasterxml.jackson.core:jackson-databind:2.15.2")
+        }
+    }
 }
 
 dependencies {
@@ -47,21 +52,35 @@ dependencies {
     compileOnly(project(":api"))
 
     // additional spark
-    basicImpl("org.apache.spark:spark-avro_$scalaVersion:$sparkVersion")
-    basicImpl("org.apache.spark:spark-protobuf_$scalaVersion:$sparkVersion")
-    basicImpl("org.apache.spark:spark-hadoop-cloud_$scalaVersion:$sparkVersion")
+    basicImpl("org.apache.spark:spark-avro_$scalaVersion:$sparkVersion") {
+        exclude(group = "org.scala-lang")
+    }
+    basicImpl("org.apache.spark:spark-protobuf_$scalaVersion:$sparkVersion") {
+        exclude(group = "org.scala-lang")
+    }
+    basicImpl("org.apache.spark:spark-hadoop-cloud_$scalaVersion:$sparkVersion") {
+        exclude(group = "org.scala-lang")
+    }
 
     // connectors
     // jdbc
     basicImpl("org.postgresql:postgresql:42.6.0")
     advancedImpl("mysql:mysql-connector-java:8.0.33")
     // cassandra
-    advancedImpl("com.datastax.spark:spark-cassandra-connector_$scalaVersion:3.3.0")
+    advancedImpl("com.datastax.spark:spark-cassandra-connector_$scalaVersion:3.3.0") {
+        exclude(group = "org.scala-lang")
+    }
     // http
-    advancedImpl("org.dispatchhttp:dispatch-core_$scalaVersion:1.2.0")  //TODO switch to https://github.com/AsyncHttpClient/async-http-client
+    //TODO switch to https://github.com/AsyncHttpClient/async-http-client
+    advancedImpl("org.asynchttpclient:async-http-client:2.12.3")
+//    advancedImpl("org.dispatchhttp:dispatch-core_$scalaVersion:1.2.0") {
+//        exclude(group = "org.scala-lang")
+//    }
     advancedImpl("io.swagger.parser.v3:swagger-parser-v3:2.1.16")
     // kafka
-    advancedImpl("org.apache.spark:spark-sql-kafka-0-10_$scalaVersion:$sparkVersion")
+    advancedImpl("org.apache.spark:spark-sql-kafka-0-10_$scalaVersion:$sparkVersion") {
+        exclude(group = "org.scala-lang")
+    }
     // jms
     //TODO advancedImpl("jakarta.jms:jakarta.jms-api:3.1.0") jms 3.x
     advancedImpl("javax.jms:javax.jms-api:2.0.1")
@@ -74,10 +93,28 @@ dependencies {
     // misc
     basicImpl("joda-time:joda-time:2.12.5")
     basicImpl("com.google.guava:guava:32.1.2-jre")
-    basicImpl("com.github.pureconfig:pureconfig_$scalaVersion:0.17.2")
-    basicImpl("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.2")
-    basicImpl("com.fasterxml.jackson.module:jackson-module-scala_$scalaVersion:2.15.2")
-    basicImpl("org.scala-lang.modules:scala-xml_$scalaVersion:2.2.0")
+    basicImpl("com.github.pureconfig:pureconfig_$scalaVersion:0.17.2") {
+        exclude(group = "org.scala-lang")
+    }
+    basicImpl("com.fasterxml.jackson.core:jackson-databind:2.15.2") {
+        version {
+            strictly("2.15.2")
+        }
+    }
+    basicImpl("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.2") {
+        version {
+            strictly("2.15.2")
+        }
+    }
+    basicImpl("com.fasterxml.jackson.module:jackson-module-scala_$scalaVersion:2.15.2") {
+        exclude(group = "org.scala-lang")
+        version {
+            strictly("2.15.2")
+        }
+    }
+    basicImpl("org.scala-lang.modules:scala-xml_$scalaVersion:2.2.0") {
+        exclude(group = "org.scala-lang")
+    }
 }
 
 testing {

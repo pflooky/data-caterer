@@ -53,7 +53,7 @@ object PlanProcessor {
   private def executePlanWithConfig(dataCatererConfiguration: DataCatererConfiguration, optPlan: Option[PlanRun]): Unit = {
     implicit val sparkSession: SparkSession = new SparkProvider(dataCatererConfiguration.master, dataCatererConfiguration.runtimeConfig).getSparkSession
 
-    val optPlanWithTasks = new DataSourceMetadataFactory(dataCatererConfiguration).extractAllDataSourceMetadata()
+    val optPlanWithTasks = new DataSourceMetadataFactory(dataCatererConfiguration).extractAllDataSourceMetadata(optPlan)
     val dataGeneratorProcessor = new DataGeneratorProcessor(dataCatererConfiguration)
     (optPlanWithTasks, optPlan) match {
       case (Some((genPlan, genTasks)), _) => dataGeneratorProcessor.generateData(genPlan, genTasks, None)
