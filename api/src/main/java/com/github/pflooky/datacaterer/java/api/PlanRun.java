@@ -7,6 +7,7 @@ import com.github.pflooky.datacaterer.api.DataCatererConfigurationBuilder;
 import com.github.pflooky.datacaterer.api.DataSourceValidationBuilder;
 import com.github.pflooky.datacaterer.api.FieldBuilder;
 import com.github.pflooky.datacaterer.api.GeneratorBuilder;
+import com.github.pflooky.datacaterer.api.MetadataSourceBuilder;
 import com.github.pflooky.datacaterer.api.PlanBuilder;
 import com.github.pflooky.datacaterer.api.SchemaBuilder;
 import com.github.pflooky.datacaterer.api.StepBuilder;
@@ -96,6 +97,8 @@ public abstract class PlanRun {
     public ValidationConfigurationBuilder validationConfig() {
         return new ValidationConfigurationBuilder();
     }
+
+    public MetadataSourceBuilder metadataSource() { return new MetadataSourceBuilder(); }
 
     public ForeignKeyRelation foreignField(String dataSource, String step, String column) {
         return new ForeignKeyRelation(dataSource, step, column);
