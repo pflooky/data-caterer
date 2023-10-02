@@ -114,14 +114,14 @@ class PlanProcessorTest extends SparkSuite {
       .schema(metadataSource.marquez("http://localhost:5001", "food_delivery", "public.categories"))
       .count(count.records(100))
 
+    val postgresTask = postgres("my_postgres", "jdbc:postgresql://localhost:5432/food_delivery", "postgres", "password")
+      .schema(metadataSource.marquez("http://localhost:5001", "food_delivery"))
+      .count(count.records(10))
+
     val jsonTask = json("my_json", "/tmp/data/json", Map("saveMode" -> "overwrite"))
       .schema(metadataSource.marquez("http://localhost:5001", "food_delivery", "public.categories"))
       .schema(field.name("name").expression("#{Name.name}"))
       .count(count.recordsPerColumn(2, "name"))
-
-    val postgresTask = postgres("my_postgres", "jdbc:postgresql://localhost:5432/food_delivery", "postgres", "password")
-      .schema(metadataSource.marquez("http://localhost:5001", "food_delivery"))
-      .count(count.records(10))
 
     val conf = configuration.enableGeneratePlanAndTasks(true).enableFailOnError(false)
 

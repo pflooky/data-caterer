@@ -1,13 +1,13 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.openlineage
 
-import com.github.pflooky.datacaterer.api.model.Constants.{DATASET_NAME, DATA_SOURCE_NAME, DEFAULT_FIELD_TYPE, FACET_DATA_SOURCE, FIELD_DATA_TYPE, FIELD_DESCRIPTION, JDBC, JDBC_TABLE, METADATA_IDENTIFIER, METADATA_SOURCE_URL, OPEN_LINEAGE_DATASET, OPEN_LINEAGE_NAMESPACE, URI}
+import com.github.pflooky.datacaterer.api.model.Constants.{DATASET_NAME, DATA_SOURCE_NAME, DEFAULT_FIELD_TYPE, DEFAULT_STEP_NAME, FACET_DATA_SOURCE, FIELD_DATA_TYPE, FIELD_DESCRIPTION, JDBC, JDBC_TABLE, METADATA_IDENTIFIER, METADATA_SOURCE_URL, OPEN_LINEAGE_DATASET, OPEN_LINEAGE_NAMESPACE, URI}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ColumnMetadata
 import com.github.pflooky.datagen.core.model.openlineage.{ListDatasetResponse, OpenLineageDataset}
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{Dataset, SparkSession}
-import org.asynchttpclient.AsyncHttpClient
+import org.asynchttpclient.{AsyncHttpClient, Response}
 import org.asynchttpclient.Dsl.asyncHttpClient
 
 import scala.util.{Failure, Success, Try}
@@ -27,9 +27,7 @@ case class OpenLineageMetadata(
 
   override val hasSourceData: Boolean = false
 
-  override def toStepName(options: Map[String, String]): String = {
-    s"${options("sourceName")}_${options("name")}"
-  }
+  override def toStepName(options: Map[String, String]): String = options.getOrElse(METADATA_IDENTIFIER, DEFAULT_STEP_NAME)
 
   override def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[Map[String, String]] = {
     val datasets = getDatasetsFromSource
@@ -81,7 +79,7 @@ case class OpenLineageMetadata(
 
   def getDataset(namespace: String, dataset: String): OpenLineageDataset = {
     val baseUrl = connectionConfig(METADATA_SOURCE_URL)
-    val response = asyncHttpClient.prepareGet(s"$baseUrl/api/v1/namespaces/$namespace/datasets/$dataset").execute().get()
+    val response = getResponse(s"$baseUrl/api/v1/namespaces/$namespace/datasets/$dataset")
     val tryParseResponse = Try(
       ObjectMapperUtil.jsonObjectMapper.readValue(response.getResponseBody, classOf[OpenLineageDataset])
     )
@@ -90,11 +88,22 @@ case class OpenLineageMetadata(
 
   def listDatasets(namespace: String): ListDatasetResponse = {
     val baseUrl = connectionConfig(METADATA_SOURCE_URL)
-    val response = asyncHttpClient.prepareGet(s"$baseUrl/api/v1/namespaces/$namespace/datasets").execute().get()
+    val response = getResponse(s"$baseUrl/api/v1/namespaces/$namespace/datasets")
     val tryParseResponse = Try(
       ObjectMapperUtil.jsonObjectMapper.readValue(response.getResponseBody, classOf[ListDatasetResponse])
     )
     getResponse(tryParseResponse)
+  }
+
+  private def getResponse(url: String): Response = {
+    val tryRequest = Try(asyncHttpClient.prepareGet(url).execute().get())
+    tryRequest match {
+      case Failure(exception) =>
+        asyncHttpClient.close()
+        throw new RuntimeException(s"Failed to call HTTP url, url=$url", exception)
+      case Success(value) =>
+        value
+    }
   }
 
   private def getResponse[T](tryParse: Try[T]): T = {
