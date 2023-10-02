@@ -1,11 +1,12 @@
 package com.github.pflooky.datagen.core.model
 
 import com.github.pflooky.datacaterer.api.model.Constants.FORMAT
-import com.github.pflooky.datacaterer.api.model.{DataExistsWaitCondition, ExpressionValidation, FileExistsWaitCondition, PauseWaitCondition, Validation, WaitCondition, WebhookWaitCondition}
+import com.github.pflooky.datacaterer.api.model.{DataExistsWaitCondition, ExpressionValidation, FileExistsWaitCondition, GroupByValidation, PauseWaitCondition, Validation, WaitCondition, WebhookWaitCondition}
 import com.github.pflooky.datagen.core.exception.InvalidWaitConditionException
 import com.github.pflooky.datagen.core.util.HttpUtil.getAuthHeader
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.log4j.Logger
+import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.asynchttpclient.Dsl.asyncHttpClient
 
@@ -36,6 +37,7 @@ object ValidationImplicits {
     def validate(df: DataFrame, dfCount: Long): ValidationResult = {
       validation match {
         case exp: ExpressionValidation => ExpressionValidationOps(exp).validate(df, dfCount)
+        case grp: GroupByValidation => GroupByValidationOps(grp).validate(df, dfCount)
         case _ => ValidationResult(validation)
       }
     }
@@ -61,6 +63,20 @@ object ValidationImplicits {
       ValidationResult(expressionValidation, isSuccess, sampleErrors)
     }
   }
+
+  implicit class GroupByValidationOps(groupByValidation: GroupByValidation) extends ValidationOps(groupByValidation) {
+    override def validate(df: DataFrame, dfCount: Long): ValidationResult = {
+      val groupByAndAggregateDf = df.groupBy(groupByValidation.groupByCols.map(col): _*).agg(Map(
+        groupByValidation.aggCol -> groupByValidation.aggType
+      ))
+      val notEqualDf = groupByAndAggregateDf.where(s"!(${groupByValidation.expr})")
+      val (isSuccess, sampleErrors) = ValidationOps(groupByValidation).getIsSuccessAndSampleErrors(notEqualDf, dfCount)
+      ValidationResult(groupByValidation, isSuccess, sampleErrors)
+    }
+  }
+  //second argument can have both sides expressed as SQL expressions
+  //validation.exists(csvTask, "account_number" -> "REPLACE(account_id, 'ACC', '')", <optional number per account_number exists, by default one to one match>)
+  //additional verifications afterwards?
 
   implicit class WaitConditionOps(waitCondition: WaitCondition = PauseWaitCondition()) {
     def checkCondition(implicit sparkSession: SparkSession): Boolean = true

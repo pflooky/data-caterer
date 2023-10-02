@@ -1,8 +1,10 @@
 package com.github.pflooky.datacaterer.api
 
-import com.github.pflooky.datacaterer.api.model.{DataExistsWaitCondition, DataSourceValidation, ExpressionValidation, FileExistsWaitCondition, PauseWaitCondition, Validation, ValidationConfiguration, WaitCondition, WebhookWaitCondition}
+import com.github.pflooky.datacaterer.api.model.Constants.{AGGREGATION_AVG, AGGREGATION_COUNT, AGGREGATION_MAX, AGGREGATION_MIN, AGGREGATION_SUM}
+import com.github.pflooky.datacaterer.api.model.{DataExistsWaitCondition, DataSourceValidation, ExpressionValidation, FileExistsWaitCondition, GroupByValidation, PauseWaitCondition, Validation, ValidationConfiguration, WaitCondition, WebhookWaitCondition}
 import com.softwaremill.quicklens.ModifyPimp
 
+import java.sql.{Date, Timestamp}
 import scala.annotation.varargs
 
 
@@ -123,38 +125,286 @@ case class ValidationBuilder(validation: Validation = ExpressionValidation()) {
 
   /**
    * SQL expression used to check if data is adhering to specified condition. Return result from SQL expression is
-   * required to be boolean
+   * required to be boolean. Can use any columns in the validation logic.
+   *
+   * For example,
+   * {{{validation.expr("CASE WHEN status == 'open' THEN balance > 0 ELSE balance == 0 END}}}
    *
    * @param expr SQL expression which returns a boolean
    * @return ValidationBuilder
+   * @see <a href="https://spark.apache.org/docs/latest/api/sql/">SQL expressions</a>
    */
   def expr(expr: String): ValidationBuilder = {
-    val expressionValidation = ExpressionValidation(expr)
-    expressionValidation.description = this.validation.description
-    expressionValidation.errorThreshold = this.validation.errorThreshold
-    this.modify(_.validation).setTo(expressionValidation)
+    validation match {
+      case GroupByValidation(grpCols, aggCol, aggType, _) =>
+        val grpWithExpr = GroupByValidation(grpCols, aggCol, aggType, expr)
+        grpWithExpr.description = this.validation.description
+        grpWithExpr.errorThreshold = this.validation.errorThreshold
+        this.modify(_.validation).setTo(grpWithExpr)
+      case expressionValidation: ExpressionValidation =>
+        val withExpr = expressionValidation.modify(_.expr).setTo(expr)
+        withExpr.description = this.validation.description
+        withExpr.errorThreshold = this.validation.errorThreshold
+        this.modify(_.validation).setTo(withExpr)
+    }
   }
+
+  /**
+   * Define a column validation that can cover validations for any type of data.
+   *
+   * @param column Name of the column to run validation against
+   * @return ColumnValidationBuilder
+   */
+  def col(column: String): ColumnValidationBuilder = {
+    ColumnValidationBuilder(column, this)
+  }
+
+  /**
+   * Define columns to group by, so that validation can be run on grouped by dataset
+   *
+   * @param columns Name of the column to run validation against
+   * @return ColumnValidationBuilder
+   */
+  @varargs def groupBy(columns: String*): GroupByValidationBuilder = {
+    GroupByValidationBuilder(this, ColumnValidationBuilder(), columns)
+  }
+
+}
+
+case class ColumnValidationBuilder(column: String = "", validationBuilder: ValidationBuilder = ValidationBuilder()) {
+  def this() = this("", ValidationBuilder())
+
+  def isEqual(value: Any): ValidationBuilder = {
+    validationBuilder.expr(s"$column == ${colValueToString(value)}")
+  }
+
+  def isNotEqual(value: Any): ValidationBuilder = {
+    validationBuilder.expr(s"$column != ${colValueToString(value)}")
+  }
+
+  def isNull: ValidationBuilder = {
+    validationBuilder.expr(s"ISNULL($column)")
+  }
+
+  def isNotNull: ValidationBuilder = {
+    validationBuilder.expr(s"ISNOTNULL($column)")
+  }
+
+  def contains(value: String): ValidationBuilder = {
+    validationBuilder.expr(s"CONTAINS($column, '$value')")
+  }
+
+  def notContains(value: String): ValidationBuilder = {
+    validationBuilder.expr(s"!CONTAINS($column, '$value')")
+  }
+
+  def lessThan(value: Any): ValidationBuilder = {
+    validationBuilder.expr(s"$column < ${colValueToString(value)}")
+  }
+
+  def lessThanOrEqual(value: Any): ValidationBuilder = {
+    validationBuilder.expr(s"$column <= ${colValueToString(value)}")
+  }
+
+  def greaterThan(value: Any): ValidationBuilder = {
+    validationBuilder.expr(s"$column > ${colValueToString(value)}")
+  }
+
+  def greaterThanOrEqual(value: Any): ValidationBuilder = {
+    validationBuilder.expr(s"$column >= ${colValueToString(value)}")
+  }
+
+  def between(minValue: Any, maxValue: Any): ValidationBuilder = {
+    validationBuilder.expr(s"$column BETWEEN ${colValueToString(minValue)} AND ${colValueToString(maxValue)}")
+  }
+
+  def notBetween(minValue: Any, maxValue: Any): ValidationBuilder = {
+    validationBuilder.expr(s"$column NOT BETWEEN ${colValueToString(minValue)} AND ${colValueToString(maxValue)}")
+  }
+
+  @varargs def in(values: Any*): ValidationBuilder = {
+    validationBuilder.expr(s"$column IN (${values.map(colValueToString).mkString(",")})")
+  }
+
+  def matches(regex: String): ValidationBuilder = {
+    validationBuilder.expr(s"REGEXP($column, '$regex')")
+  }
+
+  def notMatches(regex: String): ValidationBuilder = {
+    validationBuilder.expr(s"!REGEXP($column, '$regex')")
+  }
+
+  def startsWith(value: String): ValidationBuilder = {
+    validationBuilder.expr(s"STARTSWITH($column, '$value')")
+  }
+
+  def notStartsWith(value: String): ValidationBuilder = {
+    validationBuilder.expr(s"!STARTSWITH($column, '$value')")
+  }
+
+  def endsWith(value: String): ValidationBuilder = {
+    validationBuilder.expr(s"ENDSWITH($column, '$value')")
+  }
+
+  def notEndsWith(value: String): ValidationBuilder = {
+    validationBuilder.expr(s"!ENDSWITH($column, '$value')")
+  }
+
+  def size(size: Int): ValidationBuilder = {
+    validationBuilder.expr(s"SIZE($column) == $size")
+  }
+
+  def notSize(size: Int): ValidationBuilder = {
+    validationBuilder.expr(s"SIZE($column) != $size")
+  }
+
+  def lessThanSize(size: Int): ValidationBuilder = {
+    validationBuilder.expr(s"SIZE($column) < $size")
+  }
+
+  def lessThanOrEqualSize(size: Int): ValidationBuilder = {
+    validationBuilder.expr(s"SIZE($column) <= $size")
+  }
+
+  def greaterThanSize(size: Int): ValidationBuilder = {
+    validationBuilder.expr(s"SIZE($column) > $size")
+  }
+
+  def greaterThanOrEqualSize(size: Int): ValidationBuilder = {
+    validationBuilder.expr(s"SIZE($column) >= $size")
+  }
+
+  def luhnCheck: ValidationBuilder = {
+    validationBuilder.expr(s"LUHN_CHECK($column)")
+  }
+
+  def hasType(`type`: String): ValidationBuilder = {
+    validationBuilder.expr(s"TYPEOF($column) == '${`type`}'")
+  }
+
+  private def colValueToString(value: Any): String = {
+    value match {
+      case _: String => s"'$value'"
+      case _: Date => s"DATE('$value')"
+      case _: Timestamp => s"TIMESTAMP('$value')"
+      case _ => s"$value"
+    }
+  }
+}
+
+case class GroupByValidationBuilder(
+                                     validationBuilder: ValidationBuilder = ValidationBuilder(),
+                                     columnValidationBuilder: ColumnValidationBuilder = ColumnValidationBuilder(),
+                                     groupByCols: Seq[String] = Seq()
+                                   ) {
+  def this() = this(ValidationBuilder(), ColumnValidationBuilder(), Seq())
+
+  def sum(column: String): ColumnValidationBuilder = {
+    setGroupValidation(column, AGGREGATION_SUM)
+  }
+
+  def count(column: String): ColumnValidationBuilder = {
+    setGroupValidation(column, AGGREGATION_COUNT)
+  }
+
+  def min(column: String): ColumnValidationBuilder = {
+    setGroupValidation(column, AGGREGATION_MIN)
+  }
+
+  def max(column: String): ColumnValidationBuilder = {
+    setGroupValidation(column, AGGREGATION_MAX)
+  }
+
+  def avg(column: String): ColumnValidationBuilder = {
+    setGroupValidation(column, AGGREGATION_AVG)
+  }
+
+  private def setGroupValidation(column: String, aggType: String) = {
+    val groupByValidation = GroupByValidation(groupByCols, column, aggType)
+    groupByValidation.errorThreshold = validationBuilder.validation.errorThreshold
+    groupByValidation.description = validationBuilder.validation.description
+    ColumnValidationBuilder(s"$aggType($column)", validationBuilder.modify(_.validation).setTo(groupByValidation))
+  }
+}
+
+case class AggregationColumnValidationBuilder(groupByValidationBuilder: GroupByValidationBuilder = GroupByValidationBuilder()) {
+  def this() = this(GroupByValidationBuilder())
+
+
 }
 
 case class WaitConditionBuilder(waitCondition: WaitCondition = PauseWaitCondition()) {
   def this() = this(PauseWaitCondition())
 
+  /**
+   * Pause for configurable number of seconds, before starting data validations.
+   *
+   * @param pauseInSeconds Seconds to pause
+   * @return WaitConditionBuilder
+   */
   def pause(pauseInSeconds: Int): WaitConditionBuilder = this.modify(_.waitCondition).setTo(PauseWaitCondition(pauseInSeconds))
 
+  /**
+   * Wait until file exists within path before starting data validations.
+   *
+   * @param path Path to file
+   * @return WaitConditionBuilder
+   */
   def file(path: String): WaitConditionBuilder = this.modify(_.waitCondition).setTo(FileExistsWaitCondition(path))
 
+  /**
+   * Wait until a specific data condition is met before starting data validations. Specific data condition to be defined
+   * as a SQL expression that returns a boolean value. Need to use a data source that is already defined.
+   *
+   * @param dataSourceName Name of data source that is already defined
+   * @param options Additional data source connection options to use to get data
+   * @param expr SQL expression that returns a boolean
+   * @return WaitConditionBuilder
+   */
   def dataExists(dataSourceName: String, options: Map[String, String], expr: String): WaitConditionBuilder =
     this.modify(_.waitCondition).setTo(DataExistsWaitCondition(dataSourceName, options, expr))
 
+  /**
+   * Wait until GET request to URL returns back 200 status code, then will start data validations
+   *
+   * @param url URL for HTTP GET request
+   * @return WaitConditionBuilder
+   */
   def webhook(url: String): WaitConditionBuilder =
     webhook("tmp_http_data_source", url)
 
+  /**
+   * Wait until URL returns back one of the status codes provided before starting data validations.
+   *
+   * @param url URL for HTTP request
+   * @param method HTTP method (i.e. GET, PUT, POST)
+   * @param statusCodes HTTP status codes that are treated as successful
+   * @return WaitConditionBuilder
+   */
   @varargs def webhook(url: String, method: String, statusCodes: Int*): WaitConditionBuilder =
     webhook("tmp_http_data_source", url, method, statusCodes: _*)
 
+  /**
+   * Wait until pre-defined HTTP data source with URL, returns back 200 status code from GET request before starting
+   * data validations.
+   *
+   * @param dataSourceName Name of data source already defined
+   * @param url URL for HTTP GET request
+   * @return WaitConditionBuilder
+   */
   def webhook(dataSourceName: String, url: String): WaitConditionBuilder =
     this.modify(_.waitCondition).setTo(WebhookWaitCondition(dataSourceName, url))
 
+  /**
+   * Wait until pre-defined HTTP data source with URL, HTTP method and set of successful status codes, return back one
+   * of the successful status codes before starting data validations.
+   *
+   * @param dataSourceName Name of data source already defined
+   * @param url URL for HTTP request
+   * @param method HTTP method (i.e. GET, PUT, POST)
+   * @param statusCode HTTP status codes that are treated as successful
+   * @return WaitConditionBuilder
+   */
   @varargs def webhook(dataSourceName: String, url: String, method: String, statusCode: Int*): WaitConditionBuilder =
     this.modify(_.waitCondition).setTo(WebhookWaitCondition(dataSourceName, url, method, statusCode.toList))
 }

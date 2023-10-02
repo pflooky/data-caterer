@@ -1,13 +1,13 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.http
 
-import com.github.pflooky.datacaterer.api.model.Constants.{PATH, SCHEMA_LOCATION}
+import com.github.pflooky.datacaterer.api.model.Constants.{HTTP_CONTENT_TYPE, HTTP_HEADER, HTTP_METHOD, PATH, SCHEMA_LOCATION}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.parser.OpenAPIV3Parser
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
 
-import scala.collection.JavaConverters.mapAsScalaMapConverter
+import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapConverter}
 
 case class HttpMetadata(name: String, format: String, connectionConfig: Map[String, String]) extends DataSourceMetadata {
 
@@ -25,6 +25,7 @@ case class HttpMetadata(name: String, format: String, connectionConfig: Map[Stri
         //validate the file is openapi endpoint/doc
         //return back all endpoints along with any metadata from the doc
         val openApiSpec = new OpenAPIV3Parser().read(location)
+        val modelSchemas = openApiSpec.getComponents.getSchemas
         openApiSpec.getPaths.asScala.map(path => {
           path._2.readOperationsMap()
             .asScala
@@ -32,16 +33,15 @@ case class HttpMetadata(name: String, format: String, connectionConfig: Map[Stri
               val requestContent = pathOperation._2.getRequestBody.getContent.asScala.head
               val requestContentType = requestContent._1
               val schema = requestContent._2.getSchema
-              //              val headers = pathOperation._2.getParameters.asScala
-              //                .filter(p => p.getIn == "header")
-              //                .map(p => (s"$HTTP_HEADER_PREFIX.${p.getName}", ""))
-              //
-              //              Map(
-              //                HTTP_METHOD -> pathOperation._1.name(),
-              //                HTTP_CONTENT_TYPE -> requestContent._1,
-              //              ) ++
-              //                headers
-              Map()
+              val fields = schema.getProperties
+              val headers = pathOperation._2.getParameters.asScala
+                .filter(p => p.getIn == "header")
+                .map(p => (s"$HTTP_HEADER.${p.getName}", ""))
+
+              Map(
+                HTTP_METHOD -> pathOperation._1.name(),
+                HTTP_CONTENT_TYPE -> requestContent._1,
+              ) ++ headers
             })
         })
         Array()

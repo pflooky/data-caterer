@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.result
 
 import com.github.pflooky.datacaterer.api.model.Constants.HISTOGRAM
-import com.github.pflooky.datacaterer.api.model.{ExpressionValidation, FlagsConfig, Generator, Plan, Step}
+import com.github.pflooky.datacaterer.api.model.{ExpressionValidation, FlagsConfig, Generator, GroupByValidation, Plan, Step}
 import com.github.pflooky.datagen.core.listener.{SparkRecordListener, SparkTaskRecordSummary}
 import com.github.pflooky.datagen.core.model.PlanImplicits.CountOps
 import com.github.pflooky.datagen.core.model.{DataSourceResult, DataSourceResultSummary, StepResultSummary, TaskResultSummary, ValidationConfigResult}
@@ -545,6 +545,11 @@ class ResultHtmlWriter {
                     {validationRes.validation match {
                     case ExpressionValidation(expr) =>
                       s"""expr -> $expr
+                         |errorThreshold -> ${validationRes.validation.errorThreshold.getOrElse(0.0)}
+                         |""".stripMargin
+                    case GroupByValidation(groupByCols, aggCol, aggType, expr) =>
+                      s"""expr -> $expr
+                         |groupByCols -> ${groupByCols.mkString(",")}
                          |errorThreshold -> ${validationRes.validation.errorThreshold.getOrElse(0.0)}
                          |""".stripMargin
                     case _ => ""

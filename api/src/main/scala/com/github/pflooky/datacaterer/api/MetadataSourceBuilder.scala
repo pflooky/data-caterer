@@ -26,4 +26,8 @@ case class MetadataSourceBuilder(metadataSource: MetadataSource = MarquezMetadat
 
   def marquez(url: String, namespace: String): MetadataSourceBuilder =
     marquez(url, namespace, None, Map())
+
+  def openApi(schemaLocation: String): MetadataSourceBuilder = {
+    this
+  }
 }

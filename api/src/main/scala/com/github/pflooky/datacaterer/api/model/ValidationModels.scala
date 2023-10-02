@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonTypeInfo}
 import com.fasterxml.jackson.databind.annotation.{JsonDeserialize, JsonTypeIdResolver}
 import com.github.pflooky.datacaterer.api.ValidationBuilder
-import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_VALIDATION_CONFIG_NAME, DEFAULT_VALIDATION_DESCRIPTION}
+import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_VALIDATION_CONFIG_NAME, DEFAULT_VALIDATION_DESCRIPTION, AGGREGATION_SUM}
 import com.github.pflooky.datacaterer.api.parser.ValidationIdResolver
 
 
@@ -19,6 +19,13 @@ trait Validation {
 case class ExpressionValidation(
                                  expr: String = "true"
                                ) extends Validation
+
+case class GroupByValidation(
+                              groupByCols: Seq[String] = Seq(),
+                              aggCol: String = "",
+                              aggType: String = AGGREGATION_SUM,
+                              expr: String = "true"
+                            ) extends Validation
 
 case class ValidationConfiguration(
                                     name: String = DEFAULT_VALIDATION_CONFIG_NAME,

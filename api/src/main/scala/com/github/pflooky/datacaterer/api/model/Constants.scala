@@ -48,6 +48,9 @@ object Constants {
   lazy val JMS_VPN_NAME = "vpnName"
   lazy val SCHEMA_LOCATION = "schemaLocation"
   lazy val ROWS_PER_SECOND = "rowsPerSecond"
+  lazy val HTTP_METHOD = "httpMethod"
+  lazy val HTTP_CONTENT_TYPE = "httpContentType"
+  lazy val HTTP_HEADER = "httpHeader"
 
   //field metadata
   lazy val RANDOM_SEED = "seed"
@@ -215,4 +218,10 @@ object Constants {
   lazy val FACET_DATA_QUALITY_METRICS = "dataQualityMetrics"
   lazy val FACET_DATA_QUALITY_ASSERTIONS = "dataQualityAssertions"
 
+  //aggregation types
+  lazy val AGGREGATION_SUM = "sum"
+  lazy val AGGREGATION_COUNT = "count"
+  lazy val AGGREGATION_MAX = "max"
+  lazy val AGGREGATION_MIN = "min"
+  lazy val AGGREGATION_AVG = "avg"
 }

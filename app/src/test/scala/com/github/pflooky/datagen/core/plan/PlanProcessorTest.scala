@@ -128,7 +128,29 @@ class PlanProcessorTest extends SparkSuite {
     execute(conf, csvTask, jsonTask, postgresTask)
   }
 
-  test("Can run Postgres plan run") {
-    PlanProcessor.determineAndExecutePlan(Some(new TestPostgres()))
+  ignore("Can run Postgres plan run") {
+//    PlanProcessor.determineAndExecutePlan(Some(new TestPostgres()))
+    PlanProcessor.determineAndExecutePlan(Some(new TestValidation()))
+  }
+
+  class TestValidation extends PlanRun {
+    val csvTask = csv("my_csv", "/tmp/data/csv", Map("saveMode" -> "overwrite", "header" -> "true"))
+      .schema(
+        field.name("account_id").regex("ACC[0-9]{8}"),
+        field.name("name").expression("#{Name.name}"),
+        field.name("amount").`type`(IntegerType).min(0).max(100)
+      )
+      .count(count.recordsPerColumn(5, "account_id"))
+      .validations(
+        validation.col("transactions").hasType("string"),
+        validation.col("amount").isEqual(1000),
+        validation.groupBy("account_id").count("amount").lessThan(1000),
+        validation.groupBy("account_id").sum("amount").greaterThan(1000)
+      )
+
+    val conf = configuration.enableValidation(true)
+      .generatedReportsFolderPath("/Users/peter/code/spark-datagen/gen/report")
+
+    execute(conf, csvTask)
   }
 }

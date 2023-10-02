@@ -18,6 +18,8 @@ app/src/test/resources/sample/html
 app/src/test/resources/sample/documentation
 app/src/test/resources/sample/java
 app/src/test/resources/sample/report
+
+api/out
 api/src/test/resources/sample/documentation
 
 *.class

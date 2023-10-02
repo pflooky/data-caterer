@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.validator
 
 import com.github.pflooky.datacaterer.api.model.Constants.FORMAT
-import com.github.pflooky.datacaterer.api.model.{DataSourceValidation, ExpressionValidation, ValidationConfiguration}
+import com.github.pflooky.datacaterer.api.model.{DataSourceValidation, ExpressionValidation, GroupByValidation, ValidationConfiguration}
 import com.github.pflooky.datagen.core.model.ValidationImplicits.{ValidationOps, WaitConditionOps}
 import com.github.pflooky.datagen.core.model.{DataSourceValidationResult, ValidationConfigResult}
 import com.github.pflooky.datagen.core.parser.ValidationParser
@@ -33,6 +33,7 @@ class ValidationProcessor(
   private val LOGGER = Logger.getLogger(getClass.getName)
 
   def executeValidations: List[ValidationConfigResult] = {
+    LOGGER.info("Executing data validations")
     val validationResults = getValidations.map(vc => {
       val dataSourceValidationResults = vc.dataSources.map(dataSource => {
         LOGGER.debug(s"Waiting for validation condition to be successful before running validations, name=${vc.name}," +
@@ -70,15 +71,22 @@ class ValidationProcessor(
   private def logValidationErrors(validationResults: List[ValidationConfigResult]): Unit = {
     validationResults.foreach(vcr => vcr.dataSourceValidationResults.map(dsr => {
       val failedValidations = dsr.validationResults.filter(r => !r.isSuccess)
-      failedValidations.foreach(validationRes => {
-        val (validationType, validationCheck) = validationRes.validation match {
-          case ExpressionValidation(expr) => ("expression", expr)
-          case _ => ("Unknown", "")
-        }
-        val sampleErrors = validationRes.sampleErrorValues.get.take(5).map(_.json).mkString(",")
-        LOGGER.error(s"Failed validation: validation-name=${vcr.name}, description=${vcr.description}, data-source-name=${dsr.dataSourceName}, " +
-          s"data-source-options=${dsr.options}, is-success=${validationRes.isSuccess}, validation-type=$validationType, check=$validationCheck, sample-errors=$sampleErrors")
-      })
+
+      if (failedValidations.isEmpty) {
+        LOGGER.info(s"Data validations successful for validation, name=${vcr.name}, description=${vcr.description}, data-source-name=${dsr.dataSourceName}, " +
+          s"data-source-options=${dsr.options}, is-success=true")
+      } else {
+        failedValidations.foreach(validationRes => {
+          val (validationType, validationCheck) = validationRes.validation match {
+            case ExpressionValidation(expr) => ("expression", expr)
+            case GroupByValidation(_, _, _, expr) => ("groupByAggregate", expr)
+            case _ => ("Unknown", "")
+          }
+          val sampleErrors = validationRes.sampleErrorValues.get.take(5).map(_.json).mkString(",")
+          LOGGER.error(s"Failed validation: validation-name=${vcr.name}, description=${vcr.description}, data-source-name=${dsr.dataSourceName}, " +
+            s"data-source-options=${dsr.options}, is-success=${validationRes.isSuccess}, validation-type=$validationType, check=$validationCheck, sample-errors=$sampleErrors")
+        })
+      }
     }))
   }
 }
