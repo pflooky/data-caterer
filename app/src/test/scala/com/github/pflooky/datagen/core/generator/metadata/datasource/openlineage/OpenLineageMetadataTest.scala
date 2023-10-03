@@ -23,6 +23,7 @@ class OpenLineageMetadataTest extends SparkSuite with MockFactory {
     (mockHttp.prepareGet(_: String)).expects(*).once().returns(mockBoundRequest)
     (() => mockBoundRequest.execute()).expects().once().returns(mockListenableResponse)
     (() => mockListenableResponse.get()).expects().once().returns(mockResponse)
+    (() => mockHttp.close()).expects().once()
     (() => mockResponse.getResponseBody).expects().once().returns(responseBody)
 
     val result = openLineageMetadata.listDatasets("food_delivery")
@@ -42,6 +43,7 @@ class OpenLineageMetadataTest extends SparkSuite with MockFactory {
     (mockHttp.prepareGet(_: String)).expects(*).once().returns(mockBoundRequest)
     (() => mockBoundRequest.execute()).expects().once().returns(mockListenableResponse)
     (() => mockListenableResponse.get()).expects().once().returns(mockResponse)
+    (() => mockHttp.close()).expects().once()
     (() => mockResponse.getResponseBody).expects().once().returns(responseBody)
 
     val result = openLineageMetadata.getDataset("food_delivery", "my_dataset")
@@ -60,6 +62,7 @@ class OpenLineageMetadataTest extends SparkSuite with MockFactory {
     (mockHttp.prepareGet(_: String)).expects(*).once().returns(mockBoundRequest)
     (() => mockBoundRequest.execute()).expects().once().returns(mockListenableResponse)
     (() => mockListenableResponse.get()).expects().once().returns(mockResponse)
+    (() => mockHttp.close()).expects().once()
     (() => mockResponse.getResponseBody).expects().once().returns(responseBody)
 
     val result = openLineageMetadata.getAdditionalColumnMetadata.collect()

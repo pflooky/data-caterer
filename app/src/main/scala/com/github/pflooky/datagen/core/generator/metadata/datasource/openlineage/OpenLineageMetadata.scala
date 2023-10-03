@@ -97,9 +97,9 @@ case class OpenLineageMetadata(
 
   private def getResponse(url: String): Response = {
     val tryRequest = Try(asyncHttpClient.prepareGet(url).execute().get())
+    asyncHttpClient.close()
     tryRequest match {
       case Failure(exception) =>
-        asyncHttpClient.close()
         throw new RuntimeException(s"Failed to call HTTP url, url=$url", exception)
       case Success(value) =>
         value
