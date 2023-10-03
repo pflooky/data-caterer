@@ -125,12 +125,12 @@ class PlanProcessorTest extends SparkSuite {
 
     val conf = configuration.enableGeneratePlanAndTasks(true).enableFailOnError(false)
 
-    execute(conf, csvTask, jsonTask, postgresTask)
+    execute(conf, postgresTask)
   }
 
-  ignore("Can run Postgres plan run") {
-//    PlanProcessor.determineAndExecutePlan(Some(new TestPostgres()))
-    PlanProcessor.determineAndExecutePlan(Some(new TestValidation()))
+  test("Can run Postgres plan run") {
+    PlanProcessor.determineAndExecutePlan(Some(new TestPostgres()))
+//    PlanProcessor.determineAndExecutePlan(Some(new TestValidation()))
   }
 
   class TestValidation extends PlanRun {

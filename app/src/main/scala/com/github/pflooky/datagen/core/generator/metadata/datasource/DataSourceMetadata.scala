@@ -12,8 +12,6 @@ trait DataSourceMetadata {
   val connectionConfig: Map[String, String]
   val hasSourceData: Boolean
 
-  def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[Map[String, String]]
-
   def getAdditionalColumnMetadata(implicit sparkSession: SparkSession): Dataset[ColumnMetadata] = {
     sparkSession.emptyDataset[ColumnMetadata]
   }
@@ -21,6 +19,10 @@ trait DataSourceMetadata {
   def getForeignKeys(implicit sparkSession: SparkSession): Dataset[ForeignKeyRelationship] = {
     sparkSession.emptyDataset[ForeignKeyRelationship]
   }
+
+  def close(): Unit = {}
+
+  def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[Map[String, String]]
 
   def toStepName(options: Map[String, String]): String
 }

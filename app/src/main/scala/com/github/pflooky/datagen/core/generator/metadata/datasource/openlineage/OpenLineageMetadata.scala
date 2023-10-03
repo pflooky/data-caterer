@@ -7,8 +7,8 @@ import com.github.pflooky.datagen.core.model.openlineage.{ListDatasetResponse, O
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{Dataset, SparkSession}
-import org.asynchttpclient.{AsyncHttpClient, Response}
 import org.asynchttpclient.Dsl.asyncHttpClient
+import org.asynchttpclient.{AsyncHttpClient, Response}
 
 import scala.util.{Failure, Success, Try}
 
@@ -69,6 +69,11 @@ case class OpenLineageMetadata(
     sparkSession.createDataset(columnMetadata)
   }
 
+
+  override def close(): Unit = {
+    asyncHttpClient.close()
+  }
+
   private def getDatasetsFromSource: List[OpenLineageDataset] = {
     val datasets = OPT_DATASET.map(ds => List(getDataset(NAMESPACE, ds)))
       .getOrElse(listDatasets(NAMESPACE).datasets)
@@ -97,7 +102,6 @@ case class OpenLineageMetadata(
 
   private def getResponse(url: String): Response = {
     val tryRequest = Try(asyncHttpClient.prepareGet(url).execute().get())
-    asyncHttpClient.close()
     tryRequest match {
       case Failure(exception) =>
         throw new RuntimeException(s"Failed to call HTTP url, url=$url", exception)

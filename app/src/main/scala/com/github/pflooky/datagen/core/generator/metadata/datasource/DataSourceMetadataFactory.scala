@@ -29,6 +29,7 @@ class DataSourceMetadataFactory(dataCatererConfiguration: DataCatererConfigurati
       val generatedTasksFromMetadata = metadataPerConnection.map(m => (m._1.name, TaskHelper.fromMetadata(optPlanRun, m._1.name, m._1.format, m._3)))
       //given all the foreign key relations in each data source, detect if there are any links between data sources, then pass that into plan
       val allForeignKeys = ForeignKeyUtil.getAllForeignKeyRelationships(metadataPerConnection.map(_._2))
+      connectionMetadata.foreach(_.close())
 
       Some(writePlanAndTasksToFiles(generatedTasksFromMetadata, allForeignKeys, dataCatererConfiguration.foldersConfig.generatedPlanAndTaskFolderPath))
     } else if (applicationType.equalsIgnoreCase(BASIC_APPLICATION) && flagsConfig.enableGeneratePlanAndTasks) {

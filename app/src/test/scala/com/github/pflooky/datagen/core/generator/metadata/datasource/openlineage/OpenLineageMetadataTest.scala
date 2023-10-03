@@ -27,6 +27,7 @@ class OpenLineageMetadataTest extends SparkSuite with MockFactory {
     (() => mockResponse.getResponseBody).expects().once().returns(responseBody)
 
     val result = openLineageMetadata.listDatasets("food_delivery")
+    openLineageMetadata.close()
 
     assert(result.totalCount == 1)
     assert(result.datasets.size == 1)
@@ -47,6 +48,7 @@ class OpenLineageMetadataTest extends SparkSuite with MockFactory {
     (() => mockResponse.getResponseBody).expects().once().returns(responseBody)
 
     val result = openLineageMetadata.getDataset("food_delivery", "my_dataset")
+    openLineageMetadata.close()
 
     assert(result.`type` == "DB_TABLE")
     assert(result.fields.size == 4)
@@ -66,6 +68,7 @@ class OpenLineageMetadataTest extends SparkSuite with MockFactory {
     (() => mockResponse.getResponseBody).expects().once().returns(responseBody)
 
     val result = openLineageMetadata.getAdditionalColumnMetadata.collect()
+    openLineageMetadata.close()
 
     assert(result.length == 4)
     assert(result.head.dataSourceReadOptions(METADATA_IDENTIFIER) == "food_delivery_public.categories")
