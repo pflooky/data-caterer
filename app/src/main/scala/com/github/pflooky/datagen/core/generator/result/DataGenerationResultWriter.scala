@@ -17,8 +17,12 @@ class DataGenerationResultWriter(metadataConfig: MetadataConfig, foldersConfig: 
   private lazy val LOGGER = Logger.getLogger(getClass.getName)
   private lazy val OBJECT_MAPPER = ObjectMapperUtil.jsonObjectMapper
 
-  def writeResult(plan: Plan, generationResult: List[DataSourceResult],
-                  optValidationResults: Option[List[ValidationConfigResult]], sparkRecordListener: SparkRecordListener): Unit = {
+  def writeResult(
+                   plan: Plan,
+                   generationResult: List[DataSourceResult],
+                   validationResults: List[ValidationConfigResult],
+                   sparkRecordListener: SparkRecordListener
+                 ): Unit = {
     OBJECT_MAPPER.setSerializationInclusion(Include.NON_ABSENT)
     val (stepSummary, taskSummary, dataSourceSummary) = getSummaries(generationResult)
     val fileSystem = FileSystem.get(sparkSession.sparkContext.hadoopConfiguration)
@@ -31,13 +35,13 @@ class DataGenerationResultWriter(metadataConfig: MetadataConfig, foldersConfig: 
     try {
       fileWriter("index.html", htmlWriter.index)
       fileWriter("overview.html", htmlWriter.overview(plan, stepSummary, taskSummary, dataSourceSummary,
-        optValidationResults, flagsConfig, sparkRecordListener))
+        validationResults, flagsConfig, sparkRecordListener))
       fileWriter("navbar.html", htmlWriter.navBarDetails)
 
       fileWriter("tasks.html", htmlWriter.taskDetails(taskSummary))
       fileWriter("steps.html", htmlWriter.stepDetails(stepSummary))
       fileWriter("data-sources.html", htmlWriter.dataSourceDetails(stepSummary.flatMap(_.dataSourceResults)))
-      fileWriter("validations.html", htmlWriter.validations(optValidationResults))
+      fileWriter("validations.html", htmlWriter.validations(validationResults))
     } catch {
       case ex: Exception =>
         LOGGER.error("Failed to write data generation summary to HTML files", ex)

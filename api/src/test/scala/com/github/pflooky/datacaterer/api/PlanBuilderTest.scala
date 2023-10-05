@@ -1,5 +1,6 @@
 package com.github.pflooky.datacaterer.api
 
+import com.github.pflooky.datacaterer.api.model.Constants.FOREIGN_KEY_DELIMITER
 import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, ExpressionValidation, ForeignKeyRelation, PauseWaitCondition}
 import org.junit.runner.RunWith
 import org.scalatest.funsuite.AnyFunSuite
@@ -40,11 +41,11 @@ class PlanBuilderTest extends AnyFunSuite {
         .locale("en")
         .addForeignKeyRelationship(
           new ForeignKeyRelation("account_json", "default_step", "account_id"),
-          List(new ForeignKeyRelation("txn_db", "txn_step", "account_number"))
+          new ForeignKeyRelation("txn_db", "txn_step", "account_number")
         )
         .addForeignKeyRelationship(
           new ForeignKeyRelation("account_json", "default_step", "customer_number"),
-          List(new ForeignKeyRelation("acc_db", "acc_step", "customer_number"))
+          new ForeignKeyRelation("acc_db", "acc_step", "customer_number")
         )
 
       val c = configuration
@@ -83,10 +84,16 @@ class PlanBuilderTest extends AnyFunSuite {
     assert(result._plan.sinkOptions.get.seed.contains("1"))
     assert(result._plan.sinkOptions.get.locale.contains("en"))
     val fk = result._plan.sinkOptions.get.foreignKeys
-    assert(fk.exists(f => f._1.equalsIgnoreCase("account_json.default_step.account_id")))
-    assert(fk.find(f => f._1.equalsIgnoreCase(("account_json.default_step.account_id"))).get._2 == List("txn_db.txn_step.account_number"))
-    assert(fk.exists(f => f._1.equalsIgnoreCase("account_json.default_step.customer_number")))
-    assert(fk.find(f => f._1.equalsIgnoreCase("account_json.default_step.customer_number")).get._2 == List("acc_db.acc_step.customer_number"))
+    assert(fk.exists(f => f._1.equalsIgnoreCase(s"account_json${FOREIGN_KEY_DELIMITER}default_step${FOREIGN_KEY_DELIMITER}account_id")))
+    assert(
+      fk.find(f => f._1.equalsIgnoreCase(s"account_json${FOREIGN_KEY_DELIMITER}default_step${FOREIGN_KEY_DELIMITER}account_id")).get._2 ==
+        List(s"txn_db${FOREIGN_KEY_DELIMITER}txn_step${FOREIGN_KEY_DELIMITER}account_number")
+    )
+    assert(fk.exists(f => f._1.equalsIgnoreCase(s"account_json${FOREIGN_KEY_DELIMITER}default_step${FOREIGN_KEY_DELIMITER}customer_number")))
+    assert(
+      fk.find(f => f._1.equalsIgnoreCase(s"account_json${FOREIGN_KEY_DELIMITER}default_step${FOREIGN_KEY_DELIMITER}customer_number")).get._2 ==
+        List(s"acc_db${FOREIGN_KEY_DELIMITER}acc_step${FOREIGN_KEY_DELIMITER}customer_number")
+    )
 
     assert(result._configuration.flagsConfig.enableCount)
     assert(result._configuration.flagsConfig.enableGenerateData)

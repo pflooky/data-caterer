@@ -35,8 +35,11 @@ object MetadataUtil {
     Metadata.fromJson(OBJECT_MAPPER.writeValueAsString(mapMetadata))
   }
 
-  def mapToStructFields(sourceData: DataFrame, dataSourceReadOptions: Map[String, String],
-                        columnDataProfilingMetadata: List[DataProfilingMetadata])(implicit sparkSession: SparkSession): Array[StructField] = {
+  def mapToStructFields(
+                         sourceData: DataFrame,
+                         dataSourceReadOptions: Map[String, String],
+                         columnDataProfilingMetadata: List[DataProfilingMetadata]
+                       )(implicit sparkSession: SparkSession): Array[StructField] = {
     mapToStructFields(sourceData, dataSourceReadOptions, columnDataProfilingMetadata, sparkSession.emptyDataset[ColumnMetadata])
   }
 
@@ -85,8 +88,12 @@ object MetadataUtil {
     })
   }
 
-  def getFieldDataProfilingMetadata(sourceData: DataFrame, dataSourceReadOptions: Map[String, String],
-                                    dataSourceMetadata: DataSourceMetadata, metadataConfig: MetadataConfig)(implicit sparkSession: SparkSession): List[DataProfilingMetadata] = {
+  def getFieldDataProfilingMetadata(
+                                     sourceData: DataFrame,
+                                     dataSourceReadOptions: Map[String, String],
+                                     dataSourceMetadata: DataSourceMetadata,
+                                     metadataConfig: MetadataConfig
+                                   )(implicit sparkSession: SparkSession): List[DataProfilingMetadata] = {
     computeColumnStatistics(sourceData, dataSourceReadOptions, dataSourceMetadata.name, dataSourceMetadata.format)
     val columnLevelStatistics = sparkSession.sharedState.cacheManager.lookupCachedData(sourceData).get.cachedRepresentation.stats
     val rowCount = columnLevelStatistics.rowCount.getOrElse(BigInt(0))
@@ -98,10 +105,9 @@ object MetadataUtil {
       val columnName = x._1.name
       val statisticsMap = columnStatToMap(x._2.toCatalogColumnStat(columnName, x._1.dataType)) ++ Map(ROW_COUNT -> rowCount.toString)
       val optOneOfColumn = determineIfOneOfColumn(sourceData, columnName, statisticsMap, metadataConfig)
-      val optFakerExpression = ExpressionPredictor.getFakerExpression(sourceData.schema.fields.find(_.name == columnName).get)
-      val optionalMetadataMap = Map(EXPRESSION -> optFakerExpression, ONE_OF_GENERATOR -> optOneOfColumn)
-        .filter(_._2.isDefined)
-        .map(x => (x._1, x._2.get))
+      val optFakerExpression = ExpressionPredictor.getFakerExpressionAndLabel(sourceData.schema.fields.find(_.name == columnName).get)
+      val optionalMetadataMap = optOneOfColumn.map(oneOf => Map(ONE_OF_GENERATOR -> oneOf)).getOrElse(Map()) ++
+        optFakerExpression.map(_.toMap).getOrElse(Map())
       val statWithOptionalMetadata = statisticsMap ++ optionalMetadataMap
 
       LOGGER.debug(s"Column summary statistics, name=${dataSourceMetadata.name}, format=${dataSourceMetadata.format}, column-name=$columnName, " +
@@ -110,8 +116,12 @@ object MetadataUtil {
     }).toList
   }
 
-  private def computeColumnStatistics(sourceData: DataFrame, dataSourceReadOptions: Map[String, String],
-                                      dataSourceName: String, dataSourceFormat: String)(implicit sparkSession: SparkSession): Unit = {
+  private def computeColumnStatistics(
+                                       sourceData: DataFrame,
+                                       dataSourceReadOptions: Map[String, String],
+                                       dataSourceName: String,
+                                       dataSourceFormat: String
+                                     )(implicit sparkSession: SparkSession): Unit = {
     //have to create temp view then analyze the column stats which can be found in the cached data
     sourceData.createOrReplaceTempView(TEMP_CACHED_TABLE_NAME)
     if (!sparkSession.catalog.isCached(TEMP_CACHED_TABLE_NAME)) sparkSession.catalog.cacheTable(TEMP_CACHED_TABLE_NAME)
@@ -127,29 +137,12 @@ object MetadataUtil {
     }
   }
 
-  private def analyzeSupportsType(dataType: DataType): Boolean = dataType match {
-    case IntegerType | ShortType | LongType | DecimalType() | DoubleType | FloatType => true
-    case BooleanType => true
-    case BinaryType | StringType => true
-    case TimestampType | DateType => true
-    case _ => false
-  }
-
-  private def columnStatToMap(catalogColumnStat: CatalogColumnStat): Map[String, String] = {
-    catalogColumnStat.toMap("col")
-      .map(kv => {
-        val baseStatName = kv._1.replaceFirst("col\\.", "")
-        if (baseStatName.equalsIgnoreCase("minvalue")) {
-          ("min", kv._2)
-        } else if (baseStatName.equalsIgnoreCase("maxvalue")) {
-          ("max", kv._2)
-        } else (baseStatName, kv._2)
-      })
-      .filter(_._1 != "version")
-  }
-
-  def determineIfOneOfColumn(sourceData: DataFrame, columnName: String,
-                             statisticsMap: Map[String, String], metadataConfig: MetadataConfig): Option[Array[String]] = {
+  def determineIfOneOfColumn(
+                              sourceData: DataFrame,
+                              columnName: String,
+                              statisticsMap: Map[String, String],
+                              metadataConfig: MetadataConfig
+                            ): Option[Array[String]] = {
     val columnDataType = sourceData.schema.fields.find(_.name == columnName).map(_.dataType)
     val count = statisticsMap(ROW_COUNT).toLong
     (columnDataType, count) match {
@@ -167,7 +160,12 @@ object MetadataUtil {
     }
   }
 
-  def getSubDataSourcePath(dataSourceName: String, format: String, options: Map[String, String], recordTrackingFolderPath: String): String = {
+  def getSubDataSourcePath(
+                            dataSourceName: String,
+                            format: String,
+                            options: Map[String, String],
+                            recordTrackingFolderPath: String
+                          ): String = {
     val lowerFormat = format.toLowerCase
     val subPath = lowerFormat match {
       case JDBC =>
@@ -219,11 +217,37 @@ object MetadataUtil {
     }
   }
 
-  def getFieldMetadata(dataSourceName: String, df: DataFrame, connectionConfig: Map[String, String], metadataConfig: MetadataConfig)(implicit sparkSession: SparkSession): Array[Field] = {
+  def getFieldMetadata(
+                        dataSourceName: String,
+                        df: DataFrame,
+                        connectionConfig: Map[String, String],
+                        metadataConfig: MetadataConfig
+                      )(implicit sparkSession: SparkSession): Array[Field] = {
     val dataSourceMetadata = getMetadataFromConnectionConfig((dataSourceName, connectionConfig)).get
     val fieldMetadata = getFieldDataProfilingMetadata(df, connectionConfig, dataSourceMetadata, metadataConfig)
     val structFields = mapToStructFields(df, connectionConfig, fieldMetadata)
     structFields.map(FieldHelper.fromStructField)
+  }
+
+  private def analyzeSupportsType(dataType: DataType): Boolean = dataType match {
+    case IntegerType | ShortType | LongType | DecimalType() | DoubleType | FloatType => true
+    case BooleanType => true
+    case BinaryType | StringType => true
+    case TimestampType | DateType => true
+    case _ => false
+  }
+
+  private def columnStatToMap(catalogColumnStat: CatalogColumnStat): Map[String, String] = {
+    catalogColumnStat.toMap("col")
+      .map(kv => {
+        val baseStatName = kv._1.replaceFirst("col\\.", "")
+        if (baseStatName.equalsIgnoreCase("minvalue")) {
+          ("min", kv._2)
+        } else if (baseStatName.equalsIgnoreCase("maxvalue")) {
+          ("max", kv._2)
+        } else (baseStatName, kv._2)
+      })
+      .filter(_._1 != "version")
   }
 }
 

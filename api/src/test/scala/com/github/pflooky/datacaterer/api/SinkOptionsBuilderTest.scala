@@ -1,5 +1,6 @@
 package com.github.pflooky.datacaterer.api
 
+import com.github.pflooky.datacaterer.api.model.Constants.FOREIGN_KEY_DELIMITER
 import com.github.pflooky.datacaterer.api.model.ForeignKeyRelation
 import org.junit.runner.RunWith
 import org.scalatest.funsuite.AnyFunSuite
@@ -22,8 +23,10 @@ class SinkOptionsBuilderTest extends AnyFunSuite {
     assert(result.seed.contains("10"))
     assert(result.locale.contains("id"))
     assert(result.foreignKeys.size == 2)
-    assert(result.foreignKeys.exists(_ == "my_postgres.account.account_id" -> List("my_json.account.account_id")))
-    assert(result.foreignKeys.exists(_ == "my_postgres.account.customer_number" -> List("my_json.account.customer_number", "my_parquet.transaction.cust_num")))
+    assert(result.foreignKeys.contains(s"my_postgres${FOREIGN_KEY_DELIMITER}account${FOREIGN_KEY_DELIMITER}account_id" ->
+      List(s"my_json${FOREIGN_KEY_DELIMITER}account${FOREIGN_KEY_DELIMITER}account_id")))
+    assert(result.foreignKeys.contains(s"my_postgres${FOREIGN_KEY_DELIMITER}account${FOREIGN_KEY_DELIMITER}customer_number" ->
+      List(s"my_json${FOREIGN_KEY_DELIMITER}account${FOREIGN_KEY_DELIMITER}customer_number", s"my_parquet${FOREIGN_KEY_DELIMITER}transaction${FOREIGN_KEY_DELIMITER}cust_num")))
   }
 
 }

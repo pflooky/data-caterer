@@ -56,7 +56,7 @@ object PlanProcessor {
     val optPlanWithTasks = new DataSourceMetadataFactory(dataCatererConfiguration).extractAllDataSourceMetadata(optPlan)
     val dataGeneratorProcessor = new DataGeneratorProcessor(dataCatererConfiguration)
     (optPlanWithTasks, optPlan) match {
-      case (Some((genPlan, genTasks)), _) => dataGeneratorProcessor.generateData(genPlan, genTasks, None)
+      case (Some((genPlan, genTasks, genValidation)), _) => dataGeneratorProcessor.generateData(genPlan, genTasks, Some(List(genValidation)))
       case (_, Some(plan)) => dataGeneratorProcessor.generateData(plan._plan, plan._tasks, Some(plan._validations))
       case _ => dataGeneratorProcessor.generateData()
     }

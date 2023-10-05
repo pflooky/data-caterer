@@ -1,7 +1,7 @@
 package com.github.pflooky.datacaterer.api.model
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_COUNT_RECORDS, DEFAULT_DATA_SOURCE_NAME, DEFAULT_FIELD_NAME, DEFAULT_FIELD_NULLABLE, DEFAULT_FIELD_TYPE, DEFAULT_GENERATOR_TYPE, DEFAULT_PER_COLUMN_COUNT_RECORDS, DEFAULT_STEP_ENABLED, DEFAULT_STEP_NAME, DEFAULT_STEP_TYPE, DEFAULT_TASK_NAME, DEFAULT_TASK_SUMMARY_ENABLE}
+import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_COUNT_RECORDS, DEFAULT_DATA_SOURCE_NAME, DEFAULT_FIELD_NAME, DEFAULT_FIELD_NULLABLE, DEFAULT_FIELD_TYPE, DEFAULT_GENERATOR_TYPE, DEFAULT_PER_COLUMN_COUNT_RECORDS, DEFAULT_STEP_ENABLED, DEFAULT_STEP_NAME, DEFAULT_STEP_TYPE, DEFAULT_TASK_NAME, DEFAULT_TASK_SUMMARY_ENABLE, FOREIGN_KEY_DELIMITER}
 
 import scala.language.implicitConversions
 
@@ -27,7 +27,7 @@ case class ForeignKeyRelation(
 
   def this(dataSource: String, step: String, column: String) = this(dataSource, step, List(column))
 
-  override def toString: String = s"$dataSource.$step.${columns.mkString(",")}"
+  override def toString: String = s"$dataSource$FOREIGN_KEY_DELIMITER$step$FOREIGN_KEY_DELIMITER${columns.mkString(",")}"
 }
 
 case class TaskSummary(

@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.model
 
-import com.github.pflooky.datacaterer.api.model.Constants.FORMAT
+import com.github.pflooky.datacaterer.api.model.Constants.{AGGREGATION_COUNT, FORMAT, VALIDATION_UNIQUE}
 import com.github.pflooky.datacaterer.api.model.{DataExistsWaitCondition, ExpressionValidation, FileExistsWaitCondition, GroupByValidation, PauseWaitCondition, Validation, WaitCondition, WebhookWaitCondition}
 import com.github.pflooky.datagen.core.exception.InvalidWaitConditionException
 import com.github.pflooky.datagen.core.util.HttpUtil.getAuthHeader
@@ -66,10 +66,15 @@ object ValidationImplicits {
 
   implicit class GroupByValidationOps(groupByValidation: GroupByValidation) extends ValidationOps(groupByValidation) {
     override def validate(df: DataFrame, dfCount: Long): ValidationResult = {
-      val groupByAndAggregateDf = df.groupBy(groupByValidation.groupByCols.map(col): _*).agg(Map(
-        groupByValidation.aggCol -> groupByValidation.aggType
-      ))
-      val notEqualDf = groupByAndAggregateDf.where(s"!(${groupByValidation.expr})")
+      val groupByDf = df.groupBy(groupByValidation.groupByCols.map(col): _*)
+      val aggregateDf = if (groupByValidation.aggCol == VALIDATION_UNIQUE && groupByValidation.aggType == AGGREGATION_COUNT) {
+        groupByDf.count()
+      } else {
+        groupByDf.agg(Map(
+          groupByValidation.aggCol -> groupByValidation.aggType
+        ))
+      }
+      val notEqualDf = aggregateDf.where(s"!(${groupByValidation.expr})")
       val (isSuccess, sampleErrors) = ValidationOps(groupByValidation).getIsSuccessAndSampleErrors(notEqualDf, dfCount)
       ValidationResult(groupByValidation, isSuccess, sampleErrors)
     }
@@ -77,6 +82,17 @@ object ValidationImplicits {
   //second argument can have both sides expressed as SQL expressions
   //validation.exists(csvTask, "account_number" -> "REPLACE(account_id, 'ACC', '')", <optional number per account_number exists, by default one to one match>)
   //additional verifications afterwards?
+  //
+  //  implicit class ScanValidationOps(scanValidation: ScanValidation) extends ValidationOps(scanValidation) {
+  //    override def validate(df: DataFrame, dfCount: Long): ValidationResult = {
+  //      scanValidation.check match {
+  //        case VALIDATION_UNIQUE =>
+  //          val duplicates = df.groupBy(scanValidation.columns.map(col): _*).count().filter("count > 1")
+  //
+  //      }
+  //
+  //    }
+  //  }
 
   implicit class WaitConditionOps(waitCondition: WaitCondition = PauseWaitCondition()) {
     def checkCondition(implicit sparkSession: SparkSession): Boolean = true

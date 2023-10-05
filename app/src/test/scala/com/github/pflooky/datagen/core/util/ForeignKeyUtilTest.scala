@@ -1,5 +1,6 @@
 package com.github.pflooky.datagen.core.util
 
+import com.github.pflooky.datacaterer.api.model.Constants.FOREIGN_KEY_DELIMITER
 import com.github.pflooky.datacaterer.api.model.{Plan, SinkOptions, TaskSummary}
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
@@ -31,7 +32,9 @@ class ForeignKeyUtilTest extends SparkSuite {
   }
 
   test("Can link foreign keys between data sets") {
-    val sinkOptions = SinkOptions(None, None, List("postgres.account.account_id" -> List("postgres.transaction.account_id")))
+    val sinkOptions = SinkOptions(None, None,
+      List(s"postgres${FOREIGN_KEY_DELIMITER}account${FOREIGN_KEY_DELIMITER}account_id" -> List(s"postgres${FOREIGN_KEY_DELIMITER}transaction${FOREIGN_KEY_DELIMITER}account_id"))
+    )
     val plan = Plan("foreign keys", "simple plan", List(), Some(sinkOptions))
     val accountsList = List(
       Account("acc1", "peter", Date.valueOf(LocalDate.now())),
@@ -57,7 +60,9 @@ class ForeignKeyUtilTest extends SparkSuite {
   }
 
   test("Can link foreign keys between data sets with multiple columns") {
-    val sinkOptions = SinkOptions(None, None, List("postgres.account.account_id,name" -> List("postgres.transaction.account_id,name")))
+    val sinkOptions = SinkOptions(None, None,
+      List(s"postgres${FOREIGN_KEY_DELIMITER}account${FOREIGN_KEY_DELIMITER}account_id,name" -> List(s"postgres${FOREIGN_KEY_DELIMITER}transaction${FOREIGN_KEY_DELIMITER}account_id,name"))
+    )
     val plan = Plan("foreign keys", "simple plan", List(TaskSummary("my_task", "postgres")), Some(sinkOptions))
     val accountsList = List(
       Account("acc1", "peter", Date.valueOf(LocalDate.now())),
@@ -95,52 +100,73 @@ class ForeignKeyUtilTest extends SparkSuite {
 
   test("Can get delete order based on foreign keys defined") {
     val foreignKeys = List(
-      "postgres.accounts.account_id" -> List("postgres.balances.account_id", "postgres.transactions.account_id")
+      s"postgres${FOREIGN_KEY_DELIMITER}accounts${FOREIGN_KEY_DELIMITER}account_id" ->
+        List(s"postgres${FOREIGN_KEY_DELIMITER}balances${FOREIGN_KEY_DELIMITER}account_id", s"postgres${FOREIGN_KEY_DELIMITER}transactions${FOREIGN_KEY_DELIMITER}account_id")
     )
     val deleteOrder = ForeignKeyUtil.getDeleteOrder(foreignKeys)
-    assert(deleteOrder == List("postgres.balances.account_id", "postgres.transactions.account_id", "postgres.accounts.account_id"))
+    assert(deleteOrder ==
+      List(
+        s"postgres${FOREIGN_KEY_DELIMITER}balances${FOREIGN_KEY_DELIMITER}account_id",
+        s"postgres${FOREIGN_KEY_DELIMITER}transactions${FOREIGN_KEY_DELIMITER}account_id",
+        s"postgres${FOREIGN_KEY_DELIMITER}accounts${FOREIGN_KEY_DELIMITER}account_id"
+      )
+    )
   }
 
   test("Can get delete order based on nested foreign keys") {
     val foreignKeys = List(
-      "postgres.accounts.account_id" -> List("postgres.balances.account_id"),
-      "postgres.balances.account_id" -> List("postgres.transactions.account_id"),
+      s"postgres${FOREIGN_KEY_DELIMITER}accounts${FOREIGN_KEY_DELIMITER}account_id" -> List(s"postgres${FOREIGN_KEY_DELIMITER}balances${FOREIGN_KEY_DELIMITER}account_id"),
+      s"postgres${FOREIGN_KEY_DELIMITER}balances${FOREIGN_KEY_DELIMITER}account_id" -> List(s"postgres${FOREIGN_KEY_DELIMITER}transactions${FOREIGN_KEY_DELIMITER}account_id"),
     )
     val deleteOrder = ForeignKeyUtil.getDeleteOrder(foreignKeys)
-    val expected = List("postgres.transactions.account_id", "postgres.balances.account_id", "postgres.accounts.account_id")
+    val expected = List(
+      s"postgres${FOREIGN_KEY_DELIMITER}transactions${FOREIGN_KEY_DELIMITER}account_id",
+      s"postgres${FOREIGN_KEY_DELIMITER}balances${FOREIGN_KEY_DELIMITER}account_id",
+      s"postgres${FOREIGN_KEY_DELIMITER}accounts${FOREIGN_KEY_DELIMITER}account_id"
+    )
     assert(deleteOrder == expected)
 
     val foreignKeys1 = List(
-      "postgres.balances.account_id" -> List("postgres.transactions.account_id"),
-      "postgres.accounts.account_id" -> List("postgres.balances.account_id"),
+      s"postgres${FOREIGN_KEY_DELIMITER}balances${FOREIGN_KEY_DELIMITER}account_id" -> List(s"postgres${FOREIGN_KEY_DELIMITER}transactions${FOREIGN_KEY_DELIMITER}account_id"),
+      s"postgres${FOREIGN_KEY_DELIMITER}accounts${FOREIGN_KEY_DELIMITER}account_id" -> List(s"postgres${FOREIGN_KEY_DELIMITER}balances${FOREIGN_KEY_DELIMITER}account_id"),
     )
     val deleteOrder1 = ForeignKeyUtil.getDeleteOrder(foreignKeys1)
     assert(deleteOrder1 == expected)
 
     val foreignKeys2 = List(
-      "postgres.accounts.account_id" -> List("postgres.balances.account_id"),
-      "postgres.balances.account_id" -> List("postgres.transactions.account_id"),
-      "postgres.transactions.account_id" -> List("postgres.customer.account_id"),
+      s"postgres${FOREIGN_KEY_DELIMITER}accounts${FOREIGN_KEY_DELIMITER}account_id" -> List(s"postgres${FOREIGN_KEY_DELIMITER}balances${FOREIGN_KEY_DELIMITER}account_id"),
+      s"postgres${FOREIGN_KEY_DELIMITER}balances${FOREIGN_KEY_DELIMITER}account_id" -> List(s"postgres${FOREIGN_KEY_DELIMITER}transactions${FOREIGN_KEY_DELIMITER}account_id"),
+      s"postgres${FOREIGN_KEY_DELIMITER}transactions${FOREIGN_KEY_DELIMITER}account_id" -> List(s"postgres${FOREIGN_KEY_DELIMITER}customer${FOREIGN_KEY_DELIMITER}account_id"),
     )
     val deleteOrder2 = ForeignKeyUtil.getDeleteOrder(foreignKeys2)
-    val expected2 = List("postgres.customer.account_id") ++ expected
+    val expected2 = List(s"postgres${FOREIGN_KEY_DELIMITER}customer${FOREIGN_KEY_DELIMITER}account_id") ++ expected
     assert(deleteOrder2 == expected2)
   }
 
   test("Can generate correct values when per column count is defined over multiple columns that are also defined as foreign keys") {
     val foreignKeys = List(
-      "postgres.accounts.account_id" -> List("postgres.balances.account_id", "postgres.transactions.account_id")
+      s"postgres${FOREIGN_KEY_DELIMITER}accounts${FOREIGN_KEY_DELIMITER}account_id" ->
+        List(s"postgres${FOREIGN_KEY_DELIMITER}balances${FOREIGN_KEY_DELIMITER}account_id", s"postgres${FOREIGN_KEY_DELIMITER}transactions${FOREIGN_KEY_DELIMITER}account_id")
     )
     val deleteOrder = ForeignKeyUtil.getDeleteOrder(foreignKeys)
-    assert(deleteOrder == List("postgres.balances.account_id", "postgres.transactions.account_id", "postgres.accounts.account_id"))
+    assert(deleteOrder == List(
+      s"postgres${FOREIGN_KEY_DELIMITER}balances${FOREIGN_KEY_DELIMITER}account_id",
+      s"postgres${FOREIGN_KEY_DELIMITER}transactions${FOREIGN_KEY_DELIMITER}account_id",
+      s"postgres${FOREIGN_KEY_DELIMITER}accounts${FOREIGN_KEY_DELIMITER}account_id")
+    )
   }
 
   test("Can generate correct values when primary keys are defined over multiple columns that are also defined as foreign keys") {
     val foreignKeys = List(
-      "postgres.accounts.account_id" -> List("postgres.balances.account_id", "postgres.transactions.account_id")
+      s"postgres${FOREIGN_KEY_DELIMITER}accounts${FOREIGN_KEY_DELIMITER}account_id" ->
+        List(s"postgres${FOREIGN_KEY_DELIMITER}balances${FOREIGN_KEY_DELIMITER}account_id", s"postgres${FOREIGN_KEY_DELIMITER}transactions${FOREIGN_KEY_DELIMITER}account_id")
     )
     val deleteOrder = ForeignKeyUtil.getDeleteOrder(foreignKeys)
-    assert(deleteOrder == List("postgres.balances.account_id", "postgres.transactions.account_id", "postgres.accounts.account_id"))
+    assert(deleteOrder == List(
+      s"postgres${FOREIGN_KEY_DELIMITER}balances${FOREIGN_KEY_DELIMITER}account_id",
+      s"postgres${FOREIGN_KEY_DELIMITER}transactions${FOREIGN_KEY_DELIMITER}account_id",
+      s"postgres${FOREIGN_KEY_DELIMITER}accounts${FOREIGN_KEY_DELIMITER}account_id")
+    )
   }
 }
 

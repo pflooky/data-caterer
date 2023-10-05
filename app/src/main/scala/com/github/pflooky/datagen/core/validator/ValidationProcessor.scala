@@ -7,7 +7,6 @@ import com.github.pflooky.datagen.core.model.{DataSourceValidationResult, Valida
 import com.github.pflooky.datagen.core.parser.ValidationParser
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.storage.StorageLevel
 
 /*
 Given a list of validations, check and report on the success and failure of each
@@ -25,6 +24,7 @@ Different types of validations:
 - data profile (how close the generated data profile is compared to the expected data profile)
  */
 class ValidationProcessor(
+                           enableValidation: Boolean,
                            connectionConfigsByName: Map[String, Map[String, String]],
                            optValidationConfigs: Option[List[ValidationConfiguration]],
                            validationFolderPath: String
@@ -33,24 +33,29 @@ class ValidationProcessor(
   private val LOGGER = Logger.getLogger(getClass.getName)
 
   def executeValidations: List[ValidationConfigResult] = {
-    LOGGER.info("Executing data validations")
-    val validationResults = getValidations.map(vc => {
-      val dataSourceValidationResults = vc.dataSources.map(dataSource => {
-        LOGGER.debug(s"Waiting for validation condition to be successful before running validations, name=${vc.name}," +
-          s"data-source-name=${dataSource._1}, num-validations=${dataSource._2.validations.size}")
-        dataSource._2.waitCondition.waitForCondition(connectionConfigsByName)
+    if (enableValidation) {
+      LOGGER.info("Executing data validations")
+      val validationResults = getValidations.map(vc => {
+        val dataSourceValidationResults = vc.dataSources.map(dataSource => {
+          LOGGER.debug(s"Waiting for validation condition to be successful before running validations, name=${vc.name}," +
+            s"data-source-name=${dataSource._1}, num-validations=${dataSource._2.validations.size}")
+          dataSource._2.waitCondition.waitForCondition(connectionConfigsByName)
 
-        val df = getDataFrame(dataSource)
-        val count = df.count()
-        val results = dataSource._2.validations.map(validBuilder => validBuilder.validation.validate(df, count))
-        df.unpersist()
-        DataSourceValidationResult(dataSource._1, dataSource._2.options, results)
+          val df = getDataFrame(dataSource)
+          val count = df.count()
+          val results = dataSource._2.validations.map(validBuilder => validBuilder.validation.validate(df, count))
+          df.unpersist()
+          DataSourceValidationResult(dataSource._1, dataSource._2.options, results)
+        }).toList
+        ValidationConfigResult(vc.name, vc.description, dataSourceValidationResults)
       }).toList
-      ValidationConfigResult(vc.name, vc.description, dataSourceValidationResults)
-    }).toList
 
-    logValidationErrors(validationResults)
-    validationResults
+      logValidationErrors(validationResults)
+      validationResults
+    } else {
+      LOGGER.debug("Data validations disabled")
+      List()
+    }
   }
 
   private def getValidations: Array[ValidationConfiguration] = {

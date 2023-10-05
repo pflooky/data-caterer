@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.metadata
 
-import com.github.pflooky.datacaterer.api.model.{Count, Field, Generator, Schema, Step, Task}
+import com.github.pflooky.datacaterer.api.model.{Count, Field, FoldersConfig, Generator, Schema, Step, Task, ValidationConfiguration}
 import com.github.pflooky.datagen.core.util.SparkSuite
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
@@ -24,7 +24,7 @@ class PlanGeneratorTest extends SparkSuite {
     ))
     val foreignKeys = List("json.account_json.id" -> List("postgres.account.id"))
 
-    PlanGenerator.writePlanAndTasksToFiles(List(("account_json", task)), foreignKeys, folderPath)
+    PlanGenerator.writeToFiles(List(("account_json", task)), foreignKeys, ValidationConfiguration(), FoldersConfig(generatedPlanAndTaskFolderPath = folderPath))
 
     val planFolder = new File(folderPath + "/plan")
     assert(planFolder.exists())

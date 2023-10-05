@@ -16,7 +16,7 @@ class DataGeneratorProcessorTest extends SparkSuite {
   test("Can parse plan and tasks, then execute data generation") {
     val basePath = "src/test/resources/sample/data"
     val config = DataCatererConfiguration(
-      flagsConfig = FlagsConfig(false, true, true, false),
+      flagsConfig = FlagsConfig(false, true, true, false, enableValidation = false),
       foldersConfig = FoldersConfig("sample/plan/simple-json-plan.yaml", "sample/task", basePath, recordTrackingFolderPath = s"$basePath/recordTracking"),
       connectionConfigByName = Map("account_json" -> Map(FORMAT -> "json"))
     )

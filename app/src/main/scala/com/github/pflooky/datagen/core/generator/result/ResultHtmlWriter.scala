@@ -36,7 +36,7 @@ class ResultHtmlWriter {
   }
 
   def overview(plan: Plan, stepResultSummary: List[StepResultSummary], taskResultSummary: List[TaskResultSummary],
-               dataSourceResultSummary: List[DataSourceResultSummary], optValidationResults: Option[List[ValidationConfigResult]],
+               dataSourceResultSummary: List[DataSourceResultSummary], validationResults: List[ValidationConfigResult],
                flagsConfig: FlagsConfig, sparkRecordListener: SparkRecordListener): Node = {
     <html>
       <head>
@@ -51,7 +51,7 @@ class ResultHtmlWriter {
           {DateTime.now()}
         </div>
         <h1>Data Caterer Summary</h1>
-        <h2>Flags</h2>{flagsSummary(flagsConfig)}<h2>Plan</h2>{planSummary(plan, stepResultSummary, taskResultSummary, dataSourceResultSummary)}<h2>Tasks</h2>{tasksSummary(taskResultSummary)}<h2>Validations</h2>{validationSummary(optValidationResults)}<h2>Output Rows Per Second</h2>{createLineGraph("outputRowsPerSecond", sparkRecordListener.outputRows.toList)}
+        <h2>Flags</h2>{flagsSummary(flagsConfig)}<h2>Plan</h2>{planSummary(plan, stepResultSummary, taskResultSummary, dataSourceResultSummary)}<h2>Tasks</h2>{tasksSummary(taskResultSummary)}<h2>Validations</h2>{validationSummary(validationResults)}<h2>Output Rows Per Second</h2>{createLineGraph("outputRowsPerSecond", sparkRecordListener.outputRows.toList)}
       </body>
     </html>
   }
@@ -498,7 +498,7 @@ class ResultHtmlWriter {
     </html>
   }
 
-  def validations(optValidationResults: Option[List[ValidationConfigResult]]): Node = {
+  def validations(validationResults: List[ValidationConfigResult]): Node = {
     <html>
       <head>
         <title>
@@ -508,7 +508,7 @@ class ResultHtmlWriter {
       </style>
       </head>
       <body>
-        <h1>Validations</h1>{validationSummary(optValidationResults)}<h2>Details</h2>
+        <h1>Validations</h1>{validationSummary(validationResults)}<h2>Details</h2>
         <table class="tablesorter table table-striped" style="font-size: 13px">
           <thead>
             <tr>
@@ -522,7 +522,7 @@ class ResultHtmlWriter {
             </tr>
           </thead>
           <tbody>
-            {optValidationResults.getOrElse(List()).flatMap(validationConfRes => {
+            {validationResults.flatMap(validationConfRes => {
             validationConfRes.dataSourceValidationResults.flatMap(dataSourceValidationRes => {
               val dataSourceLink = s"data-sources.html#${dataSourceValidationRes.dataSourceName}"
               dataSourceValidationRes.validationResults.map(validationRes => {
@@ -571,7 +571,7 @@ class ResultHtmlWriter {
     </html>
   }
 
-  def validationSummary(optValidationResults: Option[List[ValidationConfigResult]]): Node = {
+  def validationSummary(validationResults: List[ValidationConfigResult]): Node = {
     <table class="tablesorter table table-striped" style="font-size: 13px">
       <thead>
         <tr>
@@ -582,7 +582,7 @@ class ResultHtmlWriter {
         </tr>
       </thead>
       <tbody>
-        {optValidationResults.getOrElse(List()).map(validationConfRes => {
+        {validationResults.map(validationConfRes => {
         val validationLink = s"validations.html#${validationConfRes.name}"
         <tr>
           <td>

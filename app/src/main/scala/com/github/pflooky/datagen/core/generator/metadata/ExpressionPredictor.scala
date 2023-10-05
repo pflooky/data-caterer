@@ -1,5 +1,7 @@
 package com.github.pflooky.datagen.core.generator.metadata
 
+import com.github.pflooky.datacaterer.api.model.Constants.{LABEL_ADDRESS, LABEL_APP, LABEL_FOOD, LABEL_INTERNET, LABEL_JOB, LABEL_MONEY, LABEL_NAME, LABEL_NATION, LABEL_PHONE, LABEL_RELATIONSHIP, LABEL_USERNAME, LABEL_WEATHER}
+import com.github.pflooky.datagen.core.model.FieldPrediction
 import net.datafaker.providers.base.AbstractProvider
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types.{StringType, StructField}
@@ -22,43 +24,44 @@ object ExpressionPredictor {
     }).toList
   }
 
-  def getFakerExpression(structField: StructField): Option[String] = {
+  def getFakerExpressionAndLabel(structField: StructField): Option[FieldPrediction] = {
     if (structField.dataType == StringType) {
-      val cleanFieldName = structField.name.toLowerCase.replaceAll("[^a-z]", "")
+      val cleanFieldName = structField.name.toLowerCase.replaceAll("[^a-z0-9]", "")
       val optExpression = cleanFieldName match {
-        case "firstname" => Some("Name.firstname")
-        case "lastname" => Some("Name.lastname")
-        case "username" => Some("Name.username")
-        case "name" => Some("Name.name")
-        case "city" => Some("Address.city")
-        case "country" => Some("Address.country")
-        case "countrycode" => Some("Address.countryCode")
-        case "nationality" => Some("Nation.nationality")
-        case "language" => Some("Nation.language")
-        case "capital" | "capitalcity" => Some("Nation.capitalCity")
-        case "address" => Some("Address.fullAddress")
-        case "version" => Some("App.version")
-        case "paymentmethod" => Some("Subscription.paymentMethods")
-        case "email" | "emailaddress" => Some("Internet.emailAddress")
-        case "macaddress" => Some("Internet.macAddress")
-        case "ipv4" => Some("Internet.ipV4Address")
-        case "ipv6" => Some("Internet.ipV6Address")
-        case "currency" => Some("Money.currency")
-        case "currencycode" => Some("Money.currencyCode")
-        case "creditcard" => Some("Finance.creditCard")
-        case "food" | "dish" => Some("Food.dish")
-        case "ingredient" => Some("Food.ingredient")
-        case "jobfield" => Some("Job.field")
-        case "jobposition" => Some("Job.position")
-        case "jobtitle" => Some("Job.title")
-        case "relationship" => Some("Relationship.any")
-        case "weather" => Some("Weather.description")
+        case "firstname" => Some(FieldPrediction("Name.firstname", LABEL_NAME, true))
+        case "lastname" => Some(FieldPrediction("Name.lastname", LABEL_NAME, true))
+        case "username" => Some(FieldPrediction("Name.username", LABEL_USERNAME, true))
+        case "name" | "fullname" => Some(FieldPrediction("Name.name", LABEL_NAME, true))
+        case "city" => Some(FieldPrediction("Address.city", LABEL_ADDRESS, false))
+        case "country" => Some(FieldPrediction("Address.country", LABEL_ADDRESS, false))
+        case "countrycode" => Some(FieldPrediction("Address.countryCode", LABEL_ADDRESS, false))
+        case "nationality" => Some(FieldPrediction("Nation.nationality", LABEL_NATION, false))
+        case "language" => Some(FieldPrediction("Nation.language", LABEL_NATION, false))
+        case "capital" | "capitalcity" => Some(FieldPrediction("Nation.capitalCity", LABEL_NATION, false))
+        case "version" => Some(FieldPrediction("App.version", LABEL_APP, false))
+        case "paymentmethod" => Some(FieldPrediction("Subscription.paymentMethods", LABEL_MONEY, false))
+        case "macaddress" => Some(FieldPrediction("Internet.macAddress", LABEL_INTERNET, true))
+        case "currency" => Some(FieldPrediction("Money.currency", LABEL_MONEY, false))
+        case "currencycode" => Some(FieldPrediction("Money.currencyCode", LABEL_MONEY, false))
+        case "creditcard" => Some(FieldPrediction("Finance.creditCard", LABEL_MONEY, true))
+        case "food" | "dish" => Some(FieldPrediction("Food.dish", LABEL_FOOD, false))
+        case "ingredient" => Some(FieldPrediction("Food.ingredient", LABEL_FOOD, false))
+        case "jobfield" => Some(FieldPrediction("Job.field", LABEL_JOB, false))
+        case "jobposition" => Some(FieldPrediction("Job.position", LABEL_JOB, false))
+        case "jobtitle" => Some(FieldPrediction("Job.title", LABEL_JOB, false))
+        case "relationship" => Some(FieldPrediction("Relationship.any", LABEL_RELATIONSHIP, false))
+        case "weather" => Some(FieldPrediction("Weather.description", LABEL_WEATHER, false))
+        case "cellphone" | "mobilephone" | "homephone" | "phone" => Some(FieldPrediction("PhoneNumber.cellPhone", LABEL_PHONE, true))
+        case x if x.contains("email") => Some(FieldPrediction("Internet.emailAddress", LABEL_INTERNET, true))
+        case x if x.contains("ipv4") => Some(FieldPrediction("Internet.ipV4Address", LABEL_INTERNET, true))
+        case x if x.contains("ipv6") => Some(FieldPrediction("Internet.ipV6Address", LABEL_INTERNET, true))
+        case x if x.contains("address") => Some(FieldPrediction("Address.fullAddress", LABEL_ADDRESS, true))
         case _ => None
       }
       if (optExpression.isDefined) {
         LOGGER.debug(s"Identified column as a faker expression, column-name=${structField.name}, expression=${optExpression.get}")
       }
-      optExpression.map(e => s"#{$e}")
+      optExpression.map(e => e.copy(fakerExpression = s"#{${e.fakerExpression}}"))
     } else {
       None
     }

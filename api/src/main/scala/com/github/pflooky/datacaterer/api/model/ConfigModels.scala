@@ -15,6 +15,7 @@ case class FlagsConfig(
                         enableSinkMetadata: Boolean = DEFAULT_ENABLE_SINK_METADATA,
                         enableSaveReports: Boolean = DEFAULT_ENABLE_SAVE_REPORTS,
                         enableValidation: Boolean = DEFAULT_ENABLE_VALIDATION,
+                        enableGenerateValidations: Boolean = DEFAULT_ENABLE_SUGGEST_VALIDATIONS,
                       )
 
 case class FoldersConfig(

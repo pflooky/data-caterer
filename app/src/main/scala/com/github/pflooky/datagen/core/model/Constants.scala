@@ -51,5 +51,6 @@ object Constants {
   lazy val BATCH = "batch"
   lazy val REAL_TIME = "real-time"
   lazy val DEFAULT_ROWS_PER_SECOND = "5"
-  lazy val DATA_CATERER_SITE_PRICING = "https://data-catering.framer.ai/pricing"
+  lazy val DATA_CATERER_SITE_PRICING = "https://data.catering/pricing/"
+
 }

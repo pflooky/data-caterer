@@ -1,6 +1,6 @@
 package com.github.pflooky.datacaterer.api
 
-import com.github.pflooky.datacaterer.api.model.Constants.{AGGREGATION_AVG, AGGREGATION_COUNT, AGGREGATION_MAX, AGGREGATION_MIN, AGGREGATION_SUM}
+import com.github.pflooky.datacaterer.api.model.Constants.{AGGREGATION_AVG, AGGREGATION_COUNT, AGGREGATION_MAX, AGGREGATION_MIN, AGGREGATION_SUM, VALIDATION_UNIQUE}
 import com.github.pflooky.datacaterer.api.model.{DataExistsWaitCondition, DataSourceValidation, ExpressionValidation, FileExistsWaitCondition, GroupByValidation, PauseWaitCondition, Validation, ValidationConfiguration, WaitCondition, WebhookWaitCondition}
 import com.softwaremill.quicklens.ModifyPimp
 
@@ -167,6 +167,17 @@ case class ValidationBuilder(validation: Validation = ExpressionValidation()) {
    */
   @varargs def groupBy(columns: String*): GroupByValidationBuilder = {
     GroupByValidationBuilder(this, ColumnValidationBuilder(), columns)
+  }
+
+  /**
+   * Check if column(s) values are unique
+   *
+   * @param columns One or more columns whose values will be checked for uniqueness
+   * @return ValidationBuilder
+   */
+  @varargs def unique(columns: String*): ValidationBuilder = {
+    this.modify(_.validation).setTo(GroupByValidation(columns, VALIDATION_UNIQUE, AGGREGATION_COUNT))
+      .expr("count == 1")
   }
 
 }

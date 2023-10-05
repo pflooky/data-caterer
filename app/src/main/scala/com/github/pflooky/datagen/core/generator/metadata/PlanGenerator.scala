@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.metadata
 
-import com.github.pflooky.datacaterer.api.model.{Plan, SinkOptions, Task, TaskSummary}
+import com.github.pflooky.datacaterer.api.model.{FoldersConfig, Plan, SinkOptions, Task, TaskSummary, ValidationConfiguration}
 import com.github.pflooky.datagen.core.util.FileUtil.writeStringToFile
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import org.apache.hadoop.fs.FileSystem
@@ -14,14 +14,20 @@ object PlanGenerator {
   private val LOGGER = Logger.getLogger(getClass.getName)
   private val OBJECT_MAPPER = ObjectMapperUtil.yamlObjectMapper
 
-  def writePlanAndTasksToFiles(tasks: List[(String, Task)], foreignKeys: List[(String, List[String])], baseFolderPath: String)
-                              (implicit sparkSession: SparkSession): (Plan, List[Task]) = {
+  def writeToFiles(
+                    tasks: List[(String, Task)],
+                    foreignKeys: List[(String, List[String])],
+                    validationConfig: ValidationConfiguration,
+                    foldersConfig: FoldersConfig
+                  )(implicit sparkSession: SparkSession): (Plan, List[Task], ValidationConfiguration) = {
+    val baseFolderPath = foldersConfig.generatedPlanAndTaskFolderPath
     val fileSystem = FileSystem.get(sparkSession.sparkContext.hadoopConfiguration)
     fileSystem.setWriteChecksum(false)
     val plan = writePlanToFile(tasks, foreignKeys, s"$baseFolderPath/plan", fileSystem)
     writeTasksToFiles(tasks, s"$baseFolderPath/task", fileSystem)
+    writeValidationsToFiles(validationConfig, s"$baseFolderPath/validation", fileSystem)
     fileSystem.close()
-    (plan, tasks.map(_._2))
+    (plan, tasks.map(_._2), validationConfig)
   }
 
   private def writePlanToFile(tasks: List[(String, Task)], foreignKeys: List[(String, List[String])], planFolder: String, fileSystem: FileSystem)
@@ -43,5 +49,13 @@ object PlanGenerator {
       val fileContent = OBJECT_MAPPER.writeValueAsString(task)
       writeStringToFile(fileSystem, taskFilePath, fileContent)
     })
+  }
+
+  private def writeValidationsToFiles(validationConfiguration: ValidationConfiguration, folder: String, fileSystem: FileSystem)(implicit sparkSession: SparkSession): Unit = {
+    val taskFilePath = s"$folder/validations.yaml"
+    val numValidations = validationConfiguration.dataSources.flatMap(_._2.validations).size
+    LOGGER.info(s"Writing validations to file, num-validations=$numValidations, file-path=$taskFilePath")
+    val fileContent = OBJECT_MAPPER.writeValueAsString(validationConfiguration)
+    writeStringToFile(fileSystem, taskFilePath, fileContent)
   }
 }

@@ -128,29 +128,28 @@ class PlanProcessorTest extends SparkSuite {
     execute(conf, postgresTask)
   }
 
-  test("Can run Postgres plan run") {
+  ignore("Can run Postgres plan run") {
     PlanProcessor.determineAndExecutePlan(Some(new TestPostgres()))
 //    PlanProcessor.determineAndExecutePlan(Some(new TestValidation()))
   }
 
   class TestValidation extends PlanRun {
-    val csvTask = csv("my_csv", "/tmp/data/csv", Map("saveMode" -> "overwrite", "header" -> "true"))
-      .schema(
-        field.name("account_id").regex("ACC[0-9]{8}"),
-        field.name("name").expression("#{Name.name}"),
-        field.name("amount").`type`(IntegerType).min(0).max(100)
-      )
-      .count(count.recordsPerColumn(5, "account_id"))
-      .validations(
-        validation.col("transactions").hasType("string"),
-        validation.col("amount").isEqual(1000),
-        validation.groupBy("account_id").count("amount").lessThan(1000),
-        validation.groupBy("account_id").sum("amount").greaterThan(1000)
-      )
+    val csvTask = csv("my_csv", "/opt/app/data/csv", Map("saveMode" -> "overwrite", "header" -> "true"))
+      .schema(metadataSource.marquez("http://host.docker.internal:5001", "food_delivery", "public.delivery_7_days"))
+      .count(count.records(100))
 
-    val conf = configuration.enableValidation(true)
-      .generatedReportsFolderPath("/Users/peter/code/spark-datagen/gen/report")
+    val postgresTask = postgres("my_postgres", "jdbc:postgresql://host.docker.internal:5432/food_delivery", "postgres", "password")
+      .schema(metadataSource.marquez("http://host.docker.internal:5001", "food_delivery"))
+      .count(count.records(10))
 
-    execute(conf, csvTask)
+    val myPlan = plan.addForeignKeyRelationships(
+      csvTask, List("key", "tmp_year", "tmp_name", "value"),
+      List(foreignField(postgresTask, "public.categories", List("account_number", "year", "name", "payload")))
+    )
+
+    val conf = configuration.enableGeneratePlanAndTasks(true)
+      .generatedReportsFolderPath("/opt/app/data/report")
+
+    execute(myPlan, conf, csvTask)
   }
 }

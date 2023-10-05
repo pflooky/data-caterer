@@ -306,4 +306,26 @@ class ValidationConfigurationBuilderTest extends AnyFunSuite {
     assert(result.validation.asInstanceOf[GroupByValidation].aggType == "avg")
     assert(result.validation.asInstanceOf[GroupByValidation].expr == "avg(amount) < 100")
   }
+
+  test("Can create unique column validation") {
+    val result = ValidationBuilder().unique("account_id").description("my_description").errorThreshold(0.2)
+
+    assert(result.validation.isInstanceOf[GroupByValidation])
+    assert(result.validation.asInstanceOf[GroupByValidation].groupByCols == Seq("account_id"))
+    assert(result.validation.asInstanceOf[GroupByValidation].aggCol == "unique")
+    assert(result.validation.asInstanceOf[GroupByValidation].aggType == "count")
+    assert(result.validation.asInstanceOf[GroupByValidation].expr == "count == 1")
+    assert(result.validation.asInstanceOf[GroupByValidation].description.contains("my_description"))
+    assert(result.validation.asInstanceOf[GroupByValidation].errorThreshold.contains(0.2))
+  }
+
+  test("Can create unique column validation with multiple columns") {
+    val result = ValidationBuilder().unique("account_id", "year", "name")
+
+    assert(result.validation.isInstanceOf[GroupByValidation])
+    assert(result.validation.asInstanceOf[GroupByValidation].groupByCols == Seq("account_id", "year", "name"))
+    assert(result.validation.asInstanceOf[GroupByValidation].aggCol == "unique")
+    assert(result.validation.asInstanceOf[GroupByValidation].aggType == "count")
+    assert(result.validation.asInstanceOf[GroupByValidation].expr == "count == 1")
+  }
 }

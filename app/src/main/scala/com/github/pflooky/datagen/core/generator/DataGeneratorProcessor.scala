@@ -1,6 +1,5 @@
 package com.github.pflooky.datagen.core.generator
 
-import com.github.pflooky.datacaterer.api.PlanRun
 import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, Plan, Task, TaskSummary, ValidationConfiguration}
 import com.github.pflooky.datagen.core.config.ConfigParser
 import com.github.pflooky.datagen.core.generator.delete.DeleteRecordProcessor
@@ -76,14 +75,11 @@ class DataGeneratorProcessor(dataCatererConfiguration: DataCatererConfiguration)
     } else {
       LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=$stepNames")
       val generationResult = batchDataProcessor.splitAndProcess(plan, summaryWithTask, faker)
-
-      val optValidationResults = if (flagsConfig.enableValidation) {
-        val validationProcessor = new ValidationProcessor(connectionConfigsByName, optValidations, foldersConfig.validationFolderPath)
-        Some(validationProcessor.executeValidations)
-      } else None
+      val validationResults = new ValidationProcessor(flagsConfig.enableValidation, connectionConfigsByName, optValidations, foldersConfig.validationFolderPath)
+        .executeValidations
 
       if (flagsConfig.enableSaveReports) {
-        dataGenerationResultWriter.writeResult(plan, generationResult, optValidationResults, sparkRecordListener)
+        dataGenerationResultWriter.writeResult(plan, generationResult, validationResults, sparkRecordListener)
       }
     }
   }

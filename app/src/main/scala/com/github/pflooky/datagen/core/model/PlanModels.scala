@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.model
 
 import com.github.pflooky.datacaterer.api.PlanRun
-import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_FIELD_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, MAXIMUM, MINIMUM, ONE_OF_GENERATOR, PRIMARY_KEY_POSITION, RANDOM_GENERATOR, STATIC}
+import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_FIELD_NULLABLE, FOREIGN_KEY_DELIMITER, FOREIGN_KEY_DELIMITER_REGEX, IS_PRIMARY_KEY, IS_UNIQUE, MAXIMUM, MINIMUM, ONE_OF_GENERATOR, PRIMARY_KEY_POSITION, RANDOM_GENERATOR, STATIC}
 import com.github.pflooky.datacaterer.api.model.{Count, Field, ForeignKeyRelation, Generator, PerColumnCount, Schema, SinkOptions, Step, Task}
 import com.github.pflooky.datagen.core.exception.InvalidFieldConfigurationException
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceDetail
@@ -14,7 +14,7 @@ import scala.language.implicitConversions
 
 object ForeignKeyRelationHelper {
   def fromString(str: String): ForeignKeyRelation = {
-    val strSpt = str.split("\\.", 3)
+    val strSpt = str.split(FOREIGN_KEY_DELIMITER_REGEX, 3)
     if (strSpt.length == 2) {
       ForeignKeyRelation(strSpt.head, strSpt.last, List())
     } else {
@@ -199,8 +199,8 @@ object PlanImplicits {
 
     def foreignKeysWithoutColumnNames: List[(String, List[String])] = {
       sinkOptions.foreignKeys.map(foreignKey => {
-        val mainFk = foreignKey._1.split("\\.").take(2).mkString(".")
-        val subFks = foreignKey._2.map(sFk => sFk.split("\\.").take(2).mkString("."))
+        val mainFk = foreignKey._1.split(FOREIGN_KEY_DELIMITER_REGEX).take(2).mkString(FOREIGN_KEY_DELIMITER)
+        val subFks = foreignKey._2.map(sFk => sFk.split(FOREIGN_KEY_DELIMITER_REGEX).take(2).mkString(FOREIGN_KEY_DELIMITER))
         (mainFk, subFks)
       })
     }

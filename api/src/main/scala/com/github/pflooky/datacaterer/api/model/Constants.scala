@@ -88,6 +88,23 @@ object Constants {
   lazy val STATIC = "static"
   lazy val CLUSTERING_POSITION = "clusteringPos"
   lazy val METADATA_IDENTIFIER = "metadataIdentifier"
+  lazy val FIELD_LABEL = "label"
+  lazy val IS_PII = "isPII"
+
+  //field labels
+  lazy val LABEL_NAME = "name"
+  lazy val LABEL_USERNAME = "username"
+  lazy val LABEL_ADDRESS = "address"
+  lazy val LABEL_APP = "app"
+  lazy val LABEL_NATION = "nation"
+  lazy val LABEL_MONEY = "money"
+  lazy val LABEL_INTERNET = "internet"
+  lazy val LABEL_FOOD = "food"
+  lazy val LABEL_JOB = "job"
+  lazy val LABEL_RELATIONSHIP = "relationship"
+  lazy val LABEL_WEATHER = "weather"
+  lazy val LABEL_PHONE = "phone"
+  lazy val LABEL_GEO = "geo"
 
   //generator types
   lazy val RANDOM_GENERATOR = "random"
@@ -105,7 +122,8 @@ object Constants {
   lazy val DEFAULT_ENABLE_UNIQUE_CHECK = false
   lazy val DEFAULT_ENABLE_SINK_METADATA = false
   lazy val DEFAULT_ENABLE_SAVE_REPORTS = true
-  lazy val DEFAULT_ENABLE_VALIDATION = false
+  lazy val DEFAULT_ENABLE_VALIDATION = true
+  lazy val DEFAULT_ENABLE_SUGGEST_VALIDATIONS = true
 
   //folders defaults
   lazy val DEFAULT_PLAN_FILE_PATH = "/opt/app/plan/customer-create-plan.yaml"
@@ -166,6 +184,8 @@ object Constants {
 
   //foreign key defaults
   lazy val DEFAULT_FOREIGN_KEY_COLUMN = "default_column"
+  lazy val FOREIGN_KEY_DELIMITER = "||"
+  lazy val FOREIGN_KEY_DELIMITER_REGEX = "\\|\\|"
 
   //task defaults
   def DEFAULT_TASK_NAME: String = UUID.randomUUID().toString
@@ -224,4 +244,9 @@ object Constants {
   lazy val AGGREGATION_MAX = "max"
   lazy val AGGREGATION_MIN = "min"
   lazy val AGGREGATION_AVG = "avg"
+
+  //validation types
+  lazy val VALIDATION_EXPRESSION = "expr"
+  lazy val VALIDATION_GROUP_BY = "groupBy"
+  lazy val VALIDATION_UNIQUE = "unique"
 }

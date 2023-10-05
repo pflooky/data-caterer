@@ -3,7 +3,7 @@ package com.github.pflooky.datacaterer.api
 import com.github.pflooky.datacaterer.api.connection.{CassandraBuilder, ConnectionTaskBuilder, FileBuilder, HttpBuilder, KafkaBuilder, MySqlBuilder, PostgresBuilder, SolaceBuilder}
 import com.github.pflooky.datacaterer.api.converter.Converters.toScalaMap
 import com.github.pflooky.datacaterer.api.model.Constants._
-import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, MetadataSource}
+import com.github.pflooky.datacaterer.api.model.DataCatererConfiguration
 import com.softwaremill.quicklens.ModifyPimp
 
 case class DataCatererConfigurationBuilder(build: DataCatererConfiguration = DataCatererConfiguration()) {
@@ -276,6 +276,9 @@ case class DataCatererConfigurationBuilder(build: DataCatererConfiguration = Dat
 
   def enableRecordTracking(enable: Boolean): DataCatererConfigurationBuilder =
     this.modify(_.build.flagsConfig.enableRecordTracking).setTo(enable)
+
+  def enableGenerateValidations(enable: Boolean): DataCatererConfigurationBuilder =
+    this.modify(_.build.flagsConfig.enableGenerateValidations).setTo(enable)
 
 
   def planFilePath(path: String): DataCatererConfigurationBuilder =
