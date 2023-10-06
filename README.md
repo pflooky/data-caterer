@@ -1,5 +1,7 @@
 # Data Caterer - Data Generator
 
+![Data Catering](misc/banner/logo_landscape_banner.svg)
+
 ## Overview
 
 Generator data for databases, files, JMS or HTTP request through a YAML based input and executed via Spark.
