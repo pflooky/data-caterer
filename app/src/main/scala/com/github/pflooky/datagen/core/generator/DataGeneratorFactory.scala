@@ -28,15 +28,6 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
   registerSparkFunctions
 
   def generateDataForStep(step: Step, dataSourceName: String, startIndex: Long, endIndex: Long): DataFrame = {
-//    val structFieldsWithDataGenerators = if (step.schema.fields.isEmpty && step.options.contains(METADATA_SOURCE_TYPE)) {
-//      //we can try populate the schema via the metadata source (i.e. data catalog, data lineage source)
-//      //TODO move out into separate class and include ExpressionPredictor
-//      val columnMetadata = MarquezMetadata(step.name, step.`type`, step.options).getAdditionalColumnMetadata
-//      val schema = mapToStructFields(columnMetadata)
-//      getStructWithGenerators(schema)
-//    } else {
-//      step.schema.fields.map(getStructWithGenerators).getOrElse(List())
-//    }
     val structFieldsWithDataGenerators = step.schema.fields.map(getStructWithGenerators).getOrElse(List())
     val indexedDf = sparkSession.createDataFrame(Seq.range(startIndex, endIndex).map(Holder))
     generateDataViaSql(structFieldsWithDataGenerators, step, indexedDf)
@@ -131,17 +122,12 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
     fields.map(field => getDataGenerator(field.generator, field.toStructField, faker))
   }
 
-  private def getStructWithGenerators(fields: Array[StructField]): List[DataGenerator[_]] = {
-    fields.map(field => getDataGenerator(field, faker)).toList
-  }
-
-
   private def registerSparkFunctions = {
-    sparkSession.udf.register(GENERATE_REGEX_UDF, udf((s: String) => faker.regexify(s)))
-    sparkSession.udf.register(GENERATE_FAKER_EXPRESSION_UDF, udf((s: String) => faker.expression(s)))
+    sparkSession.udf.register(GENERATE_REGEX_UDF, udf((s: String) => faker.regexify(s)).asNondeterministic())
+    sparkSession.udf.register(GENERATE_FAKER_EXPRESSION_UDF, udf((s: String) => faker.expression(s)).asNondeterministic())
     sparkSession.udf.register(GENERATE_RANDOM_ALPHANUMERIC_STRING_UDF, udf((minLength: Int, maxLength: Int) => {
       val length = RANDOM.nextInt(maxLength + 1) + minLength
       RANDOM.alphanumeric.take(length).mkString("")
-    }))
+    }).asNondeterministic())
   }
 }

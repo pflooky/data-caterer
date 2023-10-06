@@ -25,11 +25,12 @@ class ValidationConfigurationBuilderTest extends AnyFunSuite {
     assert(result.description == "check account data")
     assert(result.dataSources.size == 1)
     assert(result.dataSources.head._1 == "account_json")
-    assert(result.dataSources.head._2.options == Map("path" -> "/my/data/path"))
-    assert(result.dataSources.head._2.waitCondition == PauseWaitCondition())
-    assert(result.dataSources.head._2.validations.size == 2)
-    assert(result.dataSources.head._2.validations.map(_.validation).contains(ExpressionValidation("amount < 100")))
-    assert(result.dataSources.head._2.validations.map(_.validation).contains(ExpressionValidation("name == 'Peter'")))
+    val headDsValid = result.dataSources.head._2.head
+    assert(headDsValid.options == Map("path" -> "/my/data/path"))
+    assert(headDsValid.waitCondition == PauseWaitCondition())
+    assert(headDsValid.validations.size == 2)
+    assert(headDsValid.validations.map(_.validation).contains(ExpressionValidation("amount < 100")))
+    assert(headDsValid.validations.map(_.validation).contains(ExpressionValidation("name == 'Peter'")))
   }
 
   test("Can create column specific validation") {

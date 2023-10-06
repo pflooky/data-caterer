@@ -2,6 +2,7 @@ package com.github.pflooky.datacaterer.api
 
 import com.github.pflooky.datacaterer.api.connection.ConnectionTaskBuilder
 import com.github.pflooky.datacaterer.api.converter.Converters.toScalaList
+import com.github.pflooky.datacaterer.api.model.Constants.METADATA_SOURCE_TYPE
 import com.github.pflooky.datacaterer.api.model.{ForeignKeyRelation, Plan, SinkOptions}
 import com.softwaremill.quicklens.ModifyPimp
 
@@ -89,7 +90,7 @@ case class PlanBuilder(plan: Plan = Plan(), tasks: List[TasksBuilder] = List()) 
       case Some(value) =>
         val fields = value.step.schema.fields.getOrElse(List())
         val hasColumns = columns.forall(c => fields.exists(_.name == c))
-        if (!hasColumns) {
+        if (!hasColumns && !value.step.options.contains(METADATA_SOURCE_TYPE)) {
           throw new RuntimeException(s"Column name defined in foreign key relationship does not exist, data-source=$dataSource, column-name=$colNames")
         }
         ForeignKeyRelation(dataSource, value.step.name, columns)

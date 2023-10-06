@@ -25,6 +25,7 @@ class ResultHtmlWriter {
       ".selected-row { background-color: lightgreen !important; } "
 
   def index: Node = {
+    //<link rel="icon" type="image/x-icon" href="/logo/logo_transparent.svg">
     <html>
       <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>

@@ -24,7 +24,7 @@ object ExpressionPredictor {
     }).toList
   }
 
-  def getFakerExpressionAndLabel(structField: StructField): Option[FieldPrediction] = {
+  def tryGetFieldPrediction(structField: StructField): Option[FieldPrediction] = {
     if (structField.dataType == StringType) {
       val cleanFieldName = structField.name.toLowerCase.replaceAll("[^a-z0-9]", "")
       val optExpression = cleanFieldName match {

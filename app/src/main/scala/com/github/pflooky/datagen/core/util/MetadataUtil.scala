@@ -84,7 +84,12 @@ object MetadataUtil {
       val dataType = DataType.fromDDL(colMetadata.metadata(FIELD_DATA_TYPE))
       val nullable = colMetadata.metadata.get(IS_NULLABLE).map(_.toBoolean).getOrElse(DEFAULT_FIELD_NULLABLE)
       val metadata = mapToMetadata(colMetadata.metadata)
-      StructField(colMetadata.column, dataType, nullable, metadata)
+      val baseField = StructField(colMetadata.column, dataType, nullable, metadata)
+      val optFieldPrediction = ExpressionPredictor.tryGetFieldPrediction(baseField)
+      optFieldPrediction.map(fieldPrediction => {
+        val metadataWithFieldPred = mapToMetadata(colMetadata.metadata ++ fieldPrediction.toMap)
+        StructField(baseField.name, dataType, nullable, metadataWithFieldPred)
+      }).getOrElse(baseField)
     })
   }
 
@@ -105,7 +110,7 @@ object MetadataUtil {
       val columnName = x._1.name
       val statisticsMap = columnStatToMap(x._2.toCatalogColumnStat(columnName, x._1.dataType)) ++ Map(ROW_COUNT -> rowCount.toString)
       val optOneOfColumn = determineIfOneOfColumn(sourceData, columnName, statisticsMap, metadataConfig)
-      val optFakerExpression = ExpressionPredictor.getFakerExpressionAndLabel(sourceData.schema.fields.find(_.name == columnName).get)
+      val optFakerExpression = ExpressionPredictor.tryGetFieldPrediction(sourceData.schema.fields.find(_.name == columnName).get)
       val optionalMetadataMap = optOneOfColumn.map(oneOf => Map(ONE_OF_GENERATOR -> oneOf)).getOrElse(Map()) ++
         optFakerExpression.map(_.toMap).getOrElse(Map())
       val statWithOptionalMetadata = statisticsMap ++ optionalMetadataMap

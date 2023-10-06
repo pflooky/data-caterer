@@ -116,14 +116,15 @@ class PlanBuilderTest extends AnyFunSuite {
     assert(result._validations.head.dataSources.size == 1)
     val dataSourceHead = result._validations.head.dataSources.head
     assert(dataSourceHead._1 == "account_json")
-    assert(dataSourceHead._2.validations.size == 1)
-    val validationHead = dataSourceHead._2.validations.head.validation
+    assert(dataSourceHead._2.size == 1)
+    assert(dataSourceHead._2.head.validations.size == 1)
+    val validationHead = dataSourceHead._2.head.validations.head.validation
     assert(validationHead.description.contains("name is equal to Peter"))
     assert(validationHead.errorThreshold.contains(0.1))
     assert(validationHead.isInstanceOf[ExpressionValidation])
     assert(validationHead.asInstanceOf[ExpressionValidation].expr == "name == 'Peter'")
-    assert(dataSourceHead._2.options == Map("path" -> "test/path/json"))
-    assert(dataSourceHead._2.waitCondition == PauseWaitCondition())
+    assert(dataSourceHead._2.head.options == Map("path" -> "test/path/json"))
+    assert(dataSourceHead._2.head.waitCondition == PauseWaitCondition())
   }
 
 }

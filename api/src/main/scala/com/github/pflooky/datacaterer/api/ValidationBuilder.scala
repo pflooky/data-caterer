@@ -1,7 +1,9 @@
 package com.github.pflooky.datacaterer.api
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.github.pflooky.datacaterer.api.model.Constants.{AGGREGATION_AVG, AGGREGATION_COUNT, AGGREGATION_MAX, AGGREGATION_MIN, AGGREGATION_SUM, VALIDATION_UNIQUE}
 import com.github.pflooky.datacaterer.api.model.{DataExistsWaitCondition, DataSourceValidation, ExpressionValidation, FileExistsWaitCondition, GroupByValidation, PauseWaitCondition, Validation, ValidationConfiguration, WaitCondition, WebhookWaitCondition}
+import com.github.pflooky.datacaterer.api.parser.ValidationBuilderSerializer
 import com.softwaremill.quicklens.ModifyPimp
 
 import java.sql.{Date, Timestamp}
@@ -19,63 +21,47 @@ case class ValidationConfigurationBuilder(validationConfiguration: ValidationCon
 
   def addDataSourceValidation(
                                dataSourceName: String,
-                               validation: DataSourceValidationBuilder
-                             ): ValidationConfigurationBuilder =
-    this.modify(_.validationConfiguration.dataSources)(_ ++ Map(dataSourceName -> validation.dataSourceValidation))
+                               validations: Seq[DataSourceValidation]
+                             ): ValidationConfigurationBuilder = {
+    val mergedDataSourceValidations = mergeDataSourceValidations(dataSourceName, validations)
+    this.modify(_.validationConfiguration.dataSources)(_ ++ Map(dataSourceName -> mergedDataSourceValidations))
+  }
 
   def addDataSourceValidation(
                                dataSourceName: String,
-                               validation: DataSourceValidation
-                             ): ValidationConfigurationBuilder =
-    this.modify(_.validationConfiguration.dataSources)(_ ++ Map(dataSourceName -> validation))
-
-  def addValidations(
-                      dataSourceName: String,
-                      validations: Seq[ValidationBuilder]
-                    ): ValidationConfigurationBuilder =
-    this.modify(_.validationConfiguration.dataSources)(_ ++ Map(dataSourceName -> addValidationsToDataSource(dataSourceName, validations)))
+                               validation: DataSourceValidationBuilder
+                             ): ValidationConfigurationBuilder = {
+    val mergedDataSourceValidations = mergeDataSourceValidations(dataSourceName, validation)
+    this.modify(_.validationConfiguration.dataSources)(_ ++ Map(dataSourceName -> mergedDataSourceValidations))
+  }
 
   @varargs def addValidations(
                                dataSourceName: String,
                                options: Map[String, String],
                                validations: ValidationBuilder*
                              ): ValidationConfigurationBuilder =
-    addValidations(dataSourceName, options, WaitConditionBuilder().pause(0), validations: _*)
+    addValidations(dataSourceName, options, WaitConditionBuilder(), validations: _*)
 
   @varargs def addValidations(
                                dataSourceName: String,
                                options: Map[String, String],
                                waitCondition: WaitConditionBuilder,
                                validationBuilders: ValidationBuilder*
-                             ): ValidationConfigurationBuilder =
-    this.modify(_.validationConfiguration.dataSources)(_ ++
-      Map(dataSourceName -> addValidationsToDataSource(dataSourceName, options, waitCondition, validationBuilders))
-    )
-
-  private def addValidationsToDataSource(
-                                          dataSourceName: String,
-                                          options: Map[String, String],
-                                          waitCondition: WaitConditionBuilder,
-                                          validation: Seq[ValidationBuilder]
-                                        ): DataSourceValidation = {
-    val dsValidBuilder = getDsBuilder(dataSourceName)
-    dsValidBuilder.options(options).wait(waitCondition).validations(validation: _*).dataSourceValidation
+                             ): ValidationConfigurationBuilder = {
+    val newDsValidation = DataSourceValidationBuilder().options(options).wait(waitCondition).validations(validationBuilders: _*)
+    addDataSourceValidation(dataSourceName, newDsValidation)
   }
 
-  private def addValidationsToDataSource(
-                                          dataSourceName: String,
-                                          validations: Seq[ValidationBuilder]
-                                        ): DataSourceValidation = {
-    val dsValidBuilder = getDsBuilder(dataSourceName)
-    dsValidBuilder.validations(validations: _*).dataSourceValidation
+  private def mergeDataSourceValidations(dataSourceName: String, validation: DataSourceValidationBuilder): List[DataSourceValidation] = {
+    validationConfiguration.dataSources.get(dataSourceName)
+      .map(listDsValidations => listDsValidations ++ List(validation.dataSourceValidation))
+      .getOrElse(List(validation.dataSourceValidation))
   }
 
-  private def getDsBuilder(dataSourceName: String) = {
-    val dsValidBuilder = validationConfiguration.dataSources.get(dataSourceName) match {
-      case Some(value) => DataSourceValidationBuilder(value)
-      case None => DataSourceValidationBuilder()
-    }
-    dsValidBuilder
+  private def mergeDataSourceValidations(dataSourceName: String, validations: Seq[DataSourceValidation]): List[DataSourceValidation] = {
+    validationConfiguration.dataSources.get(dataSourceName)
+      .map(listDsValidations => listDsValidations ++ validations)
+      .getOrElse(validations.toList)
   }
 }
 
@@ -98,6 +84,7 @@ case class DataSourceValidationBuilder(dataSourceValidation: DataSourceValidatio
     this.modify(_.dataSourceValidation.waitCondition).setTo(waitCondition)
 }
 
+@JsonSerialize(using = classOf[ValidationBuilderSerializer])
 case class ValidationBuilder(validation: Validation = ExpressionValidation()) {
   def this() = this(ExpressionValidation())
 
@@ -368,8 +355,8 @@ case class WaitConditionBuilder(waitCondition: WaitCondition = PauseWaitConditio
    * as a SQL expression that returns a boolean value. Need to use a data source that is already defined.
    *
    * @param dataSourceName Name of data source that is already defined
-   * @param options Additional data source connection options to use to get data
-   * @param expr SQL expression that returns a boolean
+   * @param options        Additional data source connection options to use to get data
+   * @param expr           SQL expression that returns a boolean
    * @return WaitConditionBuilder
    */
   def dataExists(dataSourceName: String, options: Map[String, String], expr: String): WaitConditionBuilder =
@@ -387,8 +374,8 @@ case class WaitConditionBuilder(waitCondition: WaitCondition = PauseWaitConditio
   /**
    * Wait until URL returns back one of the status codes provided before starting data validations.
    *
-   * @param url URL for HTTP request
-   * @param method HTTP method (i.e. GET, PUT, POST)
+   * @param url         URL for HTTP request
+   * @param method      HTTP method (i.e. GET, PUT, POST)
    * @param statusCodes HTTP status codes that are treated as successful
    * @return WaitConditionBuilder
    */
@@ -400,7 +387,7 @@ case class WaitConditionBuilder(waitCondition: WaitCondition = PauseWaitConditio
    * data validations.
    *
    * @param dataSourceName Name of data source already defined
-   * @param url URL for HTTP GET request
+   * @param url            URL for HTTP GET request
    * @return WaitConditionBuilder
    */
   def webhook(dataSourceName: String, url: String): WaitConditionBuilder =
@@ -411,9 +398,9 @@ case class WaitConditionBuilder(waitCondition: WaitCondition = PauseWaitConditio
    * of the successful status codes before starting data validations.
    *
    * @param dataSourceName Name of data source already defined
-   * @param url URL for HTTP request
-   * @param method HTTP method (i.e. GET, PUT, POST)
-   * @param statusCode HTTP status codes that are treated as successful
+   * @param url            URL for HTTP request
+   * @param method         HTTP method (i.e. GET, PUT, POST)
+   * @param statusCode     HTTP status codes that are treated as successful
    * @return WaitConditionBuilder
    */
   @varargs def webhook(dataSourceName: String, url: String, method: String, statusCode: Int*): WaitConditionBuilder =

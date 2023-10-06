@@ -1,15 +1,16 @@
 package com.github.pflooky.datagen.core.util
 
+import com.github.pflooky.datacaterer.api.PlanRun
 import com.github.pflooky.datacaterer.api.model.Constants.OMIT
 import com.github.pflooky.datacaterer.api.model.{ForeignKeyRelation, Plan}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ForeignKeyRelationship
+import com.github.pflooky.datagen.core.model.ForeignKeyRelationHelper.updateForeignKeyName
 import com.github.pflooky.datagen.core.model.PlanImplicits.{ForeignKeyRelationOps, SinkOptionsOps}
 import com.github.pflooky.datagen.core.util.GeneratorUtil.applySqlExpressions
 import org.apache.log4j.Logger
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types.{LongType, MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
-import org.apache.spark.storage.StorageLevel
 
 import scala.collection.mutable
 
@@ -47,7 +48,9 @@ object ForeignKeyUtil {
         LOGGER.debug(s"Getting target dataframe, source=$targetDfName")
         val targetDf = taskDfs(targetDfName)
         if (target.columns.forall(targetDf.columns.contains)) {
-          (targetDfName, applyForeignKeysToTargetDf(sourceDf, targetDf, foreignKeyDetails._1.columns, target.columns))
+          val dfWithForeignKeys = applyForeignKeysToTargetDf(sourceDf, targetDf, foreignKeyDetails._1.columns, target.columns)
+          if (!dfWithForeignKeys.storageLevel.useMemory) dfWithForeignKeys.cache()
+          (targetDfName, dfWithForeignKeys)
         } else {
           LOGGER.warn("Foreign key data source does not contain foreign key defined in plan, defaulting to base generated data")
           (targetDfName, targetDf)
@@ -85,7 +88,7 @@ object ForeignKeyUtil {
   }
 
   private def applyForeignKeysToTargetDf(sourceDf: DataFrame, targetDf: DataFrame, sourceColumns: List[String], targetColumns: List[String]): DataFrame = {
-    if (!sourceDf.storageLevel.useMemory) sourceDf.cache()  //TODO do we checkpoint instead of cache? checkpoint based on total number of records?
+    if (!sourceDf.storageLevel.useMemory) sourceDf.cache() //TODO do we checkpoint instead of cache? checkpoint based on total number of records?
     if (!targetDf.storageLevel.useMemory) targetDf.cache()
     val sourceColRename = sourceColumns.map(c => (c, s"_src_$c")).toMap
     val distinctSourceKeys = zipWithIndex(
@@ -122,11 +125,33 @@ object ForeignKeyUtil {
    * @param dataSourceForeignKeys Foreign key relationships for each data source
    * @return Map of data source columns to respective foreign key columns (which may be in other data sources)
    */
-  def getAllForeignKeyRelationships(dataSourceForeignKeys: List[Dataset[ForeignKeyRelationship]]): List[(String, List[String])] = {
-    dataSourceForeignKeys.flatMap(_.collect())
+  def getAllForeignKeyRelationships(
+                                     dataSourceForeignKeys: List[Dataset[ForeignKeyRelationship]],
+                                     optPlanRun: Option[PlanRun],
+                                     stepNameMapping: Map[String, String]
+                                   ): List[(String, List[String])] = {
+    val generatedForeignKeys = dataSourceForeignKeys.flatMap(_.collect())
       .groupBy(_.key)
       .map(x => (x._1.toString, x._2.map(_.foreignKey.toString)))
       .toList
+    val userForeignKeys = optPlanRun.flatMap(planRun => planRun._plan.sinkOptions.map(_.foreignKeys))
+      .getOrElse(List())
+      .map(userFk => {
+        val fkMapped = updateForeignKeyName(stepNameMapping, userFk._1)
+        val subFkNamesMapped = userFk._2.map(subFk => updateForeignKeyName(stepNameMapping, subFk))
+        (fkMapped, subFkNamesMapped)
+      })
+
+    val mergedForeignKeys = generatedForeignKeys.map(genFk => {
+      userForeignKeys.find(userFk => userFk._1 == genFk._1)
+        .map(matchUserFk => {
+          //generated foreign key takes precedence due to constraints from underlying data source need to be adhered
+          (matchUserFk._1, matchUserFk._2 ++ genFk._2)
+        })
+        .getOrElse(genFk)
+    })
+    val allForeignKeys = mergedForeignKeys ++ userForeignKeys.filter(userFk => !generatedForeignKeys.exists(_._1 == userFk._1))
+    allForeignKeys
   }
 
   //get delete order

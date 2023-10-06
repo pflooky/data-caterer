@@ -30,7 +30,7 @@ case class GroupByValidation(
 case class ValidationConfiguration(
                                     name: String = DEFAULT_VALIDATION_CONFIG_NAME,
                                     description: String = DEFAULT_VALIDATION_DESCRIPTION,
-                                    dataSources: Map[String, DataSourceValidation] = Map()
+                                    dataSources: Map[String, List[DataSourceValidation]] = Map()
                                   )
 
 case class DataSourceValidation(

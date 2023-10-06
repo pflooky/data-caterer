@@ -7,7 +7,7 @@ import com.github.pflooky.datagen.core.generator.metadata.PlanGenerator.writeToF
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.{ColumnMetadata, ForeignKeyRelationship}
 import com.github.pflooky.datagen.core.generator.metadata.validation.ValidationPredictor
 import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING}
-import com.github.pflooky.datagen.core.model.TaskHelper
+import com.github.pflooky.datagen.core.model.{TaskHelper, ValidationConfigurationHelper}
 import com.github.pflooky.datagen.core.util.MetadataUtil.getMetadataFromConnectionConfig
 import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, MetadataUtil}
 import org.apache.log4j.Logger
@@ -28,12 +28,15 @@ class DataSourceMetadataFactory(dataCatererConfiguration: DataCatererConfigurati
 
       val metadataPerConnection = connectionMetadata.map(x => (x, x.getForeignKeys, getMetadataForDataSource(x)))
       val generatedTasksFromMetadata = metadataPerConnection.map(m => (m._1.name, TaskHelper.fromMetadata(optPlanRun, m._1.name, m._1.format, m._3)))
+      val stepMapping = generatedTasksFromMetadata.flatMap(_._2._2)
+      val generatedTasks = generatedTasksFromMetadata.map(x => (x._1, x._2._1))
       //given all the foreign key relations in each data source, detect if there are any links between data sources, then pass that into plan
-      val allForeignKeys = ForeignKeyUtil.getAllForeignKeyRelationships(metadataPerConnection.map(_._2))
-      val validationConfig = getValidationConfiguration(metadataPerConnection)
+      //the step name may be updated if it has come from a metadata source, need to update foreign key definitions as well with new step name
+      val allForeignKeys = ForeignKeyUtil.getAllForeignKeyRelationships(metadataPerConnection.map(_._2), optPlanRun, stepMapping.toMap)
+      val validationConfig = getValidationConfiguration(metadataPerConnection, optPlanRun)
       connectionMetadata.foreach(_.close())
 
-      Some(writeToFiles(generatedTasksFromMetadata, allForeignKeys, validationConfig, dataCatererConfiguration.foldersConfig))
+      Some(writeToFiles(generatedTasks, allForeignKeys, validationConfig, dataCatererConfiguration.foldersConfig))
     } else if (applicationType.equalsIgnoreCase(BASIC_APPLICATION) && flagsConfig.enableGeneratePlanAndTasks) {
       LOGGER.warn(s"Please upgrade from the free plan to paid plan to enable plan and tasks to be generated. More details here: $DATA_CATERER_SITE_PRICING")
       None
@@ -85,12 +88,20 @@ class DataSourceMetadataFactory(dataCatererConfiguration: DataCatererConfigurati
     }
   }
 
-  private def getValidationConfiguration(metadataPerConnection: List[(DataSourceMetadata, Dataset[ForeignKeyRelationship], List[DataSourceDetail])]) = {
+  private def getValidationConfiguration(
+                                          metadataPerConnection: List[(DataSourceMetadata, Dataset[ForeignKeyRelationship], List[DataSourceDetail])],
+                                          optPlanRun: Option[PlanRun]
+                                        ) = {
     val dataSourceValidations = metadataPerConnection.flatMap(m => {
-      m._3.map(dsd => (dsd.dataSourceMetadata.name, dsd.toDataSourceValidation))
+      m._3.map(_.toDataSourceValidation)
     }).toMap
-    val validationConfig = ValidationConfiguration(dataSources = dataSourceValidations)
-    validationConfig
+    val generatedValidationConfig = ValidationConfiguration(dataSources = dataSourceValidations)
+    if (optPlanRun.isDefined && optPlanRun.get._validations.nonEmpty) {
+      val userValidationConfig = optPlanRun.get._validations
+      ValidationConfigurationHelper.merge(userValidationConfig, generatedValidationConfig)
+    } else {
+      generatedValidationConfig
+    }
   }
 
   private def getGeneratedValidations(dataSourceMetadata: DataSourceMetadata, dataSourceReadOptions: Map[String, String],
@@ -111,6 +122,6 @@ case class DataSourceDetail(
                              structType: StructType,
                              validations: List[ValidationBuilder] = List()
                            ) {
-  def toDataSourceValidation: DataSourceValidation =
-    DataSourceValidation(dataSourceMetadata.connectionConfig ++ sparkOptions, validations = validations)
+  def toDataSourceValidation: (String, List[DataSourceValidation]) =
+    (dataSourceMetadata.name, List(DataSourceValidation(sparkOptions, validations = validations)))
 }

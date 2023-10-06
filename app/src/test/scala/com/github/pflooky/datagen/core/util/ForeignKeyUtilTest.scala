@@ -1,7 +1,10 @@
 package com.github.pflooky.datagen.core.util
 
+import com.github.pflooky.datacaterer.api.PlanRun
 import com.github.pflooky.datacaterer.api.model.Constants.FOREIGN_KEY_DELIMITER
-import com.github.pflooky.datacaterer.api.model.{Plan, SinkOptions, TaskSummary}
+import com.github.pflooky.datacaterer.api.model.{ForeignKeyRelation, Plan, SinkOptions, TaskSummary}
+import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ForeignKeyRelationship
+import org.apache.spark.sql.Encoders
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
 
@@ -167,6 +170,40 @@ class ForeignKeyUtilTest extends SparkSuite {
       s"postgres${FOREIGN_KEY_DELIMITER}transactions${FOREIGN_KEY_DELIMITER}account_id",
       s"postgres${FOREIGN_KEY_DELIMITER}accounts${FOREIGN_KEY_DELIMITER}account_id")
     )
+  }
+
+  test("Can update foreign keys with updated names from metadata") {
+    implicit val encoder = Encoders.kryo[ForeignKeyRelationship]
+    val generatedForeignKeys = List(sparkSession.createDataset(Seq(ForeignKeyRelationship(
+      ForeignKeyRelation("my_postgres", "public.account", List("account_id")),
+      ForeignKeyRelation("my_postgres", "public.orders", List("customer_id")),
+    ))))
+    val optPlanRun = Some(new ForeignKeyPlanRun())
+    val stepNameMapping = Map(
+      s"my_csv${FOREIGN_KEY_DELIMITER}random_step" -> s"my_csv${FOREIGN_KEY_DELIMITER}public.accounts"
+    )
+
+    val result = ForeignKeyUtil.getAllForeignKeyRelationships(generatedForeignKeys, optPlanRun, stepNameMapping)
+
+    assert(result.size == 3)
+    assert(result.contains(s"my_csv${FOREIGN_KEY_DELIMITER}public.accounts${FOREIGN_KEY_DELIMITER}id" ->
+      List(s"my_postgres${FOREIGN_KEY_DELIMITER}public.accounts${FOREIGN_KEY_DELIMITER}account_id")))
+    assert(result.contains(s"my_json${FOREIGN_KEY_DELIMITER}json_step${FOREIGN_KEY_DELIMITER}id" ->
+      List(s"my_postgres${FOREIGN_KEY_DELIMITER}public.orders${FOREIGN_KEY_DELIMITER}customer_id")))
+    assert(result.contains(s"my_postgres${FOREIGN_KEY_DELIMITER}public.account${FOREIGN_KEY_DELIMITER}account_id" ->
+      List(s"my_postgres${FOREIGN_KEY_DELIMITER}public.orders${FOREIGN_KEY_DELIMITER}customer_id")))
+  }
+
+  class ForeignKeyPlanRun extends PlanRun {
+    val myPlan = plan.addForeignKeyRelationship(
+      foreignField("my_csv", "random_step", "id"),
+      foreignField("my_postgres", "public.accounts", "account_id")
+    ).addForeignKeyRelationship(
+      foreignField("my_json", "json_step", "id"),
+      foreignField("my_postgres", "public.orders", "customer_id")
+    )
+
+    execute(plan = myPlan)
   }
 }
 

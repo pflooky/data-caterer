@@ -76,14 +76,13 @@ class PlanRunTest extends AnyFunSuite {
 
     assert(result._validations.size == 1)
     assert(result._validations.head.dataSources.size == 1)
+    assert(result._validations.head.dataSources.head._2.size == 1)
     val dsValidation = result._validations.head.dataSources.head
     assert(dsValidation._1 == "my_csv")
-    assert(dsValidation._2.options.size == 2)
-    assert(dsValidation._2.options.get(PATH).contains("/my/data/path"))
-    assert(dsValidation._2.options.get(FORMAT).contains("csv"))
-    assert(dsValidation._2.validations.size == 1)
-    assert(dsValidation._2.validations.head.validation.isInstanceOf[ExpressionValidation])
-    val expressionValidation = dsValidation._2.validations.head.validation.asInstanceOf[ExpressionValidation]
+    assert(dsValidation._2.head.options.isEmpty)
+    assert(dsValidation._2.head.validations.size == 1)
+    assert(dsValidation._2.head.validations.head.validation.isInstanceOf[ExpressionValidation])
+    val expressionValidation = dsValidation._2.head.validations.head.validation.asInstanceOf[ExpressionValidation]
     assert(expressionValidation.expr == "account_id != ''")
   }
 
@@ -103,11 +102,12 @@ class PlanRunTest extends AnyFunSuite {
     assert(result._validations.head.dataSources.size == 1)
     val dsValidation = result._validations.head.dataSources.head
     assert(dsValidation._1 == "my_postgres")
-    assert(dsValidation._2.options.nonEmpty)
-    assert(dsValidation._2.options.get(FORMAT).contains("jdbc"))
-    assert(dsValidation._2.validations.size == 2)
-    assert(dsValidation._2.validations.exists(v => v.validation.asInstanceOf[ExpressionValidation].expr == "account_id != ''"))
-    assert(dsValidation._2.validations.exists(v => v.validation.asInstanceOf[ExpressionValidation].expr == "txn_id IS NOT NULL"))
+    val accountValid = dsValidation._2.filter(_.options.get(JDBC_TABLE).contains("account.accounts")).head
+    assert(accountValid.validations.size == 1)
+    assert(accountValid.validations.exists(v => v.validation.asInstanceOf[ExpressionValidation].expr == "account_id != ''"))
+    val txnValid = dsValidation._2.filter(_.options.get(JDBC_TABLE).contains("account.transactions")).head
+    assert(txnValid.validations.size == 1)
+    assert(txnValid.validations.exists(v => v.validation.asInstanceOf[ExpressionValidation].expr == "txn_id IS NOT NULL"))
   }
 
   test("Can create plan with validations only defined") {
@@ -121,12 +121,10 @@ class PlanRunTest extends AnyFunSuite {
     assert(result._tasks.size == 1)
     assert(result._validations.size == 1)
     assert(result._validations.head.dataSources.contains("my_csv"))
-    val validRes = result._validations.head.dataSources("my_csv")
+    val validRes = result._validations.head.dataSources("my_csv").head
     assert(validRes.validations.size == 1)
     assert(validRes.validations.head.validation.asInstanceOf[ExpressionValidation].expr == "account_id != 'acc123'")
-    assert(validRes.options.size == 2)
-    assert(validRes.options(FORMAT) == CSV)
-    assert(validRes.options(PATH) == "/my/csv")
+    assert(validRes.options.isEmpty)
   }
 
 

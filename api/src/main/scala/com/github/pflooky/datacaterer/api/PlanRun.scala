@@ -1,6 +1,7 @@
 package com.github.pflooky.datacaterer.api
 
 import com.github.pflooky.datacaterer.api.connection.{CassandraBuilder, ConnectionTaskBuilder, FileBuilder, HttpBuilder, KafkaBuilder, MySqlBuilder, PostgresBuilder, SolaceBuilder}
+import com.github.pflooky.datacaterer.api.converter.Converters.toScalaList
 import com.github.pflooky.datacaterer.api.model.Constants._
 import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, ForeignKeyRelation, Plan, Task, ValidationConfiguration}
 
@@ -48,8 +49,14 @@ trait PlanRun {
   def foreignField(dataSource: String, step: String, columns: List[String]): ForeignKeyRelation =
     ForeignKeyRelation(dataSource, step, columns)
 
+  def foreignField(dataSource: String, step: String, columns: java.util.List[String]): ForeignKeyRelation =
+    ForeignKeyRelation(dataSource, step, toScalaList(columns))
+
   def foreignField(connectionTask: ConnectionTaskBuilder[_], step: String, columns: List[String]): ForeignKeyRelation =
     ForeignKeyRelation(connectionTask.connectionConfigWithTaskBuilder.dataSourceName, step, columns)
+
+  def foreignField(connectionTask: ConnectionTaskBuilder[_], step: String, columns: java.util.List[String]): ForeignKeyRelation =
+    ForeignKeyRelation(connectionTask.connectionConfigWithTaskBuilder.dataSourceName, step, toScalaList(columns))
 
   def metadataSource: MetadataSourceBuilder = MetadataSourceBuilder()
 
@@ -447,24 +454,33 @@ trait PlanRun {
   }
 
   private def getValidations(allConnectionTasks: Seq[ConnectionTaskBuilder[_]]) = {
-    allConnectionTasks.map(x => {
+    val validationsByDataSource = allConnectionTasks.map(x => {
       val dataSource = x.connectionConfigWithTaskBuilder.dataSourceName
-      val options = x.connectionConfigWithTaskBuilder.options
-      val stepValidation = x.step.flatMap(_.optValidation).getOrElse(DataSourceValidationBuilder()).options(options)
-
-      (dataSource, validationConfig.addDataSourceValidation(dataSource, stepValidation))
+      val optValidation = x.step
+        .flatMap(_.optValidation)
+        .map(dsValid => {
+          DataSourceValidationBuilder()
+            .options(x.step.map(_.step.options).getOrElse(Map()))
+            .wait(dsValid.dataSourceValidation.waitCondition)
+            .validations(dsValid.dataSourceValidation.validations: _*)
+        })
+      (dataSource, optValidation)
     })
+      .filter(_._2.isDefined)
+      .map(ds => (ds._1, validationConfig.addDataSourceValidation(ds._1, ds._2.get)))
+
+    validationsByDataSource
       .groupBy(_._1)
       .map(x => {
-        val dataSource = x._1
-        val otherValidations = x._2.tail.flatMap(_._2.validationConfiguration.dataSources(dataSource).validations)
-        if (otherValidations.nonEmpty) {
-          x._2.head._2.addValidations(dataSource, otherValidations)
+        val dataSourceName = x._1
+        val validationsToMerge = x._2.tail.flatMap(_._2.validationConfiguration.dataSources(dataSourceName))
+        if (validationsToMerge.nonEmpty) {
+          x._2.head._2.addDataSourceValidation(dataSourceName, validationsToMerge)
         } else {
           x._2.head._2
         }
       })
-      .filter(vc => vc.validationConfiguration.dataSources.exists(ds => ds._2.validations.nonEmpty))
+      .filter(vc => vc.validationConfiguration.dataSources.exists(_._2.nonEmpty))
   }
 }
 

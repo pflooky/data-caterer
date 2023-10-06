@@ -51,9 +51,13 @@ object PlanGenerator {
     })
   }
 
-  private def writeValidationsToFiles(validationConfiguration: ValidationConfiguration, folder: String, fileSystem: FileSystem)(implicit sparkSession: SparkSession): Unit = {
+  private def writeValidationsToFiles(
+                                       validationConfiguration: ValidationConfiguration,
+                                       folder: String,
+                                       fileSystem: FileSystem
+                                     )(implicit sparkSession: SparkSession): Unit = {
     val taskFilePath = s"$folder/validations.yaml"
-    val numValidations = validationConfiguration.dataSources.flatMap(_._2.validations).size
+    val numValidations = validationConfiguration.dataSources.flatMap(_._2.head.validations).size
     LOGGER.info(s"Writing validations to file, num-validations=$numValidations, file-path=$taskFilePath")
     val fileContent = OBJECT_MAPPER.writeValueAsString(validationConfiguration)
     writeStringToFile(fileSystem, taskFilePath, fileContent)

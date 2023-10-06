@@ -123,7 +123,7 @@ object Constants {
   lazy val DEFAULT_ENABLE_SINK_METADATA = false
   lazy val DEFAULT_ENABLE_SAVE_REPORTS = true
   lazy val DEFAULT_ENABLE_VALIDATION = true
-  lazy val DEFAULT_ENABLE_SUGGEST_VALIDATIONS = true
+  lazy val DEFAULT_ENABLE_SUGGEST_VALIDATIONS = false
 
   //folders defaults
   lazy val DEFAULT_PLAN_FILE_PATH = "/opt/app/plan/customer-create-plan.yaml"

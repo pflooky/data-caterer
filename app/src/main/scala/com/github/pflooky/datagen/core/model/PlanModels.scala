@@ -1,6 +1,7 @@
 package com.github.pflooky.datagen.core.model
 
 import com.github.pflooky.datacaterer.api.PlanRun
+import com.github.pflooky.datacaterer.api.connection.ConnectionTaskBuilder
 import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_FIELD_NULLABLE, FOREIGN_KEY_DELIMITER, FOREIGN_KEY_DELIMITER_REGEX, IS_PRIMARY_KEY, IS_UNIQUE, MAXIMUM, MINIMUM, ONE_OF_GENERATOR, PRIMARY_KEY_POSITION, RANDOM_GENERATOR, STATIC}
 import com.github.pflooky.datacaterer.api.model.{Count, Field, ForeignKeyRelation, Generator, PerColumnCount, Schema, SinkOptions, Step, Task}
 import com.github.pflooky.datagen.core.exception.InvalidFieldConfigurationException
@@ -21,32 +22,54 @@ object ForeignKeyRelationHelper {
       ForeignKeyRelation(strSpt.head, strSpt(1), strSpt.last.split(",").toList)
     }
   }
+
+  def updateForeignKeyName(stepNameMapping: Map[String, String], foreignKey: String): String = {
+    val fkDataSourceStep = foreignKey.split(FOREIGN_KEY_DELIMITER_REGEX).take(2).mkString(FOREIGN_KEY_DELIMITER)
+    stepNameMapping.get(fkDataSourceStep)
+      .map(newName => foreignKey.replace(fkDataSourceStep, newName))
+      .getOrElse(foreignKey)
+  }
 }
 
 object TaskHelper {
   private val LOGGER = Logger.getLogger(getClass.getName)
 
-  def fromMetadata(optPlanRun: Option[PlanRun], name: String, stepType: String, structTypes: List[DataSourceDetail]): Task = {
+  def fromMetadata(optPlanRun: Option[PlanRun], name: String, stepType: String, structTypes: List[DataSourceDetail]): (Task, Map[String, String]) = {
     val steps = structTypes.zipWithIndex.map(structType => enrichWithUserDefinedOptions(name, stepType, structType._1, optPlanRun))
-    Task(name, steps)
+    val mappedStepNames = steps.map(_._2).filter(_.isDefined).map(_.get).toMap
+    (Task(name, steps.map(_._1)), mappedStepNames)
   }
 
-  private def enrichWithUserDefinedOptions(name: String, stepType: String, generatedDetails: DataSourceDetail, optPlanRun: Option[PlanRun]): Step = {
+  private def enrichWithUserDefinedOptions(
+                                            name: String,
+                                            stepType: String,
+                                            generatedDetails: DataSourceDetail,
+                                            optPlanRun: Option[PlanRun]
+                                          ): (Step, Option[(String, String)]) = {
     val stepName = generatedDetails.dataSourceMetadata.toStepName(generatedDetails.sparkOptions)
+
+    def stepWithOptNameMapping(matchingStepOptions: Seq[ConnectionTaskBuilder[_]]): Some[(ConnectionTaskBuilder[_], Option[(String, String)])] = {
+      val matchStep = matchingStepOptions.head
+      val optStepNameMapping = matchStep.step.map(s => {
+        val baseStepName = s"${matchStep.connectionConfigWithTaskBuilder.dataSourceName}$FOREIGN_KEY_DELIMITER"
+        (s"$baseStepName${s.step.name}", s"$baseStepName$stepName")
+      })
+      Some(matchStep, optStepNameMapping)
+    }
+
     //check if there is any user defined step attributes that need to be used
     val optUserConf = if (optPlanRun.isDefined) {
       val matchingDataSourceConfig = optPlanRun.get._connectionTaskBuilders.filter(_.connectionConfigWithTaskBuilder.dataSourceName == name)
       if (matchingDataSourceConfig.size == 1) {
-        Some(matchingDataSourceConfig.head)
+        stepWithOptNameMapping(matchingDataSourceConfig)
       } else if (matchingDataSourceConfig.size > 1) {
         //multiple matches, so have to match against step options as well if defined
         val matchingStepOptions = matchingDataSourceConfig.filter(dsConf => dsConf.step.isDefined && dsConf.step.get.step.options == generatedDetails.sparkOptions)
         if (matchingStepOptions.size == 1) {
-          Some(matchingStepOptions.head)
+          stepWithOptNameMapping(matchingStepOptions)
         } else {
-          val head = matchingStepOptions.head
           LOGGER.warn(s"Multiple definitions of same sub data source found. Will default to taking first definition, data-source-name=$name, step-name=$stepName")
-          Some(head)
+          stepWithOptNameMapping(matchingStepOptions)
         }
       } else {
         None
@@ -55,11 +78,11 @@ object TaskHelper {
       None
     }
 
-    val count = optUserConf.flatMap(_.step.map(_.step.count)).getOrElse(Count())
-    val optUserSchema = optUserConf.flatMap(_.step.map(_.step.schema))
+    val count = optUserConf.flatMap(_._1.step.map(_.step.count)).getOrElse(Count())
+    val optUserSchema = optUserConf.flatMap(_._1.step.map(_.step.schema))
     val generatedSchema = SchemaHelper.fromStructType(generatedDetails.structType)
     val mergedSchema = optUserSchema.map(userSchema => SchemaHelper.mergeSchemaInfo(generatedSchema, userSchema)).getOrElse(generatedSchema)
-    Step(stepName, stepType, count, generatedDetails.sparkOptions, mergedSchema)
+    (Step(stepName, stepType, count, generatedDetails.sparkOptions, mergedSchema), optUserConf.flatMap(_._2))
   }
 }
 

@@ -1,9 +1,11 @@
 package com.github.pflooky.datacaterer.api.parser
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
+import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase
-import com.fasterxml.jackson.databind.{DatabindContext, JavaType}
-import com.github.pflooky.datacaterer.api.model.ExpressionValidation
+import com.fasterxml.jackson.databind.{DatabindContext, JavaType, JsonSerializer, SerializerProvider}
+import com.github.pflooky.datacaterer.api.ValidationBuilder
+import com.github.pflooky.datacaterer.api.model.{ExpressionValidation, GroupByValidation}
 
 class ValidationIdResolver extends TypeIdResolverBase {
   private var superType: JavaType = null
@@ -24,3 +26,20 @@ class ValidationIdResolver extends TypeIdResolverBase {
   }
 }
 
+class ValidationBuilderSerializer extends JsonSerializer[ValidationBuilder] {
+  override def serialize(value: ValidationBuilder, gen: JsonGenerator, serializers: SerializerProvider): Unit = {
+    val validation = value.validation
+    gen.writeStartObject()
+    validation match {
+      case ExpressionValidation(expr) =>
+        gen.writeStringField("expr", expr)
+      case GroupByValidation(groupByCols, aggCol, aggType, expr) =>
+        gen.writeArray(groupByCols.toArray, 0, groupByCols.size)
+        gen.writeStringField("aggCol", aggCol)
+        gen.writeStringField("aggType", aggType)
+        gen.writeStringField("expr", expr)
+      case _ =>
+    }
+    gen.writeEndObject()
+  }
+}

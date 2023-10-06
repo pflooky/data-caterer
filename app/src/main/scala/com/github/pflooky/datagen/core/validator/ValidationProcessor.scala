@@ -6,7 +6,7 @@ import com.github.pflooky.datagen.core.model.ValidationImplicits.{ValidationOps,
 import com.github.pflooky.datagen.core.model.{DataSourceValidationResult, ValidationConfigResult}
 import com.github.pflooky.datagen.core.parser.ValidationParser
 import org.apache.log4j.Logger
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 /*
 Given a list of validations, check and report on the success and failure of each
@@ -36,16 +36,14 @@ class ValidationProcessor(
     if (enableValidation) {
       LOGGER.info("Executing data validations")
       val validationResults = getValidations.map(vc => {
-        val dataSourceValidationResults = vc.dataSources.map(dataSource => {
-          LOGGER.debug(s"Waiting for validation condition to be successful before running validations, name=${vc.name}," +
-            s"data-source-name=${dataSource._1}, num-validations=${dataSource._2.validations.size}")
-          dataSource._2.waitCondition.waitForCondition(connectionConfigsByName)
+        val dataSourceValidationResults = vc.dataSources.flatMap(dataSource => {
+          val dataSourceName = dataSource._1
+          val dataSourceValidations = dataSource._2
+          val numValidations = dataSourceValidations.flatMap(_.validations).size
 
-          val df = getDataFrame(dataSource)
-          val count = df.count()
-          val results = dataSource._2.validations.map(validBuilder => validBuilder.validation.validate(df, count))
-          df.unpersist()
-          DataSourceValidationResult(dataSource._1, dataSource._2.options, results)
+          LOGGER.info(s"Executing data validations for data source, name=${vc.name}," +
+            s"data-source-name=$dataSourceName, num-validations=$numValidations")
+          dataSourceValidations.map(dataSourceValidation => executeDataValidations(vc, dataSourceName, dataSourceValidation))
         }).toList
         ValidationConfigResult(vc.name, vc.description, dataSourceValidationResults)
       }).toList
@@ -58,16 +56,35 @@ class ValidationProcessor(
     }
   }
 
+  private def executeDataValidations(
+                                      vc: ValidationConfiguration,
+                                      dataSourceName: String,
+                                      dataSourceValidation: DataSourceValidation
+                                    ): DataSourceValidationResult = {
+    LOGGER.debug(s"Waiting for validation condition to be successful before running validations, name=${vc.name}," +
+      s"data-source-name=$dataSourceName, details=${dataSourceValidation.options}, num-validations=${dataSourceValidation.validations.size}")
+    dataSourceValidation.waitCondition.waitForCondition(connectionConfigsByName)
+
+    val df = getDataFrame(dataSourceName, dataSourceValidation.options)
+    val count = df.count()
+    val results = dataSourceValidation.validations.map(validBuilder => validBuilder.validation.validate(df, count))
+    df.unpersist()
+    LOGGER.debug(s"Finished data validations, name=${vc.name}," +
+      s"data-source-name=$dataSourceName, details=${dataSourceValidation.options}, num-validations=${dataSourceValidation.validations.size}")
+
+    DataSourceValidationResult(dataSourceName, dataSourceValidation.options, results)
+  }
+
   private def getValidations: Array[ValidationConfiguration] = {
     optValidationConfigs.map(_.toArray).getOrElse(ValidationParser.parseValidation(validationFolderPath))
   }
 
-  private def getDataFrame(ds: (String, DataSourceValidation)) = {
-    val dataSourceName = ds._1
+  private def getDataFrame(dataSourceName: String, options: Map[String, String]): DataFrame = {
     val connectionConfig = connectionConfigsByName(dataSourceName)
     val format = connectionConfig(FORMAT)
-    val df = sparkSession.read.format(format)
-      .options(connectionConfig ++ ds._2.options)
+    val df = sparkSession.read
+      .format(format)
+      .options(connectionConfig ++ options)
       .load()
     if (!df.storageLevel.useMemory) df.cache()
     df

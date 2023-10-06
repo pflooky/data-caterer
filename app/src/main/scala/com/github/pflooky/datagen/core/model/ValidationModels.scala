@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.model
 
 import com.github.pflooky.datacaterer.api.model.Constants.{AGGREGATION_COUNT, FORMAT, VALIDATION_UNIQUE}
-import com.github.pflooky.datacaterer.api.model.{DataExistsWaitCondition, ExpressionValidation, FileExistsWaitCondition, GroupByValidation, PauseWaitCondition, Validation, WaitCondition, WebhookWaitCondition}
+import com.github.pflooky.datacaterer.api.model.{DataExistsWaitCondition, ExpressionValidation, FileExistsWaitCondition, GroupByValidation, PauseWaitCondition, Validation, ValidationConfiguration, WaitCondition, WebhookWaitCondition}
 import com.github.pflooky.datagen.core.exception.InvalidWaitConditionException
 import com.github.pflooky.datagen.core.util.HttpUtil.getAuthHeader
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -29,6 +29,44 @@ case class ValidationResult(
                              isSuccess: Boolean = true,
                              sampleErrorValues: Option[DataFrame] = None
                            )
+
+object ValidationConfigurationHelper {
+  /**
+   * A few different scenarios:
+   * - user defined validations, no generated validations
+   * - user defined validations, generated validations
+   * - user defined validation for 1 data source, generated validations for 2 data sources
+   * -
+   *
+   * @param userValidationConf
+   * @param generatedValidationConf
+   * @return
+   */
+  def merge(userValidationConf: List[ValidationConfiguration], generatedValidationConf: ValidationConfiguration): ValidationConfiguration = {
+    val userDataSourceValidations = userValidationConf.flatMap(_.dataSources)
+    val genDataSourceValidations = generatedValidationConf.dataSources
+
+    val mergedUserDataSourceValidations = userDataSourceValidations.map(userDsValid => {
+      val currentUserDsValid = userDsValid._2
+      val combinedDataSourceValidations = genDataSourceValidations.get(userDsValid._1)
+        .map(dsv2 => {
+          dsv2.map(genV => {
+            currentUserDsValid.find(_.options == genV.options)
+              .map(matchUserDef =>
+                matchUserDef.copy(validations = genV.validations ++ matchUserDef.validations)
+              )
+              .getOrElse(genV)
+          })
+        }).getOrElse(currentUserDsValid)
+      (userDsValid._1, combinedDataSourceValidations)
+    }).toMap
+
+    //data source from generated not in user
+    val genDsValidationNotInUser = genDataSourceValidations.filter(genDs => !userDataSourceValidations.exists(_._1 == genDs._1))
+    val allValidations = mergedUserDataSourceValidations ++ genDsValidationNotInUser
+    userValidationConf.head.copy(dataSources = allValidations)
+  }
+}
 
 object ValidationImplicits {
 
@@ -156,7 +194,7 @@ object ValidationImplicits {
       val authHeader = getAuthHeader(webhookOptions)
       val requestWithAuth = if (authHeader.nonEmpty) request.setHeader(authHeader.head._1, authHeader.head._2) else request
 
-      val tryResponse = Try(request.execute().get())
+      val tryResponse = Try(requestWithAuth.execute().get())
 
       tryResponse match {
         case Failure(exception) =>
