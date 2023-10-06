@@ -104,6 +104,14 @@ public abstract class PlanRun {
         return new ForeignKeyRelation(dataSource, step, column);
     }
 
+    public ForeignKeyRelation foreignField(String dataSource, String step, List<String> columns) {
+        return new ForeignKeyRelation(dataSource, step, toScalaList(columns));
+    }
+
+    public ForeignKeyRelation foreignField(ConnectionTaskBuilder<?> connectionTaskBuilder, String step, List<String> columns) {
+        return new ForeignKeyRelation(connectionTaskBuilder.connectionConfigWithTaskBuilder().dataSourceName(), step, toScalaList(columns));
+    }
+
     public FileBuilder csv(
             String name, String path, Map<String, String> options
     ) {

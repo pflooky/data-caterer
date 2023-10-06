@@ -49,14 +49,8 @@ trait PlanRun {
   def foreignField(dataSource: String, step: String, columns: List[String]): ForeignKeyRelation =
     ForeignKeyRelation(dataSource, step, columns)
 
-  def foreignField(dataSource: String, step: String, columns: java.util.List[String]): ForeignKeyRelation =
-    ForeignKeyRelation(dataSource, step, toScalaList(columns))
-
   def foreignField(connectionTask: ConnectionTaskBuilder[_], step: String, columns: List[String]): ForeignKeyRelation =
     ForeignKeyRelation(connectionTask.connectionConfigWithTaskBuilder.dataSourceName, step, columns)
-
-  def foreignField(connectionTask: ConnectionTaskBuilder[_], step: String, columns: java.util.List[String]): ForeignKeyRelation =
-    ForeignKeyRelation(connectionTask.connectionConfigWithTaskBuilder.dataSourceName, step, toScalaList(columns))
 
   def metadataSource: MetadataSourceBuilder = MetadataSourceBuilder()
 
