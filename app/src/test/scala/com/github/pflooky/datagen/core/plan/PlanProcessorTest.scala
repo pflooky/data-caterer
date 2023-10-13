@@ -110,28 +110,38 @@ class PlanProcessorTest extends SparkSuite {
   }
 
   class TestPostgres extends PlanRun {
-    val csvTask = csv("my_csv", "/tmp/data/csv", Map("saveMode" -> "overwrite", "header" -> "true"))
-      .schema(metadataSource.marquez("http://localhost:5001", "food_delivery", "public.categories"))
-      .count(count.records(100))
-
-    val postgresTask = postgres("my_postgres", "jdbc:postgresql://localhost:5432/food_delivery", "postgres", "password")
-      .schema(metadataSource.marquez("http://localhost:5001", "food_delivery"))
-      .count(count.records(10))
-
     val jsonTask = json("my_json", "/tmp/data/json", Map("saveMode" -> "overwrite"))
-      .schema(metadataSource.marquez("http://localhost:5001", "food_delivery", "public.categories"))
-      .schema(field.name("name").expression("#{Name.name}"))
-      .count(count.recordsPerColumn(2, "name"))
+      .schema(
+        field.name("account_id").regex("ACC[0-9]{8}"),
+        field.name("name").expression("#{Name.name}"),
+        field.name("amount").`type`(DoubleType).max(10),
+      )
+      .count(count.recordsPerColumn(2, "account_id", "name"))
+      .validations(
+        validation.groupBy("account_id", "name").max("amount").lessThan(100),
+        validation.unique("account_id", "name"),
+      )
+    val csvTask = json("my_csv", "/tmp/data/csv", Map("saveMode" -> "overwrite"))
+      .schema(
+        field.name("account_number").regex("[0-9]{8}"),
+        field.name("name").expression("#{Name.name}"),
+        field.name("amount").`type`(DoubleType).max(10),
+      )
+      .validations(
+        validation.col("account_number").isNotNull.description("account_number is a primary key"),
+        validation.col("name").matches("[A-Z][a-z]+ [A-Z][a-z]+").errorThreshold(0.3).description("Some names follow a different pattern"),
+      )
 
-    val conf = configuration.enableGeneratePlanAndTasks(true).enableFailOnError(false)
+    val conf = configuration
+      .generatedReportsFolderPath("/Users/peter/code/spark-datagen/tmp/report")
+      .enableSinkMetadata(true)
 
-    execute(conf, postgresTask)
+    execute(conf, jsonTask, csvTask)
   }
 
-  ignore("Can run Postgres plan run") {
-    //    PlanProcessor.determineAndExecutePlan(Some(new TestPostgres()))
-    PlanProcessor.determineAndExecutePlan(Some(new TestValidation()))
-    //    PlanProcessor.determineAndExecutePlan(Some(new TestExpression()))
+  test("Can run Postgres plan run") {
+        PlanProcessor.determineAndExecutePlan(Some(new TestPostgres()))
+//    PlanProcessor.determineAndExecutePlan(Some(new TestValidation()))
   }
 
   class TestValidation extends PlanRun {

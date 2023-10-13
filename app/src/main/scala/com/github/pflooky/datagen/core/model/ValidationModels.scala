@@ -27,6 +27,8 @@ case class DataSourceValidationResult(
 case class ValidationResult(
                              validation: Validation = ExpressionValidation(),
                              isSuccess: Boolean = true,
+                             numErrors: Long = 0,
+                             total: Long = 0,
                              sampleErrorValues: Option[DataFrame] = None
                            )
 
@@ -80,9 +82,9 @@ object ValidationImplicits {
       }
     }
 
-    def getIsSuccessAndSampleErrors(notEqualDf: Dataset[Row], dfCount: Long): (Boolean, Option[DataFrame]) = {
-      val count = notEqualDf.count()
-      val (isSuccess, sampleErrors) = (count, validation.errorThreshold) match {
+    def getIsSuccessAndSampleErrors(notEqualDf: Dataset[Row], dfCount: Long): (Boolean, Option[DataFrame], Long) = {
+      val numErrors = notEqualDf.count()
+      val (isSuccess, sampleErrors) = (numErrors, validation.errorThreshold) match {
         case (c, Some(threshold)) if c > 0 =>
           if ((threshold >= 1 && c > threshold) || (threshold < 1 && c.toDouble / dfCount > threshold)) {
             (false, Some(notEqualDf))
@@ -90,15 +92,15 @@ object ValidationImplicits {
         case (c, None) if c > 0 => (false, Some(notEqualDf))
         case _ => (true, None)
       }
-      (isSuccess, sampleErrors)
+      (isSuccess, sampleErrors, numErrors)
     }
   }
 
   implicit class ExpressionValidationOps(expressionValidation: ExpressionValidation) extends ValidationOps(expressionValidation) {
     override def validate(df: DataFrame, dfCount: Long): ValidationResult = {
       val notEqualDf = df.where(s"!(${expressionValidation.expr})")
-      val (isSuccess, sampleErrors) = ValidationOps(expressionValidation).getIsSuccessAndSampleErrors(notEqualDf, dfCount)
-      ValidationResult(expressionValidation, isSuccess, sampleErrors)
+      val (isSuccess, sampleErrors, numErrors) = ValidationOps(expressionValidation).getIsSuccessAndSampleErrors(notEqualDf, dfCount)
+      ValidationResult(expressionValidation, isSuccess, numErrors, dfCount, sampleErrors)
     }
   }
 
@@ -113,8 +115,8 @@ object ValidationImplicits {
         ))
       }
       val notEqualDf = aggregateDf.where(s"!(${groupByValidation.expr})")
-      val (isSuccess, sampleErrors) = ValidationOps(groupByValidation).getIsSuccessAndSampleErrors(notEqualDf, dfCount)
-      ValidationResult(groupByValidation, isSuccess, sampleErrors)
+      val (isSuccess, sampleErrors, numErrors) = ValidationOps(groupByValidation).getIsSuccessAndSampleErrors(notEqualDf, dfCount)
+      ValidationResult(groupByValidation, isSuccess, numErrors, dfCount, sampleErrors)
     }
   }
   //second argument can have both sides expressed as SQL expressions

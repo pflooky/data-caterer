@@ -6,6 +6,7 @@ import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_FIELD_NULLABL
 import com.github.pflooky.datacaterer.api.model.{Count, Field, ForeignKeyRelation, Generator, PerColumnCount, Schema, SinkOptions, Step, Task}
 import com.github.pflooky.datagen.core.exception.InvalidFieldConfigurationException
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceDetail
+import com.github.pflooky.datagen.core.model.Constants.{COUNT_BASIC, COUNT_COLUMNS, COUNT_GENERATED, COUNT_GENERATED_PER_COLUMN, COUNT_NUM_RECORDS, COUNT_PER_COLUMN, COUNT_TYPE}
 import com.github.pflooky.datagen.core.util.{MetadataUtil, ObjectMapperUtil}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types.{ArrayType, DataType, Metadata, MetadataBuilder, StructField, StructType}
@@ -239,7 +240,7 @@ object PlanImplicits {
 
   implicit class StepOps(step: Step) {
     def toStepDetailString: String = {
-      s"name=${step.name}, type=${step.`type`}, options=${step.options}, step-num-records=(${step.count.numRecordsString}), schema-summary=(${step.schema.toString})"
+      s"name=${step.name}, type=${step.`type`}, options=${step.options}, step-num-records=(${step.count.numRecordsString._1}), schema-summary=(${step.schema.toString})"
     }
 
     def gatherPrimaryKeys: List[String] = {
@@ -269,19 +270,46 @@ object PlanImplicits {
   }
 
   implicit class CountOps(count: Count) {
-    def numRecordsString: String = {
+    def numRecordsString: (String, List[List[String]]) = {
       if (count.records.isDefined && count.perColumn.isDefined && count.perColumn.get.count.isDefined && count.perColumn.get.generator.isEmpty) {
-        val records = count.records.get * count.perColumn.get.count.get
-        s"per-column-count: columns=${count.perColumn.get.columnNames.mkString(",")}, num-records=${records.toString}"
+        val records = (count.records.get * count.perColumn.get.count.get).toString
+        val columns = count.perColumn.get.columnNames.mkString(",")
+        val str = s"per-column-count: columns=$columns, num-records=$records"
+        val list = List(
+          List(COUNT_TYPE, COUNT_PER_COLUMN),
+          List(COUNT_COLUMNS, columns),
+          List(COUNT_NUM_RECORDS, records)
+        )
+        (str, list)
       } else if (count.perColumn.isDefined && count.perColumn.get.generator.isDefined) {
-        s"per-column-count: columns=${count.perColumn.get.columnNames.mkString(",")}, num-records-via-generator=(${count.perColumn.get.generator.get.toString})"
+        val records = (count.records.get * count.perColumn.get.count.get).toString
+        val columns = count.perColumn.get.columnNames.mkString(",")
+        val str = s"per-column-count: columns=$columns, num-records-via-generator=$records"
+        val list = List(
+          List(COUNT_TYPE, COUNT_GENERATED_PER_COLUMN),
+          List(COUNT_COLUMNS, columns),
+          List(COUNT_NUM_RECORDS, records)
+        )
+        (str, list)
       } else if (count.records.isDefined) {
-        s"basic-count: num-records=${count.records.get.toString}"
+        val records = count.records.get.toString
+        val str = s"basic-count: num-records=$records"
+        val list = List(
+          List(COUNT_TYPE, COUNT_BASIC),
+          List(COUNT_NUM_RECORDS, records)
+        )
+        (str, list)
       } else if (count.generator.isDefined) {
-        s"generated-count: num-records=${count.generator.toString}"
+        val records = count.generator.toString
+        val str = s"generated-count: num-records=$records"
+        val list = List(
+          List(COUNT_TYPE, COUNT_GENERATED),
+          List(COUNT_NUM_RECORDS, records)
+        )
+        (str, list)
       } else {
         //TODO: should throw error here?
-        "0"
+        ("0", List())
       }
     }
 

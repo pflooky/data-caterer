@@ -46,6 +46,21 @@ object Constants {
   lazy val FINISHED = "finished"
   lazy val FAILED = "failed"
 
+  //count
+  lazy val COUNT_TYPE = "countType"
+  lazy val COUNT_BASIC = "basic-count"
+  lazy val COUNT_GENERATED = "generated-count"
+  lazy val COUNT_PER_COLUMN = "per-column-count"
+  lazy val COUNT_GENERATED_PER_COLUMN = "generated-per-column-count"
+  lazy val COUNT_COLUMNS = "columns"
+  lazy val COUNT_NUM_RECORDS = "numRecords"
+
+  //report
+  lazy val REPORT_DATA_SOURCES_HTML = "data-sources.html"
+  lazy val REPORT_FIELDS_HTML = "steps.html"
+  lazy val REPORT_HOME_HTML = "index.html"
+  lazy val REPORT_VALIDATIONS_HTML = "validations.html"
+
   //misc
   lazy val APPLICATION_CONFIG_PATH = "APPLICATION_CONFIG_PATH"
   lazy val BATCH = "batch"

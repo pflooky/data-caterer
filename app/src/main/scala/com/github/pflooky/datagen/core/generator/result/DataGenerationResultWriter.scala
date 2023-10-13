@@ -3,10 +3,11 @@ package com.github.pflooky.datagen.core.generator.result
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.github.pflooky.datacaterer.api.model.{Field, FlagsConfig, FoldersConfig, MetadataConfig, Plan, Step, Task}
 import com.github.pflooky.datagen.core.listener.SparkRecordListener
+import com.github.pflooky.datagen.core.model.Constants.{REPORT_DATA_SOURCES_HTML, REPORT_FIELDS_HTML, REPORT_HOME_HTML, REPORT_VALIDATIONS_HTML}
 import com.github.pflooky.datagen.core.model.{DataSourceResult, DataSourceResultSummary, StepResultSummary, TaskResultSummary, ValidationConfigResult}
 import com.github.pflooky.datagen.core.util.FileUtil.writeStringToFile
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
-import org.apache.hadoop.fs.FileSystem
+import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
 
@@ -33,15 +34,20 @@ class DataGenerationResultWriter(metadataConfig: MetadataConfig, foldersConfig: 
     val fileWriter = writeToFile(fileSystem, foldersConfig.generatedReportsFolderPath) _
 
     try {
-      fileWriter("index.html", htmlWriter.index)
-      fileWriter("overview.html", htmlWriter.overview(plan, stepSummary, taskSummary, dataSourceSummary,
-        validationResults, flagsConfig, sparkRecordListener))
-      fileWriter("navbar.html", htmlWriter.navBarDetails)
+      fileSystem.copyFromLocalFile(
+        new Path(getClass.getResource("/report/css/main.css").toURI),
+        new Path(s"${foldersConfig.generatedReportsFolderPath}/main.css")
+      )
+      fileSystem.copyFromLocalFile(
+        new Path(getClass.getResource("/report/logo/data_catering_transparent.svg").toURI),
+        new Path(s"${foldersConfig.generatedReportsFolderPath}/data_catering_transparent.svg")
+      )
+      fileWriter(REPORT_HOME_HTML, htmlWriter.index(plan, stepSummary, taskSummary, dataSourceSummary, validationResults, flagsConfig, sparkRecordListener))
 
       fileWriter("tasks.html", htmlWriter.taskDetails(taskSummary))
-      fileWriter("steps.html", htmlWriter.stepDetails(stepSummary))
-      fileWriter("data-sources.html", htmlWriter.dataSourceDetails(stepSummary.flatMap(_.dataSourceResults)))
-      fileWriter("validations.html", htmlWriter.validations(validationResults))
+      fileWriter(REPORT_FIELDS_HTML, htmlWriter.stepDetails(stepSummary))
+      fileWriter(REPORT_DATA_SOURCES_HTML, htmlWriter.dataSourceDetails(stepSummary.flatMap(_.dataSourceResults)))
+      fileWriter(REPORT_VALIDATIONS_HTML, htmlWriter.validations(validationResults))
     } catch {
       case ex: Exception =>
         LOGGER.error("Failed to write data generation summary to HTML files", ex)
