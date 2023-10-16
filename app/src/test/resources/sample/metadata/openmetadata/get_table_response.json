@@ -1,0 +1,313 @@
+{
+  "data": [
+    {
+      "id": "464fe2d0-eb37-4351-b939-3358170c941a",
+      "name": "dim_address",
+      "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address",
+      "description": "This dimension table contains the billing and shipping addresses of customers. You can join this table with the sales table to generate lists of the billing and shipping addresses. Customers can enter their addresses more than once, so the same address can appear in more than one row in this table. This table contains one row per customer address.",
+      "version": 0.1,
+      "updatedAt": 1697177637240,
+      "updatedBy": "admin",
+      "href": "http://localhost:8585/api/v1/tables/464fe2d0-eb37-4351-b939-3358170c941a",
+      "tableType": "Regular",
+      "columns": [
+        {
+          "name": "address_id",
+          "dataType": "NUMERIC",
+          "dataTypeDisplay": "numeric",
+          "description": "Unique identifier for the address.",
+          "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.address_id",
+          "tags": [],
+          "ordinalPosition": 1,
+          "customMetrics": []
+        },
+        {
+          "name": "shop_id",
+          "dataType": "NUMERIC",
+          "dataTypeDisplay": "numeric",
+          "description": "The ID of the store. This column is a foreign key reference to the shop_id column in the dim_shop table.",
+          "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.shop_id",
+          "tags": [],
+          "ordinalPosition": 2,
+          "customMetrics": []
+        },
+        {
+          "name": "first_name",
+          "dataType": "VARCHAR",
+          "dataLength": 100,
+          "dataTypeDisplay": "varchar",
+          "description": "First name of the customer.",
+          "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.first_name",
+          "tags": [],
+          "ordinalPosition": 3,
+          "customMetrics": []
+        },
+        {
+          "name": "last_name",
+          "dataType": "VARCHAR",
+          "dataLength": 100,
+          "dataTypeDisplay": "varchar",
+          "description": "Last name of the customer.",
+          "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.last_name",
+          "tags": [],
+          "ordinalPosition": 4,
+          "customMetrics": []
+        },
+        {
+          "name": "address1",
+          "dataType": "VARCHAR",
+          "dataLength": 500,
+          "dataTypeDisplay": "varchar",
+          "description": "The first address line. For example, 150 Elgin St.",
+          "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.address1",
+          "tags": [],
+          "ordinalPosition": 5,
+          "customMetrics": []
+        },
+        {
+          "name": "address2",
+          "dataType": "VARCHAR",
+          "dataLength": 500,
+          "dataTypeDisplay": "varchar",
+          "description": "The second address line. For example, Suite 800.",
+          "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.address2",
+          "tags": [],
+          "ordinalPosition": 6,
+          "customMetrics": []
+        },
+        {
+          "name": "company",
+          "dataType": "VARCHAR",
+          "dataLength": 100,
+          "dataTypeDisplay": "varchar",
+          "description": "The name of the customer's business, if one exists.",
+          "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.company",
+          "tags": [],
+          "ordinalPosition": 7,
+          "customMetrics": []
+        },
+        {
+          "name": "city",
+          "dataType": "VARCHAR",
+          "dataLength": 100,
+          "dataTypeDisplay": "varchar",
+          "description": "The name of the city. For example, Palo Alto.",
+          "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.city",
+          "tags": [],
+          "ordinalPosition": 8,
+          "customMetrics": []
+        },
+        {
+          "name": "region",
+          "dataType": "VARCHAR",
+          "dataLength": 512,
+          "dataTypeDisplay": "varchar",
+          "description": "The name of the region, such as a province or state, where the customer is located. For example, Ontario or New York. This column is the same as CustomerAddress.province in the Admin API.",
+          "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.region",
+          "tags": [],
+          "ordinalPosition": 9,
+          "customMetrics": []
+        },
+        {
+          "name": "zip",
+          "dataType": "VARCHAR",
+          "dataLength": 10,
+          "dataTypeDisplay": "varchar",
+          "description": "The ZIP or postal code. For example, 90210.",
+          "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.zip",
+          "tags": [],
+          "ordinalPosition": 10,
+          "customMetrics": []
+        },
+        {
+          "name": "country",
+          "dataType": "VARCHAR",
+          "dataLength": 50,
+          "dataTypeDisplay": "varchar",
+          "description": "The full name of the country. For example, Canada.",
+          "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.country",
+          "tags": [],
+          "ordinalPosition": 11,
+          "customMetrics": []
+        },
+        {
+          "name": "phone",
+          "dataType": "VARCHAR",
+          "dataLength": 15,
+          "dataTypeDisplay": "varchar",
+          "description": "The phone number of the customer.",
+          "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.phone",
+          "tags": [],
+          "ordinalPosition": 12,
+          "customMetrics": []
+        }
+      ],
+      "tableConstraints": [
+        {
+          "constraintType": "PRIMARY_KEY",
+          "columns": [
+            "address_id",
+            "shop_id"
+          ]
+        }
+      ],
+      "databaseSchema": {
+        "id": "faa1f342-6087-414b-91e9-b3f3d506dc77",
+        "type": "databaseSchema",
+        "name": "shopify",
+        "fullyQualifiedName": "sample_data.ecommerce_db.shopify",
+        "description": "This **mock** database contains schema related to shopify sales and orders with related dimension tables.",
+        "deleted": false,
+        "href": "http://localhost:8585/api/v1/databaseSchemas/faa1f342-6087-414b-91e9-b3f3d506dc77"
+      },
+      "database": {
+        "id": "e89bd155-96c5-4ba5-89d5-a65134b3df91",
+        "type": "database",
+        "name": "ecommerce_db",
+        "fullyQualifiedName": "sample_data.ecommerce_db",
+        "description": "This **mock** database contains schemas related to shopify sales and orders with related dimension tables.",
+        "deleted": false,
+        "href": "http://localhost:8585/api/v1/databases/e89bd155-96c5-4ba5-89d5-a65134b3df91"
+      },
+      "service": {
+        "id": "b925ebce-07ec-4598-a174-62b3c1b3e0fc",
+        "type": "databaseService",
+        "name": "sample_data",
+        "fullyQualifiedName": "sample_data",
+        "deleted": false,
+        "href": "http://localhost:8585/api/v1/services/databaseServices/b925ebce-07ec-4598-a174-62b3c1b3e0fc"
+      },
+      "serviceType": "BigQuery",
+      "tags": [],
+      "usageSummary": {
+        "dailyStats": {
+          "count": 0,
+          "percentileRank": 0.0
+        },
+        "weeklyStats": {
+          "count": 0,
+          "percentileRank": 0.0
+        },
+        "monthlyStats": {
+          "count": 0,
+          "percentileRank": 0.0
+        },
+        "date": "2023-10-13"
+      },
+      "followers": [],
+      "joins": {
+        "startDate": "2023-09-13",
+        "dayCount": 30,
+        "columnJoins": [],
+        "directTableJoins": []
+      },
+      "testSuite": {
+        "id": "0946125d-6cf5-41fa-894f-3ee6aab6a20f",
+        "name": "sample_data.ecommerce_db.shopify.dim_address.testSuite",
+        "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.testSuite",
+        "description": "This is an executable test suite linked to an entity",
+        "tests": [
+          {
+            "id": "26ea4fb8-1a13-42eb-a4b6-37ace2c4dd05",
+            "type": "testCase",
+            "name": "column_value_max_to_be_between",
+            "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.shop_id.column_value_max_to_be_between",
+            "description": "test the value of a column is between x and y",
+            "deleted": false
+          },
+          {
+            "id": "a30d4175-2681-4427-87ee-6a5a139e3d31",
+            "type": "testCase",
+            "name": "column_values_to_be_between",
+            "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.zip.column_values_to_be_between",
+            "description": "test the number of column in table is between x and y",
+            "deleted": false
+          },
+          {
+            "id": "d3024ad8-3bc7-4875-8369-1e2085dfab77",
+            "type": "testCase",
+            "name": "column_values_to_match_regex",
+            "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.last_name.column_values_to_match_regex",
+            "description": "test value of a column match regex",
+            "deleted": false
+          },
+          {
+            "id": "e7a485ee-af8a-4f22-b114-014e6bb74531",
+            "type": "testCase",
+            "name": "table_column_count_between",
+            "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.table_column_count_between",
+            "description": "test the number of column in table is between x and y",
+            "deleted": false
+          },
+          {
+            "id": "dea9535c-2f8b-4a69-8a79-990d672af4f5",
+            "type": "testCase",
+            "name": "table_column_count_equals",
+            "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.table_column_count_equals",
+            "description": "test the number of column in table",
+            "deleted": false
+          }
+        ],
+        "pipelines": [
+          {
+            "id": "9633bd61-f424-46b0-9de7-47aa755d3939",
+            "type": "ingestionPipeline",
+            "name": "dim_address_TestSuite",
+            "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address.testSuite.dim_address_TestSuite",
+            "deleted": false
+          }
+        ],
+        "serviceType": "TestSuite",
+        "version": 0.1,
+        "updatedAt": 1697177643705,
+        "updatedBy": "admin",
+        "deleted": false,
+        "executable": true,
+        "executableEntityReference": {
+          "id": "464fe2d0-eb37-4351-b939-3358170c941a",
+          "type": "table",
+          "name": "dim_address",
+          "fullyQualifiedName": "sample_data.ecommerce_db.shopify.dim_address"
+        },
+        "summary": {
+          "success": 4,
+          "failed": 0,
+          "aborted": 1,
+          "total": 5
+        },
+        "testCaseResultSummary": [
+          {
+            "testCaseName": "sample_data.ecommerce_db.shopify.dim_address.table_column_count_equals",
+            "status": "Success",
+            "timestamp": 1696313644465
+          },
+          {
+            "testCaseName": "sample_data.ecommerce_db.shopify.dim_address.table_column_count_between",
+            "status": "Success",
+            "timestamp": 1696400044815
+          },
+          {
+            "testCaseName": "sample_data.ecommerce_db.shopify.dim_address.shop_id.column_value_max_to_be_between",
+            "status": "Aborted",
+            "timestamp": 1696400045181
+          },
+          {
+            "testCaseName": "sample_data.ecommerce_db.shopify.dim_address.last_name.column_values_to_match_regex",
+            "status": "Success",
+            "timestamp": 1696400045622
+          },
+          {
+            "testCaseName": "sample_data.ecommerce_db.shopify.dim_address.zip.column_values_to_be_between",
+            "status": "Success",
+            "timestamp": 1696400045933
+          }
+        ]
+      },
+      "deleted": false
+    }
+  ],
+  "paging": {
+    "after": "ZGltX2FkZHJlc3M=",
+    "total": 20
+  }
+}

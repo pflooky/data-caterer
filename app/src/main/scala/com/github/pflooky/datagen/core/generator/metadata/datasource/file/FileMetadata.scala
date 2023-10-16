@@ -1,8 +1,9 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.file
 
 import com.github.pflooky.datacaterer.api.model.Constants.{DELTA, FORMAT, PARQUET, PATH}
-import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
-import org.apache.spark.sql.SparkSession
+import com.github.pflooky.datagen.core.generator.metadata.datasource.{DataSourceMetadata, SubDataSourceMetadata}
+import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ColumnMetadata
+import org.apache.spark.sql.{Dataset, SparkSession}
 
 case class FileMetadata(name: String, format: String, connectionConfig: Map[String, String]) extends DataSourceMetadata {
 
@@ -18,7 +19,7 @@ case class FileMetadata(name: String, format: String, connectionConfig: Map[Stri
    *
    * @return Array of connection config for files
    */
-  override def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[Map[String, String]] = {
+  override def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[SubDataSourceMetadata] = {
     val baseFolderPath = connectionConfig(PATH)
     val fileSuffix = format match {
       case DELTA => PARQUET
@@ -32,7 +33,7 @@ case class FileMetadata(name: String, format: String, connectionConfig: Map[Stri
     val filePaths = df.distinct().collect()
       .map(r => r.getAs[String]("file_path"))
     val baseFilePaths = getBaseFolderPathways(filePaths)
-    baseFilePaths.map(p => connectionConfig ++ Map(PATH -> p, FORMAT -> format))
+    baseFilePaths.map(p => SubDataSourceMetadata(connectionConfig ++ Map(PATH -> p, FORMAT -> format)))
   }
 
   private def getBaseFolderPathways(filePaths: Array[String]): Array[String] = {

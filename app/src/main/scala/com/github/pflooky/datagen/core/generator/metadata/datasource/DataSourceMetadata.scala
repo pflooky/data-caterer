@@ -22,7 +22,9 @@ trait DataSourceMetadata {
 
   def close(): Unit = {}
 
-  def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[Map[String, String]]
+  def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[SubDataSourceMetadata]
 
   def toStepName(options: Map[String, String]): String
 }
+
+case class SubDataSourceMetadata(readOptions: Map[String, String] = Map(), optColumnMetadata: Option[Dataset[ColumnMetadata]] = None)

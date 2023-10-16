@@ -590,7 +590,7 @@ class ResultHtmlWriter {
   private def checkMark(isSuccess: Boolean): NodeSeq = if (isSuccess) xml.EntityRef("#9989") else xml.EntityRef("#10060")
 
   private def progressBar(success: Long, total: Long): NodeBuffer = {
-    val percent = BigDecimal(success.toDouble / total * 100).setScale(2).toString()
+    val percent = if (success > 0 && total > 0) BigDecimal(success.toDouble / total * 100).setScale(2).toString() else "0"
     val width = s"width:$percent%"
     val progressBarText = s"$success/$total ($percent%)"
     <div class="progress">

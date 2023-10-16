@@ -1,6 +1,7 @@
 package com.github.pflooky.datagen.core.generator.result
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include
+import com.github.pflooky.datacaterer.api.model.Constants.DEFAULT_GENERATED_REPORTS_FOLDER_PATH
 import com.github.pflooky.datacaterer.api.model.{Field, FlagsConfig, FoldersConfig, MetadataConfig, Plan, Step, Task}
 import com.github.pflooky.datagen.core.listener.SparkRecordListener
 import com.github.pflooky.datagen.core.model.Constants.{REPORT_DATA_SOURCES_HTML, REPORT_FIELDS_HTML, REPORT_HOME_HTML, REPORT_VALIDATIONS_HTML}
@@ -11,6 +12,8 @@ import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
 
+import java.io.File
+import scala.util.{Failure, Success, Try}
 import scala.xml.Node
 
 class DataGenerationResultWriter(metadataConfig: MetadataConfig, foldersConfig: FoldersConfig, flagsConfig: FlagsConfig)(implicit sparkSession: SparkSession) {
@@ -34,23 +37,35 @@ class DataGenerationResultWriter(metadataConfig: MetadataConfig, foldersConfig: 
     val fileWriter = writeToFile(fileSystem, foldersConfig.generatedReportsFolderPath) _
 
     try {
-      fileSystem.copyFromLocalFile(
-        new Path(getClass.getResource("/report/css/main.css").toURI),
-        new Path(s"${foldersConfig.generatedReportsFolderPath}/main.css")
-      )
-      fileSystem.copyFromLocalFile(
-        new Path(getClass.getResource("/report/logo/data_catering_transparent.svg").toURI),
-        new Path(s"${foldersConfig.generatedReportsFolderPath}/data_catering_transparent.svg")
-      )
       fileWriter(REPORT_HOME_HTML, htmlWriter.index(plan, stepSummary, taskSummary, dataSourceSummary, validationResults, flagsConfig, sparkRecordListener))
-
       fileWriter("tasks.html", htmlWriter.taskDetails(taskSummary))
       fileWriter(REPORT_FIELDS_HTML, htmlWriter.stepDetails(stepSummary))
       fileWriter(REPORT_DATA_SOURCES_HTML, htmlWriter.dataSourceDetails(stepSummary.flatMap(_.dataSourceResults)))
       fileWriter(REPORT_VALIDATIONS_HTML, htmlWriter.validations(validationResults))
+
+      copyHtmlResources(fileSystem)
     } catch {
       case ex: Exception =>
         LOGGER.error("Failed to write data generation summary to HTML files", ex)
+    }
+  }
+
+  private def copyHtmlResources(fileSystem: FileSystem): Unit = {
+    val resources = List("main.css", "data_catering_transparent.svg")
+    if (!foldersConfig.generatedReportsFolderPath.equalsIgnoreCase(DEFAULT_GENERATED_REPORTS_FOLDER_PATH)) {
+      resources.foreach(resource => {
+        val tryLocalUri = Try(getClass.getResource(s"/report/$resource").toURI)
+        val resourcePath = tryLocalUri match {
+          case Failure(_) =>
+            s"$DEFAULT_GENERATED_REPORTS_FOLDER_PATH/$resource"
+          case Success(value) =>
+            value.toString
+        }
+        fileSystem.copyFromLocalFile(
+          new Path(resourcePath),
+          new Path(s"${foldersConfig.generatedReportsFolderPath}/$resource")
+        )
+      })
     }
   }
 

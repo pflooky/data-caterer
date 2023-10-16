@@ -8,6 +8,7 @@ RUN chown -R app:app /opt/app
 COPY --chown=app:app script /opt/app
 COPY --chown=app:app app/src/main/resources/application.conf /opt/app/application.conf
 COPY --chown=app:app app/src/main/resources/log4j2.properties /opt/app/log4j2.properties
+COPY --chown=app:app app/src/main/resources/report /opt/app/report
 
 ARG APP_VERSION=0.1
 ARG APP_TYPE=basic

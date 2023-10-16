@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.openlineage
 
 import com.github.pflooky.datacaterer.api.model.Constants.{DATASET_NAME, DATA_SOURCE_NAME, DEFAULT_FIELD_TYPE, DEFAULT_STEP_NAME, FACET_DATA_SOURCE, FIELD_DATA_TYPE, FIELD_DESCRIPTION, JDBC, JDBC_TABLE, METADATA_IDENTIFIER, METADATA_SOURCE_URL, OPEN_LINEAGE_DATASET, OPEN_LINEAGE_NAMESPACE, URI}
-import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
+import com.github.pflooky.datagen.core.generator.metadata.datasource.{DataSourceMetadata, SubDataSourceMetadata}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ColumnMetadata
 import com.github.pflooky.datagen.core.model.openlineage.{ListDatasetResponse, OpenLineageDataset}
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
@@ -29,46 +29,39 @@ case class OpenLineageMetadata(
 
   override def toStepName(options: Map[String, String]): String = options.getOrElse(METADATA_IDENTIFIER, DEFAULT_STEP_NAME)
 
-  override def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[Map[String, String]] = {
+  override def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[SubDataSourceMetadata] = {
     val datasets = getDatasetsFromSource
 
     datasets.map(ds => {
-      val baseOptions = Map(
+      val baseOptions = connectionConfig ++ Map(
         OPEN_LINEAGE_NAMESPACE -> NAMESPACE,
         METADATA_IDENTIFIER -> toMetadataIdentifier(ds)
       )
-      if (format.equalsIgnoreCase(JDBC)) baseOptions ++ Map(JDBC_TABLE -> ds.physicalName) else baseOptions
+      val allOptions = if (format.equalsIgnoreCase(JDBC)) baseOptions ++ Map(JDBC_TABLE -> ds.physicalName) else baseOptions
+
+      val facets = ds.facets
+      val columnMetadata = ds.fields
+        .map(field => {
+          val dataType = field.`type`.getOrElse(DEFAULT_FIELD_TYPE).toLowerCase
+          val parsedDataType = if (dataType == "varchar" || dataType == "text") "string" else dataType
+          var metadata = Map(
+            FIELD_DATA_TYPE -> parsedDataType,
+            FIELD_DESCRIPTION -> field.description.getOrElse(""),
+          )
+          if (facets.contains(FACET_DATA_SOURCE)) {
+            val dataSourceFacet = facets(FACET_DATA_SOURCE).asInstanceOf[Map[String, String]]
+            metadata = metadata ++ Map(DATA_SOURCE_NAME -> dataSourceFacet("name"), URI -> dataSourceFacet(URI))
+          }
+          ColumnMetadata(field.name, allOptions, metadata)
+        })
+
+      SubDataSourceMetadata(allOptions, Some(sparkSession.createDataset(columnMetadata)))
     }).toArray
   }
 
   override def getAdditionalColumnMetadata(implicit sparkSession: SparkSession): Dataset[ColumnMetadata] = {
-    val datasets = getDatasetsFromSource
-
-    val columnMetadata = datasets
-      .flatMap(ds => {
-        val dataSourceReadOptions = connectionConfig ++ Map(
-          DATASET_NAME -> ds.id.name,
-          METADATA_IDENTIFIER -> toMetadataIdentifier(ds)
-        )
-        val facets = ds.facets
-        ds.fields
-          .map(field => {
-            val dataType = field.`type`.getOrElse(DEFAULT_FIELD_TYPE).toLowerCase
-            val parsedDataType = if (dataType == "varchar" || dataType == "text") "string" else dataType
-            var metadata = Map(
-              FIELD_DATA_TYPE -> parsedDataType,
-              FIELD_DESCRIPTION -> field.description.getOrElse(""),
-            )
-            if (facets.contains(FACET_DATA_SOURCE)) {
-              val dataSourceFacet = ds.facets(FACET_DATA_SOURCE).asInstanceOf[Map[String, String]]
-              metadata = metadata ++ Map(DATA_SOURCE_NAME -> dataSourceFacet("name"), URI -> dataSourceFacet(URI))
-            }
-            ColumnMetadata(field.name, dataSourceReadOptions, metadata)
-          })
-      })
-    sparkSession.createDataset(columnMetadata)
+    sparkSession.emptyDataset
   }
-
 
   override def close(): Unit = {
     asyncHttpClient.close()

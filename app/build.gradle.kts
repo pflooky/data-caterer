@@ -42,6 +42,8 @@ configurations {
     all {
         resolutionStrategy {
             force("com.fasterxml.jackson.core:jackson-databind:2.15.2")
+            force("org.antlr:antlr4-runtime:4.9.3")
+            force("org.antlr:antlr4-tool:4.9.3")
         }
     }
 }
@@ -71,11 +73,7 @@ dependencies {
         exclude(group = "org.scala-lang")
     }
     // http
-    //TODO switch to https://github.com/AsyncHttpClient/async-http-client
     advancedImpl("org.asynchttpclient:async-http-client:2.12.3")
-//    advancedImpl("org.dispatchhttp:dispatch-core_$scalaVersion:1.2.0") {
-//        exclude(group = "org.scala-lang")
-//    }
     advancedImpl("io.swagger.parser.v3:swagger-parser-v3:2.1.16")
     // kafka
     advancedImpl("org.apache.spark:spark-sql-kafka-0-10_$scalaVersion:$sparkVersion") {
@@ -85,6 +83,10 @@ dependencies {
     //TODO advancedImpl("jakarta.jms:jakarta.jms-api:3.1.0") jms 3.x
     advancedImpl("javax.jms:javax.jms-api:2.0.1")
     advancedImpl("com.solacesystems:sol-jms:10.21.0")
+    // metadata
+    advancedImpl("org.open-metadata:openmetadata-java-client:1.1.7") {
+        exclude(group = "org.antlr")
+    }
 
     // data generation helpers
     basicImpl("net.datafaker:datafaker:1.9.0")

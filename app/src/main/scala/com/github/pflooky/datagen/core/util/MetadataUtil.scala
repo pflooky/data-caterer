@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.util
 
 import com.github.pflooky.datacaterer.api.model.Constants._
-import com.github.pflooky.datacaterer.api.model.{Field, MetadataConfig}
+import com.github.pflooky.datacaterer.api.model.{Field, MetadataConfig, OpenMetadataSource}
 import com.github.pflooky.datagen.core.generator.metadata.ExpressionPredictor
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.{CassandraMetadata, ColumnMetadata, MysqlMetadata, PostgresMetadata}
@@ -9,6 +9,7 @@ import com.github.pflooky.datagen.core.generator.metadata.datasource.file.FileMe
 import com.github.pflooky.datagen.core.generator.metadata.datasource.http.HttpMetadata
 import com.github.pflooky.datagen.core.generator.metadata.datasource.jms.JmsMetadata
 import com.github.pflooky.datagen.core.generator.metadata.datasource.openlineage.OpenLineageMetadata
+import com.github.pflooky.datagen.core.generator.metadata.datasource.openmetadata.OpenMetadataDataSourceMetadata
 import com.github.pflooky.datagen.core.model.FieldHelper
 import org.apache.log4j.Logger
 import org.apache.spark.sql.catalyst.TableIdentifier
@@ -200,6 +201,7 @@ object MetadataUtil {
       case (Some(metadataSourceType), _) =>
         metadataSourceType.toLowerCase match {
           case MARQUEZ => Some(OpenLineageMetadata(connectionConfig._1, format, connectionConfig._2))
+          case OPEN_METADATA => Some(OpenMetadataDataSourceMetadata(connectionConfig._1, format, connectionConfig._2))
           case metadataSourceType =>
             LOGGER.warn(s"Unsupported external metadata source, connection-name=${connectionConfig._1}, metadata-source-type=$metadataSourceType")
             None

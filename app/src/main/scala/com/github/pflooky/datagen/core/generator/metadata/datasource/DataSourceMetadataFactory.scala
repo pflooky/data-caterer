@@ -46,15 +46,15 @@ class DataSourceMetadataFactory(dataCatererConfiguration: DataCatererConfigurati
   def getMetadataForDataSource(dataSourceMetadata: DataSourceMetadata): List[DataSourceDetail] = {
     LOGGER.info(s"Extracting out metadata from data source, name=${dataSourceMetadata.name}, format=${dataSourceMetadata.format}")
     val allDataSourceReadOptions = dataSourceMetadata.getSubDataSourcesMetadata
-
     allDataSourceReadOptions.length match {
       case 0 => LOGGER.warn(s"Unable to find any sub data sources, name=${dataSourceMetadata.name}, format=${dataSourceMetadata.format}")
       case i => LOGGER.info(s"Found sub data sources, name=${dataSourceMetadata.name}, format=${dataSourceMetadata.format}, num-sub-data-sources=$i")
     }
 
     val additionalColumnMetadata = dataSourceMetadata.getAdditionalColumnMetadata
-    allDataSourceReadOptions.map(dataSourceReadOptions => {
-      getFieldLevelMetadata(dataSourceMetadata, additionalColumnMetadata, dataSourceReadOptions)
+    allDataSourceReadOptions.map(subDataSourceMeta => {
+      val columnMetadata = subDataSourceMeta.optColumnMetadata.getOrElse(additionalColumnMetadata)
+      getFieldLevelMetadata(dataSourceMetadata, columnMetadata, subDataSourceMeta.readOptions)
     }).toList
   }
 

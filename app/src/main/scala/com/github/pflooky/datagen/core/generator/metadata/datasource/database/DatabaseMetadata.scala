@@ -2,7 +2,7 @@ package com.github.pflooky.datagen.core.generator.metadata.datasource.database
 
 import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_VALUE, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_QUERY, JDBC_TABLE, MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE, PRIMARY_KEY_POSITION, SOURCE_COLUMN_DATA_TYPE}
 import com.github.pflooky.datacaterer.api.model.ForeignKeyRelation
-import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
+import com.github.pflooky.datagen.core.generator.metadata.datasource.{DataSourceMetadata, SubDataSourceMetadata}
 import com.github.pflooky.datagen.core.model.Constants.{METADATA_FILTER_OUT_SCHEMA, METADATA_FILTER_OUT_TABLE}
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 
@@ -14,7 +14,7 @@ trait DatabaseMetadata extends DataSourceMetadata {
 
   override val hasSourceData: Boolean = true
 
-  override def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[Map[String, String]] = {
+  override def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[SubDataSourceMetadata] = {
     val allDatabaseSchemasWithTableName = sparkSession.read
       .format(format)
       .options(connectionConfig ++ metadataTable)
@@ -28,7 +28,7 @@ trait DatabaseMetadata extends DataSourceMetadata {
       .getOrElse(allDatabaseSchemasWithTableName)
     // have to collect here due to being unable to use encoder for DataType and Metadata from Spark. Should be okay given data size is small
     filteredSchemasAndTables.collect()
-      .map(r => getTableDataOptions(r.getAs[String]("schema"), r.getAs[String]("table")))
+      .map(r => SubDataSourceMetadata(getTableDataOptions(r.getAs[String]("schema"), r.getAs[String]("table"))))
   }
 
   def getTableDataOptions(schema: String, table: String): Map[String, String]

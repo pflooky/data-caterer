@@ -25,7 +25,8 @@ object ValidationPredictor {
   private val VALIDATION_PREDICTION_CHECKS: List[ValidationPredictionCheck] =
     List(
       new DateTimestampValidationPredictionCheck(),
-      new PrimaryKeyValidationPredictionCheck()
+      new PrimaryKeyValidationPredictionCheck(),
+      new ExpressionValidationPredictionCheck()
     )
 
   def suggestValidations(dataSourceMetadata: DataSourceMetadata, dataSourceReadOptions: Map[String, String],

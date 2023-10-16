@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.plan
 
 import com.github.pflooky.datacaterer.api.PlanRun
-import com.github.pflooky.datacaterer.api.model.Constants.SAVE_MODE
+import com.github.pflooky.datacaterer.api.model.Constants.{OPEN_METADATA_AUTH_TYPE_OPEN_METADATA, OPEN_METADATA_JWT_TOKEN, OPEN_METADATA_TABLE_FQN, SAVE_MODE}
 import com.github.pflooky.datacaterer.api.model.{ArrayType, DateType, DoubleType, IntegerType, TimestampType}
 import com.github.pflooky.datagen.core.util.{ObjectMapperUtil, SparkSuite}
 import org.junit.runner.RunWith
@@ -139,9 +139,10 @@ class PlanProcessorTest extends SparkSuite {
     execute(conf, jsonTask, csvTask)
   }
 
-  test("Can run Postgres plan run") {
-        PlanProcessor.determineAndExecutePlan(Some(new TestPostgres()))
-//    PlanProcessor.determineAndExecutePlan(Some(new TestValidation()))
+  ignore("Can run Postgres plan run") {
+    PlanProcessor.determineAndExecutePlan(Some(new TestOpenMetadata()))
+    //        PlanProcessor.determineAndExecutePlan(Some(new TestPostgres()))
+    //    PlanProcessor.determineAndExecutePlan(Some(new TestValidation()))
   }
 
   class TestValidation extends PlanRun {
@@ -167,5 +168,20 @@ class PlanProcessorTest extends SparkSuite {
       .generatedReportsFolderPath("/Users/peter/code/spark-datagen/tmp/report")
 
     execute(myPlan, conf, csvTask, postgresTask)
+  }
+
+  class TestOpenMetadata extends PlanRun {
+    val csvTask = csv("my_csv", "/tmp/data/csv", Map("saveMode" -> "overwrite", "header" -> "true"))
+      .schema(metadataSource.openMetadata("http://localhost:8585/api", OPEN_METADATA_AUTH_TYPE_OPEN_METADATA,
+        Map(
+          OPEN_METADATA_JWT_TOKEN -> "abc123",
+          OPEN_METADATA_TABLE_FQN -> "sample_data.ecommerce_db.shopify.raw_product_catalog"
+        )))
+      .count(count.records(10))
+
+    val conf = configuration.enableGeneratePlanAndTasks(true)
+      .generatedReportsFolderPath("/Users/peter/code/spark-datagen/tmp/report")
+
+    execute(conf, csvTask)
   }
 }

@@ -1,11 +1,12 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.http
 
 import com.github.pflooky.datacaterer.api.model.Constants.{HTTP_CONTENT_TYPE, HTTP_HEADER, HTTP_METHOD, PATH, SCHEMA_LOCATION}
-import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
+import com.github.pflooky.datagen.core.generator.metadata.datasource.{DataSourceMetadata, SubDataSourceMetadata}
+import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ColumnMetadata
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.parser.OpenAPIV3Parser
 import org.apache.log4j.Logger
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{Dataset, SparkSession}
 
 import scala.collection.JavaConverters.{asScalaBufferConverter, mapAsScalaMapConverter}
 
@@ -19,7 +20,7 @@ case class HttpMetadata(name: String, format: String, connectionConfig: Map[Stri
     options(PATH)
   }
 
-  override def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[Map[String, String]] = {
+  override def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[SubDataSourceMetadata] = {
     connectionConfig.get(SCHEMA_LOCATION) match {
       case Some(location) =>
         //validate the file is openapi endpoint/doc

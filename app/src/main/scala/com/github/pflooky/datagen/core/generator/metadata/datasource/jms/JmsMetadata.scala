@@ -1,8 +1,9 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.jms
 
 import com.github.pflooky.datacaterer.api.model.Constants.{PATH, SCHEMA_LOCATION}
-import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
-import org.apache.spark.sql.SparkSession
+import com.github.pflooky.datagen.core.generator.metadata.datasource.{DataSourceMetadata, SubDataSourceMetadata}
+import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ColumnMetadata
+import org.apache.spark.sql.{Dataset, SparkSession}
 
 case class JmsMetadata(name: String, format: String, connectionConfig: Map[String, String]) extends DataSourceMetadata {
 
@@ -11,7 +12,7 @@ case class JmsMetadata(name: String, format: String, connectionConfig: Map[Strin
     options(PATH)
   }
 
-  override def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[Map[String, String]] = {
+  override def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[SubDataSourceMetadata] = {
     //TODO schema location can be either API endpoint or file, for now only allow file
     val schemaLocation = connectionConfig(SCHEMA_LOCATION)
     //could be JSON, Avro, Protobuf or XML schema definition

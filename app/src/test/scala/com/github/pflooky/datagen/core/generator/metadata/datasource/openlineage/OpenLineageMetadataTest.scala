@@ -67,7 +67,7 @@ class OpenLineageMetadataTest extends SparkSuite with MockFactory {
     (() => mockHttp.close()).expects().once()
     (() => mockResponse.getResponseBody).expects().once().returns(responseBody)
 
-    val result = openLineageMetadata.getAdditionalColumnMetadata.collect()
+    val result = openLineageMetadata.getSubDataSourcesMetadata.head.optColumnMetadata.get.collect()
     openLineageMetadata.close()
 
     assert(result.length == 4)

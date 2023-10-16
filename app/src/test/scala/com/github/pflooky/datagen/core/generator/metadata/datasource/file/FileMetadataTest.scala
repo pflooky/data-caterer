@@ -14,8 +14,8 @@ class FileMetadataTest extends SparkSuite {
     val result = fileMetadata.getSubDataSourcesMetadata
 
     assert(result.length == 2)
-    assert(result.forall(m => m("format") == "csv"))
-    assert(result.forall(m => m("path").contains(s"$baseFolder/csv/account") || m("path").contains(s"$baseFolder/csv/transactions")))
+    assert(result.forall(m => m.readOptions("format") == "csv"))
+    assert(result.forall(m => m.readOptions("path").contains(s"$baseFolder/csv/account") || m.readOptions("path").contains(s"$baseFolder/csv/transactions")))
   }
 
   test("Can get all distinct folder pathways for parquet file type") {
@@ -24,11 +24,11 @@ class FileMetadataTest extends SparkSuite {
     val result = fileMetadata.getSubDataSourcesMetadata
 
     assert(result.length == 3)
-    assert(result.forall(m => m("format") == "parquet"))
+    assert(result.forall(m => m.readOptions("format") == "parquet"))
     assert(result.forall(m =>
-      m("path").contains(s"$baseFolder/parquet/account") ||
-        m("path").contains(s"$baseFolder/parquet/customer") ||
-        m("path").contains(s"$baseFolder/parquet/transactions")))
+      m.readOptions("path").contains(s"$baseFolder/parquet/account") ||
+        m.readOptions("path").contains(s"$baseFolder/parquet/customer") ||
+        m.readOptions("path").contains(s"$baseFolder/parquet/transactions")))
   }
 
   test("Can get all distinct folder pathways for json file type") {
@@ -37,8 +37,8 @@ class FileMetadataTest extends SparkSuite {
     val result = fileMetadata.getSubDataSourcesMetadata
 
     assert(result.length == 2)
-    assert(result.forall(m => m("format") == "json"))
-    assert(result.forall(m => m("path").contains(s"$baseFolder/json") || m("path").contains(s"$baseFolder/csv/json")))
+    assert(result.forall(m => m.readOptions("format") == "json"))
+    assert(result.forall(m => m.readOptions("path").contains(s"$baseFolder/json") || m.readOptions("path").contains(s"$baseFolder/csv/json")))
   }
 
 }
