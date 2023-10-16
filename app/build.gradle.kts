@@ -42,7 +42,7 @@ configurations {
     all {
         resolutionStrategy {
             force("com.fasterxml.jackson.core:jackson-databind:2.15.2")
-            force("org.antlr:antlr4-runtime:4.9.3")
+            force("org.antlr:antlr4-runtime:4.13.1")
             force("org.antlr:antlr4-tool:4.9.3")
         }
     }
