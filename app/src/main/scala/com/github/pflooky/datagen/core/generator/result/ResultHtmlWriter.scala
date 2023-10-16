@@ -8,6 +8,7 @@ import com.github.pflooky.datagen.core.model.PlanImplicits.CountOps
 import com.github.pflooky.datagen.core.model.{DataSourceResult, DataSourceResultSummary, StepResultSummary, TaskResultSummary, ValidationConfigResult}
 import org.joda.time.DateTime
 
+import scala.math.BigDecimal.RoundingMode
 import scala.xml.{Node, NodeBuffer, NodeSeq}
 
 class ResultHtmlWriter {
@@ -590,7 +591,7 @@ class ResultHtmlWriter {
   private def checkMark(isSuccess: Boolean): NodeSeq = if (isSuccess) xml.EntityRef("#9989") else xml.EntityRef("#10060")
 
   private def progressBar(success: Long, total: Long): NodeBuffer = {
-    val percent = if (success > 0 && total > 0) BigDecimal(success.toDouble / total * 100).setScale(2).toString() else "0"
+    val percent = if (success > 0 && total > 0) BigDecimal(success.toDouble / total * 100).setScale(2, RoundingMode.HALF_UP).toString() else "0"
     val width = s"width:$percent%"
     val progressBarText = s"$success/$total ($percent%)"
     <div class="progress">
