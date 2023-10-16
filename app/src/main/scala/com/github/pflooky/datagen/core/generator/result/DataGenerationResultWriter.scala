@@ -54,17 +54,20 @@ class DataGenerationResultWriter(metadataConfig: MetadataConfig, foldersConfig: 
     val resources = List("main.css", "data_catering_transparent.svg")
     if (!foldersConfig.generatedReportsFolderPath.equalsIgnoreCase(DEFAULT_GENERATED_REPORTS_FOLDER_PATH)) {
       resources.foreach(resource => {
-        val tryLocalUri = Try(getClass.getResource(s"/report/$resource").toURI)
+        val defaultResourcePath = new Path(s"file:///$DEFAULT_GENERATED_REPORTS_FOLDER_PATH/$resource")
+        val tryLocalUri = Try(new Path(getClass.getResource(s"/report/$resource").toURI))
         val resourcePath = tryLocalUri match {
           case Failure(_) =>
-            s"$DEFAULT_GENERATED_REPORTS_FOLDER_PATH/$resource"
+            defaultResourcePath
           case Success(value) =>
-            value.toString
+            Try(value.getName) match {
+              case Failure(_) => defaultResourcePath
+              case Success(name) =>
+                if (name.startsWith("jar:")) defaultResourcePath else value
+            }
         }
-        fileSystem.copyFromLocalFile(
-          new Path(resourcePath),
-          new Path(s"${foldersConfig.generatedReportsFolderPath}/$resource")
-        )
+        val destination = s"file:///${foldersConfig.generatedReportsFolderPath}/$resource"
+        fileSystem.copyFromLocalFile(resourcePath, new Path(destination))
       })
     }
   }
