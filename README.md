@@ -13,6 +13,7 @@ Full docs can be found [**here**](https://pflooky.github.io/data-caterer-docs/).
 ![Data Caterer high level design](design/high-level-design.png "High level design")
 
 ## Generate data
+
 ### Quickest start
 1. `mkdir /tmp/datagen`
 2. `docker run -v /tmp/datagen:/opt/app/data-caterer pflookyy/data-caterer:0.1`
@@ -32,6 +33,7 @@ Full docs can be found [**here**](https://pflooky.github.io/data-caterer-docs/).
       2. Set task folder path via environment variable [TASK_FOLDER_PATH](app/src/main/resources/application.conf)
 
 ## Configuration/Customisation
+
 ### Configuration
 
 | Config                          | Default Value | Description                                                                                             |

@@ -62,6 +62,9 @@ case class MetadataSourceBuilder(metadataSource: MetadataSource = MarquezMetadat
   def openMetadata(url: String, authProvider: String, options: Map[String, String]): MetadataSourceBuilder =
     openMetadata(url, OPEN_METADATA_DEFAULT_API_VERSION, authProvider, options)
 
+  def openMetadataJava(url: String, authProvider: String, options: java.util.Map[String, String]): MetadataSourceBuilder =
+    openMetadata(url, OPEN_METADATA_DEFAULT_API_VERSION, authProvider, toScalaMap(options))
+
   def openApi(schemaLocation: String): MetadataSourceBuilder = {
     this
   }
