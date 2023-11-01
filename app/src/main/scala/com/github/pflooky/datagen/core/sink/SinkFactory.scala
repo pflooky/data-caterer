@@ -4,12 +4,15 @@ import com.github.pflooky.datacaterer.api.model.Constants.{DRIVER, FORMAT, HTTP,
 import com.github.pflooky.datacaterer.api.model.{FlagsConfig, MetadataConfig, Step}
 import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS, BATCH, DATA_CATERER_SITE_PRICING, DEFAULT_ROWS_PER_SECOND, FAILED, FINISHED, PER_COLUMN_INDEX_COL, REAL_TIME, STARTED}
 import com.github.pflooky.datagen.core.model.SinkResult
+import com.github.pflooky.datagen.core.sink.http.HttpSinkProcessor
+import com.github.pflooky.datagen.core.util.KryoSerializationWrapper
 import com.github.pflooky.datagen.core.util.MetadataUtil.getFieldMetadata
 import com.google.common.util.concurrent.RateLimiter
 import org.apache.log4j.Logger
-import org.apache.spark.sql.{DataFrame, DataFrameWriter, Dataset, Row, SaveMode, SparkSession}
+import org.apache.spark.sql.{DataFrame, DataFrameWriter, Dataset, Encoders, Row, SaveMode, SparkSession}
 
 import java.time.LocalDateTime
+import java.util.concurrent.CompletableFuture
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
@@ -127,12 +130,13 @@ class SinkFactory(
     val saveResult = new ListBuffer[Try[Unit]]()
     val permitsPerSecond = rowsPerSecond.toInt / df.rdd.getNumPartitions.toDouble
 
+    df.show(false)
     df.foreachPartition((partition: Iterator[Row]) => {
       val rateLimiter = RateLimiter.create(permitsPerSecond)
-      val part = partition.toList
+      val rows = partition.toList
       val sinkProcessor = SinkProcessor.getConnection(format, connectionConfig, step)
 
-      part.foreach(row => {
+      rows.foreach(row => {
         rateLimiter.acquire()
         saveResult.append(Try(sinkProcessor.pushRowToSink(row)))
       })

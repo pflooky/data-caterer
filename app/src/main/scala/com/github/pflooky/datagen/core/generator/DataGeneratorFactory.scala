@@ -1,14 +1,12 @@
 package com.github.pflooky.datagen.core.generator
 
-import com.github.pflooky.datacaterer.api.model.Constants.{METADATA_SOURCE_TYPE, SQL_GENERATOR}
+import com.github.pflooky.datacaterer.api.model.Constants.SQL_GENERATOR
 import com.github.pflooky.datacaterer.api.model.{Field, PerColumnCount, Step}
 import com.github.pflooky.datagen.core.exception.InvalidStepCountGeneratorConfigurationException
-import com.github.pflooky.datagen.core.generator.metadata.datasource.openlineage.OpenLineageMetadata
 import com.github.pflooky.datagen.core.generator.provider.DataGenerator
 import com.github.pflooky.datagen.core.model.Constants._
 import com.github.pflooky.datagen.core.model.PlanImplicits.FieldOps
 import com.github.pflooky.datagen.core.util.GeneratorUtil.{applySqlExpressions, getDataGenerator}
-import com.github.pflooky.datagen.core.util.MetadataUtil.mapToStructFields
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import net.datafaker.Faker
 import org.apache.spark.sql.expressions.UserDefinedFunction

@@ -5,7 +5,8 @@ import com.github.pflooky.datagen.core.exception.UnsupportedDataGeneratorType
 import com.github.pflooky.datagen.core.model.Constants._
 import com.github.pflooky.datagen.core.util.GeneratorUtil
 import net.datafaker.Faker
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.functions.{array_repeat, expr, lit}
+import org.apache.spark.sql.{Row, functions}
 import org.apache.spark.sql.types._
 
 import java.sql.{Date, Timestamp}
@@ -250,7 +251,7 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      s"TO_BINARY(ARRAY_JOIN(TRANSFORM(ARRAY_REPEAT(1, CAST($sqlRandom * ${maxLength - minLength} + $minLength AS INT)), x -> CHAR(ROUND($sqlRandom * 94 + 32, 0))), ''), 'utf-8')"
+      s"TO_BINARY(ARRAY_JOIN(TRANSFORM(ARRAY_REPEAT(1, CAST($sqlRandom * ${maxLength - minLength} + $minLength AS INT)), i -> CHAR(ROUND($sqlRandom * 94 + 32, 0))), ''), 'utf-8')"
     }
   }
 
@@ -287,7 +288,7 @@ object RandomDataGenerator {
         case _ =>
           getGeneratorForStructField(structField.copy(dataType = dataType)).generateSqlExpressionWrapper
       }
-      s"TRANSFORM(ARRAY_REPEAT(1, CAST($sqlRandom * ${arrayMaxSize - arrayMinSize} + $arrayMinSize AS INT)), x -> $nestedSqlExpressions)"
+      s"TRANSFORM(ARRAY_REPEAT(1, CAST($sqlRandom * ${arrayMaxSize - arrayMinSize} + $arrayMinSize AS INT)), i -> $nestedSqlExpressions)"
     }
   }
 

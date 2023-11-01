@@ -274,6 +274,17 @@ Data Caterer is able to support the following data sinks:
   - How will it interact with a data dictionary?
   - Updated schema/metadata
 
+## UI
+
+- UI for no/low code solution
+- Run as same image
+  - Option to execute jobs separately
+    - Interface through YAML files?
+- Pages
+  - Data sources
+  - Generation
+  - Validation
+
 ## Resources
 
 [Spark test data generator](https://github.com/apache/spark/blob/master/sql/catalyst/src/test/scala/org/apache/spark/sql/RandomDataGenerator.scala)

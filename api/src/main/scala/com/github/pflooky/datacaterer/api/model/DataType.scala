@@ -4,6 +4,27 @@ trait DataType {
   override def toString: String = getClass.getSimpleName.toLowerCase.stripSuffix("type$")
 }
 
+object DataType {
+  def fromString(str: String): DataType = {
+    str.toLowerCase match {
+      case "string" => StringType
+      case "int" | "integer" => IntegerType
+      case "long" => LongType
+      case "short" | "tinyint" | "smallint" => ShortType
+      case "decimal" => DecimalType
+      case "double" => DoubleType
+      case "float" => FloatType
+      case "date" => DateType
+      case "date-time" | "datetime" | "timestamp" => TimestampType
+      case "boolean" | "bool" => BooleanType
+      case "binary" => BinaryType
+      case "byte" => ByteType
+      case "array" | "list" | "seq" => ArrayType
+      case _ => StructType
+    }
+  }
+}
+
 class StringType extends DataType
 
 case object StringType extends StringType {
@@ -88,8 +109,13 @@ case object ArrayType extends ArrayType(StringType) {
   def instance: ArrayType.type = this
 }
 
-class StructType extends DataType
+class StructType(innerType: List[(String, DataType)] = List()) extends DataType{
+  override def toString: String = {
+    val innerStructType = innerType.map(t => s"${t._1}: ${t._2.toString}").mkString(",")
+    s"struct<$innerStructType>"
+  }
+}
 
-case object StructType extends StructType {
+case object StructType extends StructType(List()) {
   def instance: StructType.type = this
 }

@@ -84,7 +84,7 @@ dependencies {
     advancedImpl("javax.jms:javax.jms-api:2.0.1")
     advancedImpl("com.solacesystems:sol-jms:10.21.0")
     // metadata
-    advancedImpl("org.open-metadata:openmetadata-java-client:1.1.7") {
+    advancedImpl("org.open-metadata:openmetadata-java-client:1.1.7") {  //1.2.0 has component reliant on java 17
         exclude(group = "org.antlr")
     }
 

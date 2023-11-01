@@ -2,7 +2,7 @@
   "openapi": "3.0.1",
   "servers": [
     {
-      "url": "{scheme}://developer.uspto.gov/ds-api",
+      "url": "{scheme}://localhost:80/anything",
       "variables": {
         "scheme": {
           "description": "The Data Set API is accessible via https and http",
@@ -10,7 +10,7 @@
             "https",
             "http"
           ],
-          "default": "https"
+          "default": "http"
         }
       }
     }
@@ -188,7 +188,8 @@
                   "criteria": {
                     "description": "Uses Lucene Query Syntax in the format of propertyName:value, propertyName:[num1 TO num2] and date range format: propertyName:[yyyyMMdd TO yyyyMMdd]. In the response please see the 'docs' element which has the list of record objects. Each record structure would consist of all the fields and their corresponding values.",
                     "type": "string",
-                    "default": "*:*"
+                    "default": "*:*",
+                    "pattern": "([a-zA-Z]+|\\*):([a-zA-Z0-9 ]+|\\*|[0-9]+ TO [0-9]+|[0-9]{8} TO [0-9]{8})"
                   },
                   "start": {
                     "description": "Starting record number. Default value is 0.",

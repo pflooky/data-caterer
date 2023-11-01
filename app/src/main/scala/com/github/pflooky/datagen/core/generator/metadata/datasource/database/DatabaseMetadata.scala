@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.database
 
-import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_VALUE, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_QUERY, JDBC_TABLE, MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE, PRIMARY_KEY_POSITION, SOURCE_COLUMN_DATA_TYPE}
-import com.github.pflooky.datacaterer.api.model.ForeignKeyRelation
+import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_VALUE, FIELD_DATA_TYPE, IS_NULLABLE, IS_PRIMARY_KEY, IS_UNIQUE, JDBC, JDBC_QUERY, JDBC_TABLE, MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE, PRIMARY_KEY_POSITION, SOURCE_COLUMN_DATA_TYPE}
+import com.github.pflooky.datacaterer.api.model.{ForeignKeyRelation, StringType, StructType}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.{DataSourceMetadata, SubDataSourceMetadata}
 import com.github.pflooky.datagen.core.model.Constants.{METADATA_FILTER_OUT_SCHEMA, METADATA_FILTER_OUT_TABLE}
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
@@ -164,6 +164,27 @@ trait JdbcMetadata extends DatabaseMetadata {
   }
 }
 
-case class ColumnMetadata(column: String, dataSourceReadOptions: Map[String, String], metadata: Map[String, String])
+case class ColumnMetadata(
+                           column: String,
+                           dataSourceReadOptions: Map[String, String] = Map(),
+                           metadata: Map[String, String] = Map(),
+                           nestedColumns: List[ColumnMetadata] = List()
+                         ) {
+  def getNestedDataType: String = {
+    val baseType = metadata.getOrElse(FIELD_DATA_TYPE, StringType.toString)
+    if (nestedColumns.isEmpty) {
+      baseType
+    } else {
+      val innerType = nestedColumns.map(c => {
+        if (baseType.equalsIgnoreCase(StructType.toString)) {
+          s"${c.column}: ${c.getNestedDataType}"
+        } else {
+          c.getNestedDataType
+        }
+      }).mkString(",")
+      s"$baseType<$innerType>"
+    }
+  }
+}
 
 case class ForeignKeyRelationship(key: ForeignKeyRelation, foreignKey: ForeignKeyRelation)

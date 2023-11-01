@@ -6,24 +6,34 @@ import com.github.pflooky.datagen.core.sink.{RealTimeSinkProcessor, SinkProcesso
 import com.github.pflooky.datagen.core.util.HttpUtil.getAuthHeader
 import com.github.pflooky.datagen.core.util.RowUtil.getRowValue
 import io.netty.handler.codec.http.HttpHeaderNames
+import io.netty.handler.ssl.util.TrustManagerFactoryWrapper
+import io.netty.handler.ssl.{SslContext, SslContextBuilder}
+import org.apache.http.ssl.{SSLContexts, TrustStrategy}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.Row
-import org.asynchttpclient.{AsyncHttpClient, Request}
+import org.asynchttpclient.{AsyncHttpClient, AsyncHttpClientConfig, DefaultAsyncHttpClientConfig, Request, Response}
 import org.asynchttpclient.Dsl.asyncHttpClient
 
-import java.nio.charset.Charset
+import java.nio.charset.{Charset, StandardCharsets}
+import java.security.cert.X509Certificate
+import java.util.concurrent.CompletableFuture
+import javax.net.ssl.{TrustManager, X509TrustManager}
 import scala.collection.mutable
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
-object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] {
+object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] with Serializable {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
 
   var connectionConfig: Map[String, String] = _
   var step: Step = _
-  var http = asyncHttpClient
+  var http: AsyncHttpClient = buildClient
 
-  override def createConnections(connectionConfig: Map[String, String], step: Step): SinkProcessor[_] = this
+  override def createConnections(connectionConfig: Map[String, String], step: Step): SinkProcessor[_] = {
+    this.connectionConfig = connectionConfig
+    this.step = step
+    this
+  }
 
   override def createConnection(connectionConfig: Map[String, String], step: Step): Unit = {}
 
@@ -35,12 +45,24 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] {
   }
 
   override def close: Unit = {
-    //TODO hack to wait for all connections to be finished, hard to know as connections are used across all partitions
-    Thread.sleep(2000)
-    http.close()
+    Thread.sleep(1000)
+    val activeConnections = http.getClientStats.getTotalActiveConnectionCount
+    val idleConnections = http.getClientStats.getTotalIdleConnectionCount
+    if (activeConnections == 0 && idleConnections == 0) {
+      http.close()
+    } else {
+      close
+    }
   }
 
   override def pushRowToSink(row: Row): Unit = {
+    pushRowToSinkFuture(row)
+  }
+
+  private def pushRowToSinkFuture(row: Row): CompletableFuture[Response] = {
+    if (http.isClosed) {
+      http = buildClient
+    }
     val request = createHttpRequest(row)
     val completableFutureResp = http.executeRequest(request).toCompletableFuture
 
@@ -48,6 +70,7 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] {
       if (error == null) {
         LOGGER.debug(s"Successful HTTP request, url=${resp.getUri}, status-code=${resp.getStatusCode}, status-text=${resp.getStatusText}, " +
           s"response-body=${resp.getResponseBody}")
+        //TODO can save response body along with request in file for validations
       } else {
         LOGGER.error(s"Failed HTTP request, url=, message=${error.getMessage}")
       }
@@ -65,13 +88,38 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] {
     val basePrepareRequest = http.prepare(method, httpUrl)
       .setBody(body)
 
-    (getHeaders(headers) ++ Map(HttpHeaderNames.CONTENT_TYPE -> contentType))
-      .foldLeft(basePrepareRequest)((req, header) => req.addHeader(header._1, header._2))
+    (getHeaders(headers) ++ Map("content-type" -> contentType))
+      .foldLeft(basePrepareRequest)((req, header) => {
+        val tryAddHeader = Try(req.addHeader(header._1, header._2))
+        tryAddHeader match {
+          case Failure(exception) =>
+            val message = s"Failed to add header to HTTP request, exception=$exception"
+            LOGGER.error(message)
+            throw new RuntimeException(message, exception)
+          case Success(value) => value
+        }
+      })
     basePrepareRequest.build()
   }
 
   private def getHeaders(rowHeaders: mutable.WrappedArray[Row]): Map[String, String] = {
-    val baseHeaders = rowHeaders.map(r => (r.getAs[String]("key"), r.getAs[String]("value"))).toMap
+    val baseHeaders = rowHeaders.map(r => (
+      r.getAs[String]("key"),
+      r.getAs[String]("value")
+    )).toMap
     baseHeaders ++ getAuthHeader(connectionConfig)
+  }
+
+  private def buildClient: AsyncHttpClient = {
+    val trustManager = new X509TrustManager {
+      override def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
+
+      override def checkServerTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
+
+      override def getAcceptedIssuers: Array[X509Certificate] = null
+    }
+    val sslContext = SslContextBuilder.forClient().trustManager(trustManager).build()
+    val config = new DefaultAsyncHttpClientConfig.Builder().setSslContext(sslContext)
+    asyncHttpClient
   }
 }

@@ -1,8 +1,8 @@
 package com.github.pflooky.datacaterer.api
 
 import com.github.pflooky.datacaterer.api.converter.Converters.toScalaMap
-import com.github.pflooky.datacaterer.api.model.Constants.{METADATA_SOURCE_URL, OPEN_LINEAGE_DATASET, OPEN_LINEAGE_NAMESPACE, OPEN_METADATA_API_VERSION, OPEN_METADATA_AUTH_TYPE, OPEN_METADATA_DEFAULT_API_VERSION, OPEN_METADATA_HOST}
-import com.github.pflooky.datacaterer.api.model.{MarquezMetadataSource, MetadataSource, OpenMetadataSource}
+import com.github.pflooky.datacaterer.api.model.Constants.{METADATA_SOURCE_URL, OPEN_LINEAGE_DATASET, OPEN_LINEAGE_NAMESPACE, OPEN_METADATA_API_VERSION, OPEN_METADATA_AUTH_TYPE, OPEN_METADATA_AUTH_TYPE_OPEN_METADATA, OPEN_METADATA_DEFAULT_API_VERSION, OPEN_METADATA_HOST, OPEN_METADATA_JWT_TOKEN, SCHEMA_LOCATION}
+import com.github.pflooky.datacaterer.api.model.{MarquezMetadataSource, MetadataSource, OpenAPISource, OpenMetadataSource}
 import com.softwaremill.quicklens.ModifyPimp
 
 case class MetadataSourceBuilder(metadataSource: MetadataSource = MarquezMetadataSource()) {
@@ -54,18 +54,21 @@ case class MetadataSourceBuilder(metadataSource: MetadataSource = MarquezMetadat
    * options can contain additional authentication related configuration values.
    * Check under {{{Constants}}} openmetadata section for more details.
    *
-   * @param url
-   * @param authProvider
-   * @param options
+   * @param url URL to OpenMetadata server
+   * @param authProvider See above for list of auth providers
+   * @param options Additional auth configuration
    * @return
    */
   def openMetadata(url: String, authProvider: String, options: Map[String, String]): MetadataSourceBuilder =
     openMetadata(url, OPEN_METADATA_DEFAULT_API_VERSION, authProvider, options)
 
+  def openMetadataWithToken(url: String, openMetadataToken: String, options: Map[String, String] = Map()): MetadataSourceBuilder =
+    openMetadata(url, OPEN_METADATA_DEFAULT_API_VERSION, OPEN_METADATA_AUTH_TYPE_OPEN_METADATA, options ++ Map(OPEN_METADATA_JWT_TOKEN -> openMetadataToken))
+
   def openMetadataJava(url: String, authProvider: String, options: java.util.Map[String, String]): MetadataSourceBuilder =
     openMetadata(url, OPEN_METADATA_DEFAULT_API_VERSION, authProvider, toScalaMap(options))
 
   def openApi(schemaLocation: String): MetadataSourceBuilder = {
-    this
+    this.modify(_.metadataSource).setTo(OpenAPISource(Map(SCHEMA_LOCATION -> schemaLocation)))
   }
 }

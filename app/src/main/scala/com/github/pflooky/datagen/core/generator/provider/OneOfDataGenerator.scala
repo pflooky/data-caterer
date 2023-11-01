@@ -1,8 +1,10 @@
 package com.github.pflooky.datagen.core.generator.provider
 
-import com.github.pflooky.datacaterer.api.model.Constants.ONE_OF_GENERATOR
+import com.github.pflooky.datacaterer.api.model.Constants.{ONE_OF_GENERATOR, ONE_OF_GENERATOR_DELIMITER}
 import net.datafaker.Faker
 import org.apache.spark.sql.types.StructField
+
+import scala.util.{Failure, Success, Try}
 
 object OneOfDataGenerator {
 
@@ -26,7 +28,17 @@ object OneOfDataGenerator {
     }
 
     private def getOneOfList: Array[String] = {
-      structField.metadata.getStringArray(ONE_OF_GENERATOR)
+      val tryStringArray = Try(structField.metadata.getStringArray(ONE_OF_GENERATOR))
+      tryStringArray match {
+        case Failure(_) =>
+          val tryString = Try(structField.metadata.getString(ONE_OF_GENERATOR))
+          tryString match {
+            case Failure(exception) => throw new RuntimeException(s"Failed to get $ONE_OF_GENERATOR from field metadata, " +
+              s"field-name=${structField.name}, field-type=${structField.dataType.typeName}", exception)
+            case Success(value) => value.split(ONE_OF_GENERATOR_DELIMITER)
+          }
+        case Success(value) => value
+      }
     }
   }
 

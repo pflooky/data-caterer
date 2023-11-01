@@ -30,11 +30,15 @@ object Constants {
   lazy val RECORD_COUNT_GENERATOR_COL = "record_count_generator"
   lazy val INDEX_INC_COL = "__index_inc"
   lazy val REAL_TIME_BODY_COL = "value"
+  lazy val REAL_TIME_BODY_CONTENT_COL = "bodyContent"
   lazy val REAL_TIME_PARTITION_COL = "partition"
   lazy val REAL_TIME_HEADERS_COL = "headers"
   lazy val REAL_TIME_METHOD_COL = "method"
   lazy val REAL_TIME_CONTENT_TYPE_COL = "content_type"
   lazy val REAL_TIME_URL_COL = "url"
+  lazy val HTTP_HEADER_COL_PREFIX = "header"
+  lazy val HTTP_PATH_PARAM_COL_PREFIX = "pathParam"
+  lazy val HTTP_QUERY_PARAM_COL_PREFIX = "queryParam"
 
   //spark udf
   lazy val GENERATE_REGEX_UDF = "GENERATE_REGEX"

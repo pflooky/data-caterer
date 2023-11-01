@@ -3,9 +3,11 @@ package com.github.pflooky.datagen.core.generator.provider
 import com.github.pflooky.datacaterer.api.model.Constants.{ARRAY_MAXIMUM_LENGTH, ARRAY_MINIMUM_LENGTH, ENABLED_EDGE_CASE, ENABLED_NULL, IS_UNIQUE, PROBABILITY_OF_EDGE_CASE, PROBABILITY_OF_NULL, RANDOM_SEED, STATIC}
 import com.github.pflooky.datacaterer.api.model.generator.BaseGenerator
 import net.datafaker.Faker
-import org.apache.spark.sql.functions.{expr, rand, when}
+import org.apache.spark.sql.Column
+import org.apache.spark.sql.functions.{expr, lit, rand, when}
 import org.apache.spark.sql.types.StructField
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.language.higherKinds
 import scala.util.Random
@@ -30,9 +32,9 @@ trait DataGenerator[T] extends BaseGenerator[T] with Serializable {
     if (optStatic.isDefined) {
       return s"'${optStatic.get}'"
     }
-    val baseSqlExpression = generateSqlExpression
+    val baseSqlExpression = replaceLambdaFunction(generateSqlExpression)
     val caseRandom = optRandomSeed.map(s => rand(s)).getOrElse(rand())
-    (enabledEdgeCases, enabledNull) match {
+    val expression = (enabledEdgeCases, enabledNull) match {
       case (true, true) =>
         when(caseRandom.leq(probabilityOfEdgeCases), edgeCases(random.nextInt(edgeCases.size)))
           .otherwise(when(caseRandom.leq(probabilityOfEdgeCases + probabilityOfNull), null))
@@ -48,6 +50,7 @@ trait DataGenerator[T] extends BaseGenerator[T] with Serializable {
           .expr.sql
       case _ => baseSqlExpression
     }
+    replaceLambdaFunction(expression)
   }
 
   def generateWrapper(count: Int = 0): T = {
@@ -71,6 +74,17 @@ trait DataGenerator[T] extends BaseGenerator[T] with Serializable {
     } else {
       generatedValue
     }
+  }
+
+  @tailrec
+  private def replaceLambdaFunction(sql: String): String = {
+    val lambdaRegex = ".*lambdafunction\\((.+?), i\\).*".r.pattern
+    val matcher = lambdaRegex.matcher(sql)
+    if (matcher.matches()) {
+      val innerFunction = matcher.group(1)
+      val replace = sql.replace(s"lambdafunction($innerFunction, i)", s"i -> $innerFunction")
+      replaceLambdaFunction(replace)
+    } else sql
   }
 }
 

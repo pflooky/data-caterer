@@ -17,7 +17,7 @@
   },
   "servers": [
     {
-      "url": "https://petstore.swagger.io/v2"
+      "url": "http://localhost:80"
     }
   ],
   "paths": {
@@ -47,6 +47,25 @@
             "schema": {
               "type": "integer",
               "format": "int32"
+            }
+          },
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "description": "Content type of the request body",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["application/json", "application/xml"]
+            }
+          },
+          {
+            "name": "Content-Length",
+            "in": "header",
+            "description": "Content length of the request body",
+            "required": false,
+            "schema": {
+              "type": "integer"
             }
           }
         ],
@@ -208,16 +227,19 @@
         ]
       },
       "NewPet": {
-        "type": "object",
-        "required": [
-          "name"
-        ],
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "tag": {
-            "type": "string"
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            }
           }
         }
       },

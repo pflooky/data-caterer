@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.validator
 
-import com.github.pflooky.datacaterer.api.model.Constants.FORMAT
+import com.github.pflooky.datacaterer.api.model.Constants.{FORMAT, HTTP, JMS}
 import com.github.pflooky.datacaterer.api.model.{DataSourceValidation, ExpressionValidation, GroupByValidation, ValidationConfiguration}
 import com.github.pflooky.datagen.core.model.ValidationImplicits.{ValidationOps, WaitConditionOps}
 import com.github.pflooky.datagen.core.model.{DataSourceValidationResult, ValidationConfigResult}
@@ -67,12 +67,16 @@ class ValidationProcessor(
 
     val df = getDataFrame(dataSourceName, dataSourceValidation.options)
     val count = df.count()
-    val results = dataSourceValidation.validations.map(validBuilder => validBuilder.validation.validate(df, count))
-    df.unpersist()
-    LOGGER.debug(s"Finished data validations, name=${vc.name}," +
-      s"data-source-name=$dataSourceName, details=${dataSourceValidation.options}, num-validations=${dataSourceValidation.validations.size}")
-
-    DataSourceValidationResult(dataSourceName, dataSourceValidation.options, results)
+    if (count == 0) {
+      LOGGER.info("No data validations found")
+      DataSourceValidationResult(dataSourceName, dataSourceValidation.options, List())
+    } else {
+      val results = dataSourceValidation.validations.map(validBuilder => validBuilder.validation.validate(df, count))
+      df.unpersist()
+      LOGGER.debug(s"Finished data validations, name=${vc.name}," +
+        s"data-source-name=$dataSourceName, details=${dataSourceValidation.options}, num-validations=${dataSourceValidation.validations.size}")
+      DataSourceValidationResult(dataSourceName, dataSourceValidation.options, results)
+    }
   }
 
   private def getValidations: Array[ValidationConfiguration] = {
@@ -82,12 +86,17 @@ class ValidationProcessor(
   private def getDataFrame(dataSourceName: String, options: Map[String, String]): DataFrame = {
     val connectionConfig = connectionConfigsByName(dataSourceName)
     val format = connectionConfig(FORMAT)
-    val df = sparkSession.read
-      .format(format)
-      .options(connectionConfig ++ options)
-      .load()
-    if (!df.storageLevel.useMemory) df.cache()
-    df
+    if (format == HTTP || format == JMS) {
+      LOGGER.warn("No support for HTTP or JMS data validations, will skip validations")
+      sparkSession.emptyDataFrame
+    } else {
+      val df = sparkSession.read
+        .format(format)
+        .options(connectionConfig ++ options)
+        .load()
+      if (!df.storageLevel.useMemory) df.cache()
+      df
+    }
   }
 
   private def logValidationErrors(validationResults: List[ValidationConfigResult]): Unit = {

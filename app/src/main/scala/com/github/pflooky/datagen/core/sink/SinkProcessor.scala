@@ -7,7 +7,7 @@ import com.github.pflooky.datagen.core.sink.http.HttpSinkProcessor
 import com.github.pflooky.datagen.core.sink.jms.JmsSinkProcessor
 import org.apache.spark.sql.Row
 
-import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.{CompletableFuture, LinkedBlockingQueue}
 
 trait SinkProcessor[T] {
 

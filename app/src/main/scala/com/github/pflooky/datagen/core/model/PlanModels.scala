@@ -2,7 +2,7 @@ package com.github.pflooky.datagen.core.model
 
 import com.github.pflooky.datacaterer.api.PlanRun
 import com.github.pflooky.datacaterer.api.connection.ConnectionTaskBuilder
-import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_FIELD_NULLABLE, FOREIGN_KEY_DELIMITER, FOREIGN_KEY_DELIMITER_REGEX, IS_PRIMARY_KEY, IS_UNIQUE, MAXIMUM, MINIMUM, ONE_OF_GENERATOR, PRIMARY_KEY_POSITION, RANDOM_GENERATOR, STATIC}
+import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_FIELD_NULLABLE, FOREIGN_KEY_DELIMITER, FOREIGN_KEY_DELIMITER_REGEX, IS_PRIMARY_KEY, IS_UNIQUE, MAXIMUM, MINIMUM, ONE_OF_GENERATOR, PRIMARY_KEY_POSITION, RANDOM_GENERATOR, REGEX_GENERATOR, STATIC}
 import com.github.pflooky.datacaterer.api.model.{Count, Field, ForeignKeyRelation, Generator, PerColumnCount, Schema, SinkOptions, Step, Task}
 import com.github.pflooky.datagen.core.exception.InvalidFieldConfigurationException
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceDetail
@@ -198,12 +198,17 @@ object FieldHelper {
 
   def fromStructField(structField: StructField): Field = {
     val metadataOptions = MetadataUtil.metadataToMap(structField.metadata)
-    val generator = if (structField.metadata.contains(ONE_OF_GENERATOR)) {
-      Generator(ONE_OF_GENERATOR, metadataOptions)
+    val generatorType = if (structField.metadata.contains(ONE_OF_GENERATOR)) {
+      ONE_OF_GENERATOR
+    } else if (structField.metadata.contains(REGEX_GENERATOR)) {
+      REGEX_GENERATOR
     } else {
-      Generator(RANDOM_GENERATOR, metadataOptions)
+      RANDOM_GENERATOR
     }
-    Field(structField.name, Some(structField.dataType.sql.toLowerCase), Some(generator), structField.nullable)
+    val generator = Generator(generatorType, metadataOptions)
+    val optStatic = if (structField.metadata.contains(STATIC)) Some(structField.metadata.getString(STATIC)) else None
+    val optSchema = if (structField.dataType.typeName == "struct") Some(SchemaHelper.fromStructType(structField.dataType.asInstanceOf[StructType])) else None
+    Field(structField.name, Some(structField.dataType.sql.toLowerCase), Some(generator), structField.nullable, optStatic, optSchema)
   }
 }
 

@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.plan
 
 import com.github.pflooky.datacaterer.api.PlanRun
-import com.github.pflooky.datacaterer.api.model.Constants.{OPEN_METADATA_AUTH_TYPE_OPEN_METADATA, OPEN_METADATA_JWT_TOKEN, OPEN_METADATA_TABLE_FQN, SAVE_MODE}
+import com.github.pflooky.datacaterer.api.model.Constants.{OPEN_METADATA_AUTH_TYPE_OPEN_METADATA, OPEN_METADATA_DATABASE_SCHEMA, OPEN_METADATA_JWT_TOKEN, OPEN_METADATA_TABLE_FQN, SAVE_MODE}
 import com.github.pflooky.datacaterer.api.model.{ArrayType, DateType, DoubleType, IntegerType, TimestampType}
 import com.github.pflooky.datagen.core.util.{ObjectMapperUtil, SparkSuite}
 import org.junit.runner.RunWith
@@ -139,9 +139,10 @@ class PlanProcessorTest extends SparkSuite {
     execute(conf, jsonTask, csvTask)
   }
 
-  test("Can run Postgres plan run") {
-    //    PlanProcessor.determineAndExecutePlan(Some(new TestOpenMetadata()))
-    PlanProcessor.determineAndExecutePlan(Some(new TestPostgres()))
+  ignore("Can run Postgres plan run") {
+    PlanProcessor.determineAndExecutePlan(Some(new TestOpenMetadata()))
+    //    PlanProcessor.determineAndExecutePlan(Some(new TestPostgres()))
+    //    PlanProcessor.determineAndExecutePlan(Some(new TestOpenAPI()))
     //    PlanProcessor.determineAndExecutePlan(Some(new TestValidation()))
   }
 
@@ -171,17 +172,29 @@ class PlanProcessorTest extends SparkSuite {
   }
 
   class TestOpenMetadata extends PlanRun {
-    val csvTask = csv("my_csv", "/tmp/data/csv", Map("saveMode" -> "overwrite", "header" -> "true"))
+    val jsonTask = json("my_json", "/tmp/data/json", Map("saveMode" -> "overwrite"))
       .schema(metadataSource.openMetadata("http://localhost:8585/api", OPEN_METADATA_AUTH_TYPE_OPEN_METADATA,
         Map(
           OPEN_METADATA_JWT_TOKEN -> "abc123",
-          OPEN_METADATA_TABLE_FQN -> "sample_data.ecommerce_db.shopify.raw_product_catalog"
+          OPEN_METADATA_TABLE_FQN -> "sample_data.ecommerce_db.shopify.raw_customer"
         )))
+      .schema(field.name("customer").schema(field.name("sex").oneOf("M", "F")))
       .count(count.records(10))
 
     val conf = configuration.enableGeneratePlanAndTasks(true)
       .generatedReportsFolderPath("/Users/peter/code/spark-datagen/tmp/report")
 
-    execute(conf, csvTask)
+    execute(conf, jsonTask)
+  }
+
+  class TestOpenAPI extends PlanRun {
+    val httpTask = http("my_http")
+      .schema(metadataSource.openApi("/Users/peter/code/spark-datagen/app/src/test/resources/sample/http/openapi/petstore.json"))
+      .count(count.records(10))
+
+    val conf = configuration.enableGeneratePlanAndTasks(true)
+      .generatedReportsFolderPath("/Users/peter/code/spark-datagen/tmp/report")
+
+    execute(conf, httpTask)
   }
 }

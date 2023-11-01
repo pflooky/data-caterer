@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.openmetadata
 
 import com.github.pflooky.datacaterer.api.model.Constants.{SOURCE_COLUMN_DATA_TYPE, _}
-import com.github.pflooky.datacaterer.api.model.{BinaryType, BooleanType, ByteType, DataType, DateType, DecimalType, DoubleType, FloatType, IntegerType, LongType, ShortType, StringType, TimestampType}
+import com.github.pflooky.datacaterer.api.model.{ArrayType, BinaryType, BooleanType, ByteType, DataType, DateType, DecimalType, DoubleType, FloatType, IntegerType, LongType, ShortType, StringType, StructType, TimestampType}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ColumnMetadata
 import com.github.pflooky.datagen.core.generator.metadata.datasource.{DataSourceMetadata, SubDataSourceMetadata}
 import org.apache.log4j.Logger
@@ -22,6 +22,11 @@ case class OpenMetadataDataSourceMetadata(
                                            connectionConfig: Map[String, String],
                                          ) extends DataSourceMetadata {
   private val LOGGER = Logger.getLogger(getClass.getName)
+  private val DATA_TYPE_ARRAY_REGEX = "^array<(.+?)>$".r
+  private val DATA_TYPE_MAP_REGEX = "^map<(.+?)>$".r
+  private val DATA_TYPE_STRUCT_REGEX = "^struct<(.+?)>$".r
+  private val DATA_TYPE_CHAR_VAR_REGEX = "^character varying\\(([0-9]+)\\)$".r
+  private val DATA_TYPE_CHAR_REGEX = "^char\\(([0-9]+)\\)$".r
   private val AUTH_CONFIGURATION = List(
     OPEN_METADATA_BASIC_AUTH_USERNAME,
     OPEN_METADATA_BASIC_AUTH_PASSWORD,
@@ -78,12 +83,13 @@ case class OpenMetadataDataSourceMetadata(
 
       val columnMetadata = table.getColumns.asScala.map(col => {
         val dataType = dataTypeMapping(col)
+        val (miscMetadata, dataTypeWithMisc) = getMiscMetadata(col, dataType)
         val description = if (col.getDescription == null) "" else col.getDescription
         val metadata = Map(
-          FIELD_DATA_TYPE -> dataType.toString,
+          FIELD_DATA_TYPE -> dataTypeWithMisc.toString,
           FIELD_DESCRIPTION -> description,
           SOURCE_COLUMN_DATA_TYPE -> col.getDataType.getValue.toLowerCase
-        )
+        ) ++ miscMetadata
         ColumnMetadata(col.getName, allOptions, metadata)
       })
       val columnMetadataDataset = sparkSession.createDataset(columnMetadata)
@@ -91,6 +97,31 @@ case class OpenMetadataDataSourceMetadata(
     }).toArray
   }
 
+  private def getMiscMetadata(column: Column, dataType: DataType): (Map[String, String], DataType) = {
+    val (precisionScaleMeta, updatedDataType) = if (dataType.toString == DecimalType.toString) {
+      val precisionMap = Map(NUMERIC_PRECISION -> column.getPrecision.toString, NUMERIC_SCALE -> column.getScale.toString)
+      (precisionMap, new DecimalType(column.getPrecision, column.getScale))
+    } else (Map(), dataType)
+
+    val miscMetadata = if (column.getProfile != null) {
+      val profile = column.getProfile
+      val minMaxMetadata = dataType match {
+        case StringType => Map(MINIMUM_LENGTH -> profile.getMinLength, MAXIMUM_LENGTH -> profile.getMaxLength)
+        case DecimalType | IntegerType | DoubleType | ShortType | LongType | FloatType => Map(
+          MINIMUM -> profile.getMin, MAXIMUM -> profile.getMax, STANDARD_DEVIATION -> profile.getStddev, MEAN -> profile.getMean
+        )
+        case _ => Map[String, Any]()
+      }
+
+      val nullMetadata = if (profile.getNullCount > 0) Map(IS_NULLABLE -> "true", ENABLED_NULL -> "true") else Map(IS_NULLABLE -> "false")
+
+      (minMaxMetadata ++ nullMetadata).map(x => (x._1, x._2.toString))
+    } else Map()
+
+    (precisionScaleMeta ++ miscMetadata, updatedDataType)
+  }
+
+  //col.getDataTypeDisplay => array<struct<product_id:character varying(24),price:int,onsale:boolean,tax:int,weight:int,others:int,vendor:character varying(64), stock:int>>
   private def dataTypeMapping(col: Column): DataType = {
     col.getDataType match {
       case DataTypeEnum.NUMBER | DataTypeEnum.NUMERIC | DataTypeEnum.DOUBLE => DoubleType
@@ -109,7 +140,33 @@ case class OpenMetadataDataSourceMetadata(
            DataTypeEnum.MEDIUMTEXT => StringType
       case DataTypeEnum.DATE => DateType
       case DataTypeEnum.TIMESTAMP | DataTypeEnum.TIMESTAMPZ | DataTypeEnum.DATETIME | DataTypeEnum.TIME => TimestampType
+      case DataTypeEnum.ARRAY | DataTypeEnum.MAP | DataTypeEnum.STRUCT => getInnerDataType(col.getDataTypeDisplay)
       case _ => StringType
+    }
+  }
+
+  private def getInnerDataType(dataTypeDisplay: String): DataType = {
+    dataTypeDisplay match {
+      case DATA_TYPE_ARRAY_REGEX(innerType) => new ArrayType(getInnerDataType(innerType))
+      case DATA_TYPE_MAP_REGEX(innerType) =>
+        val spt = innerType.split(",")
+        val key = getInnerDataType(spt.head)
+        val value = getInnerDataType(spt.last)
+        new StructType(List("key" -> key, "value" -> value))
+      case DATA_TYPE_STRUCT_REGEX(innerType) =>
+        val keyValues = innerType.split(",").map(t => t.split(":"))
+        val mappedInnerType = keyValues.map(kv => (kv.head, getInnerDataType(kv.last))).toList
+        new StructType(mappedInnerType)
+      case x =>
+        val col = new Column
+        val openMetadataDataType = x match {
+          case DATA_TYPE_CHAR_VAR_REGEX(_) => DataTypeEnum.VARCHAR
+          case DATA_TYPE_CHAR_REGEX(_) => DataTypeEnum.CHAR
+          case _ => DataTypeEnum.fromValue(x.toUpperCase)
+        }
+        col.setDataType(openMetadataDataType)
+        col.setDataTypeDisplay(x)
+        dataTypeMapping(col)
     }
   }
 

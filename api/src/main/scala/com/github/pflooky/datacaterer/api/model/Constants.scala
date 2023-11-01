@@ -53,6 +53,8 @@ object Constants {
   lazy val HTTP_HEADER = "httpHeader"
 
   //field metadata
+  lazy val FIELD_DATA_TYPE = "type"
+  lazy val FIELD_DESCRIPTION = "description"
   lazy val RANDOM_SEED = "seed"
   lazy val ENABLED_NULL = "enableNull"
   lazy val PROBABILITY_OF_NULL = "nullProb"
@@ -90,6 +92,8 @@ object Constants {
   lazy val METADATA_IDENTIFIER = "metadataIdentifier"
   lazy val FIELD_LABEL = "label"
   lazy val IS_PII = "isPII"
+  lazy val HTTP_PARAMETER_TYPE = "httpParamType"
+  lazy val POST_SQL_EXPRESSION = "postSqlExpression"
 
   //field labels
   lazy val LABEL_NAME = "name"
@@ -212,6 +216,13 @@ object Constants {
   //kafka defaults
   lazy val DEFAULT_KAFKA_URL = "kafkaserver:9092"
 
+  //http defaults
+  lazy val DEFAULT_HTTP_HEADERS_INNER_DATA_TYPE = "struct<key: string, value: string>"
+  lazy val DEFAULT_HTTP_HEADERS_DATA_TYPE = s"array<$DEFAULT_HTTP_HEADERS_INNER_DATA_TYPE>"
+  lazy val HTTP_PATH_PARAMETER = "path"
+  lazy val HTTP_QUERY_PARAMETER = "query"
+  lazy val HTTP_HEADER_PARAMETER = "header"
+
   //foreign key defaults
   lazy val DEFAULT_FOREIGN_KEY_COLUMN = "default_column"
   lazy val FOREIGN_KEY_DELIMITER = "||"
@@ -234,6 +245,7 @@ object Constants {
 
   lazy val DEFAULT_FIELD_TYPE = "string"
   lazy val DEFAULT_FIELD_NULLABLE = true
+  lazy val ONE_OF_GENERATOR_DELIMITER = ","
 
   //generator defaults
   lazy val DEFAULT_GENERATOR_TYPE = "random"
@@ -253,6 +265,7 @@ object Constants {
   lazy val METADATA_SOURCE_URL = "metadata_source_url"
   lazy val MARQUEZ = "marquez"
   lazy val OPEN_METADATA = "open_metadata"
+  lazy val OPEN_API = "open_api"
   lazy val AMUNDSEN = "amundsen"
   lazy val DATAHUB = "datahub"
   lazy val DEFAULT_METADATA_SOURCE_NAME = "default_metadata_source"
@@ -261,8 +274,6 @@ object Constants {
   lazy val OPEN_LINEAGE_NAMESPACE = "namespace"
   lazy val OPEN_LINEAGE_DATASET = "dataset"
   lazy val DATASET_NAME = "name"
-  lazy val FIELD_DATA_TYPE = "type"
-  lazy val FIELD_DESCRIPTION = "description"
   lazy val FACET_DATA_SOURCE = "dataSource"
   lazy val DATA_SOURCE_NAME = "dataSourceName"
   lazy val URI = "uri"

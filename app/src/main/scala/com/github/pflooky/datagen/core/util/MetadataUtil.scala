@@ -15,7 +15,7 @@ import org.apache.log4j.Logger
 import org.apache.spark.sql.catalyst.TableIdentifier
 import org.apache.spark.sql.catalyst.catalog.CatalogColumnStat
 import org.apache.spark.sql.execution.command.AnalyzeColumnCommand
-import org.apache.spark.sql.types.{BinaryType, BooleanType, DataType, DateType, DecimalType, DoubleType, FloatType, IntegerType, LongType, Metadata, MetadataBuilder, ShortType, StringType, StructField, TimestampType}
+import org.apache.spark.sql.types.{BinaryType, BooleanType, DataType, DateType, DecimalType, DoubleType, FloatType, IntegerType, LongType, Metadata, MetadataBuilder, ShortType, StringType, StructField, StructType, TimestampType}
 import org.apache.spark.sql.{DataFrame, Dataset, Encoder, Encoders, SparkSession}
 
 import scala.util.{Failure, Success, Try}
@@ -81,8 +81,16 @@ object MetadataUtil {
   def mapToStructFields(additionalColumnMetadata: Dataset[ColumnMetadata], dataSourceReadOptions: Map[String, String]): Array[StructField] = {
     val colsMetadata = additionalColumnMetadata.collect()
     val matchedColMetadata = colsMetadata.filter(_.dataSourceReadOptions.getOrElse(METADATA_IDENTIFIER, "").equals(dataSourceReadOptions(METADATA_IDENTIFIER)))
-    matchedColMetadata.map(colMetadata => {
-      val dataType = DataType.fromDDL(colMetadata.metadata(FIELD_DATA_TYPE))
+    getStructFields(matchedColMetadata)
+  }
+
+  private def getStructFields(colsMetadata: Array[ColumnMetadata]): Array[StructField] = {
+    colsMetadata.map(colMetadata => {
+      //TODO get nested data type
+      var dataType = DataType.fromDDL(colMetadata.metadata.getOrElse(FIELD_DATA_TYPE, DEFAULT_FIELD_TYPE))
+      if (colMetadata.nestedColumns.nonEmpty && dataType.typeName == "struct") {
+        dataType = StructType(getStructFields(colMetadata.nestedColumns.toArray))
+      }
       val nullable = colMetadata.metadata.get(IS_NULLABLE).map(_.toBoolean).getOrElse(DEFAULT_FIELD_NULLABLE)
       val metadata = mapToMetadata(colMetadata.metadata)
       val baseField = StructField(colMetadata.column, dataType, nullable, metadata)
@@ -201,6 +209,7 @@ object MetadataUtil {
       case (Some(metadataSourceType), _) =>
         metadataSourceType.toLowerCase match {
           case MARQUEZ => Some(OpenLineageMetadata(connectionConfig._1, format, connectionConfig._2))
+          case OPEN_API => Some(HttpMetadata(connectionConfig._1, format, connectionConfig._2))
           case OPEN_METADATA => Some(OpenMetadataDataSourceMetadata(connectionConfig._1, format, connectionConfig._2))
           case metadataSourceType =>
             LOGGER.warn(s"Unsupported external metadata source, connection-name=${connectionConfig._1}, metadata-source-type=$metadataSourceType")
