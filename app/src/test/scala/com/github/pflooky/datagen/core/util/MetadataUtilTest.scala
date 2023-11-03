@@ -81,7 +81,7 @@ class MetadataUtilTest extends SparkSuite {
     val accountIdField = result.find(_.columnName == "account_id").get
     assertResult(Map("count" -> "4", "distinctCount" -> "4", "maxLen" -> "6", "avgLen" -> "6", "nullCount" -> "0"))(accountIdField.metadata)
     val nameField = result.find(_.columnName == "name").get
-    val nameMeta = Map("count" -> "4", "distinctCount" -> "2", "maxLen" -> "5", "avgLen" -> "5", "nullCount" -> "0", ONE_OF_GENERATOR -> Array("peter", "john"), "expression" -> "#{Name.name}")
+    val nameMeta = Map("count" -> "4", "distinctCount" -> "2", "maxLen" -> "5", "avgLen" -> "5", "nullCount" -> "0", ONE_OF_GENERATOR -> Array("peter", "john"))
     nameMeta.foreach(m => assertResult(m._2)(nameField.metadata(m._1)))
     val dateField = result.find(_.columnName == "open_date").get
     assertResult(Map("count" -> "4", "distinctCount" -> "4", "min" -> "2023-01-01", "max" -> "2023-02-04", "maxLen" -> "4", "avgLen" -> "4", "nullCount" -> "0"))(dateField.metadata)

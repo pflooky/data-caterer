@@ -139,6 +139,7 @@ object Constants {
   lazy val FAKER_EXPR_IPV4 = "Internet.ipV4Address"
   lazy val FAKER_EXPR_IPV6 = "Internet.ipV6Address"
   lazy val FAKER_EXPR_ADDRESS = "Address.fullAddress"
+  lazy val FAKER_EXPR_ADDRESS_POSTCODE = "Address.postcode"
 
   //generator types
   lazy val RANDOM_GENERATOR = "random"

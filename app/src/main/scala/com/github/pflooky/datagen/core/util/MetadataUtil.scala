@@ -69,7 +69,8 @@ object MetadataUtil {
           baseMetadata.putString(IS_UNIQUE, "true")
         }
       }
-      StructField(field.name, field.dataType, nullable, baseMetadata.build())
+      val updatedField = StructField(field.name, field.dataType, nullable, baseMetadata.build())
+      ExpressionPredictor.getFieldPredictions(updatedField)
     })
 
     if (sparkSession.catalog.tableExists(TEMP_CACHED_TABLE_NAME)) {
@@ -94,11 +95,7 @@ object MetadataUtil {
       val nullable = colMetadata.metadata.get(IS_NULLABLE).map(_.toBoolean).getOrElse(DEFAULT_FIELD_NULLABLE)
       val metadata = mapToMetadata(colMetadata.metadata)
       val baseField = StructField(colMetadata.column, dataType, nullable, metadata)
-      val optFieldPrediction = ExpressionPredictor.tryGetFieldPrediction(baseField)
-      optFieldPrediction.map(fieldPrediction => {
-        val metadataWithFieldPred = mapToMetadata(colMetadata.metadata ++ fieldPrediction.toMap)
-        StructField(baseField.name, dataType, nullable, metadataWithFieldPred)
-      }).getOrElse(baseField)
+      ExpressionPredictor.getFieldPredictions(baseField)
     })
   }
 
@@ -119,9 +116,7 @@ object MetadataUtil {
       val columnName = x._1.name
       val statisticsMap = columnStatToMap(x._2.toCatalogColumnStat(columnName, x._1.dataType)) ++ Map(ROW_COUNT -> rowCount.toString)
       val optOneOfColumn = determineIfOneOfColumn(sourceData, columnName, statisticsMap, metadataConfig)
-      val optFakerExpression = ExpressionPredictor.tryGetFieldPrediction(sourceData.schema.fields.find(_.name == columnName).get)
-      val optionalMetadataMap = optOneOfColumn.map(oneOf => Map(ONE_OF_GENERATOR -> oneOf)).getOrElse(Map()) ++
-        optFakerExpression.map(_.toMap).getOrElse(Map())
+      val optionalMetadataMap = optOneOfColumn.map(oneOf => Map(ONE_OF_GENERATOR -> oneOf)).getOrElse(Map())
       val statWithOptionalMetadata = statisticsMap ++ optionalMetadataMap
 
       LOGGER.debug(s"Column summary statistics, name=${dataSourceMetadata.name}, format=${dataSourceMetadata.format}, column-name=$columnName, " +
@@ -268,4 +263,4 @@ object MetadataUtil {
 }
 
 
-case class DataProfilingMetadata(columnName: String, metadata: Map[String, Any])
+case class DataProfilingMetadata(columnName: String, metadata: Map[String, Any], nestedProfiling: List[DataProfilingMetadata] = List())

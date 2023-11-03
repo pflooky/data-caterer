@@ -1,10 +1,11 @@
 package com.github.pflooky.datagen.core.generator.metadata
 
-import com.github.pflooky.datacaterer.api.model.Constants.{FAKER_EXPR_ADDRESS, FAKER_EXPR_APP_VERSION, FAKER_EXPR_CAPITAL, FAKER_EXPR_CITY, FAKER_EXPR_COUNTRY, FAKER_EXPR_COUNTRY_CODE, FAKER_EXPR_CREDIT_CARD, FAKER_EXPR_CURRENCY, FAKER_EXPR_CURRENCY_CODE, FAKER_EXPR_EMAIL, FAKER_EXPR_FIRST_NAME, FAKER_EXPR_FOOD, FAKER_EXPR_FOOD_INGREDIENT, FAKER_EXPR_IPV4, FAKER_EXPR_IPV6, FAKER_EXPR_JOB_FIELD, FAKER_EXPR_JOB_POSITION, FAKER_EXPR_JOB_TITLE, FAKER_EXPR_LANGUAGE, FAKER_EXPR_LAST_NAME, FAKER_EXPR_MAC_ADDRESS, FAKER_EXPR_NAME, FAKER_EXPR_NATIONALITY, FAKER_EXPR_PAYMENT_METHODS, FAKER_EXPR_PHONE, FAKER_EXPR_RELATIONSHIP, FAKER_EXPR_USERNAME, FAKER_EXPR_WEATHER, LABEL_ADDRESS, LABEL_APP, LABEL_FOOD, LABEL_INTERNET, LABEL_JOB, LABEL_MONEY, LABEL_NAME, LABEL_NATION, LABEL_PHONE, LABEL_RELATIONSHIP, LABEL_USERNAME, LABEL_WEATHER}
+import com.github.pflooky.datacaterer.api.model.Constants._
+import com.github.pflooky.datacaterer.api.model.{DateType, TimestampType}
 import com.github.pflooky.datagen.core.model.FieldPrediction
 import net.datafaker.providers.base.AbstractProvider
 import org.apache.log4j.Logger
-import org.apache.spark.sql.types.{StringType, StructField}
+import org.apache.spark.sql.types.{ArrayType, DataType, MetadataBuilder, StringType, StructField, StructType}
 import org.reflections.Reflections
 
 import scala.collection.JavaConverters.asScalaSetConverter
@@ -24,6 +25,45 @@ object ExpressionPredictor {
     }).toList
   }
 
+  def getFieldPredictions(structField: StructField): StructField = {
+    if (structField.dataType.typeName == "struct") {
+      val updatedDataType: StructType = structTypeWithFieldPredictions(structField.dataType)
+      StructField(structField.name, updatedDataType, structField.nullable, structField.metadata)
+    } else if (structField.dataType.typeName == "array") {
+      val nestedType = structField.dataType.asInstanceOf[ArrayType].elementType
+      if (nestedType.typeName == "struct") {
+        val updatedNestedDataType = structTypeWithFieldPredictions(nestedType)
+        val updatedArrayType = ArrayType(updatedNestedDataType)
+        StructField(structField.name, updatedArrayType, structField.nullable, structField.metadata)
+      } else {
+        structField
+      }
+    } else if (structField.dataType.typeName == "string") {
+      val optFieldPrediction = tryGetFieldPrediction(structField)
+      val metadata = optFieldPrediction.map(prediction => {
+        val metadataBuilder = new MetadataBuilder().withMetadata(structField.metadata)
+        prediction.toMap.foreach(p => metadataBuilder.putString(p._1, p._2))
+        metadataBuilder.build()
+      }).getOrElse(structField.metadata)
+      val updatedDataType = if (metadata.contains(FIELD_DATA_TYPE) && metadata.getString(FIELD_DATA_TYPE) != "string") {
+        DataType.fromDDL(metadata.getString(FIELD_DATA_TYPE))
+      } else {
+        structField.dataType
+      }
+      StructField(structField.name, updatedDataType, structField.nullable, metadata)
+    } else {
+      structField
+    }
+  }
+
+  private def structTypeWithFieldPredictions(dataType: DataType): StructType = {
+    val nestedFields = dataType.asInstanceOf[StructType].fields
+    val updatedFields = nestedFields.map(field => {
+      getFieldPredictions(field)
+    })
+    StructType(updatedFields)
+  }
+
   def tryGetFieldPrediction(structField: StructField): Option[FieldPrediction] = {
     if (structField.dataType == StringType) {
       val cleanFieldName = structField.name.toLowerCase.replaceAll("[^a-z0-9]", "")
@@ -32,6 +72,7 @@ object ExpressionPredictor {
         case "lastname" => Some(FieldPrediction(FAKER_EXPR_LAST_NAME, LABEL_NAME, true))
         case "username" => Some(FieldPrediction(FAKER_EXPR_USERNAME, LABEL_USERNAME, true))
         case "name" | "fullname" => Some(FieldPrediction(FAKER_EXPR_NAME, LABEL_NAME, true))
+        case "postcode" => Some(FieldPrediction(FAKER_EXPR_ADDRESS_POSTCODE, LABEL_ADDRESS, false))
         case "city" => Some(FieldPrediction(FAKER_EXPR_CITY, LABEL_ADDRESS, false))
         case "country" => Some(FieldPrediction(FAKER_EXPR_COUNTRY, LABEL_ADDRESS, false))
         case "countrycode" => Some(FieldPrediction(FAKER_EXPR_COUNTRY_CODE, LABEL_ADDRESS, false))
@@ -56,6 +97,8 @@ object ExpressionPredictor {
         case x if x.contains("ipv4") => Some(FieldPrediction(FAKER_EXPR_IPV4, LABEL_INTERNET, true))
         case x if x.contains("ipv6") => Some(FieldPrediction(FAKER_EXPR_IPV6, LABEL_INTERNET, true))
         case x if x.contains("address") => Some(FieldPrediction(FAKER_EXPR_ADDRESS, LABEL_ADDRESS, true))
+        case x if x.contains("datetime") => Some(FieldPrediction("", "", false, Map(FIELD_DATA_TYPE -> TimestampType.toString)))
+        case x if x.contains("date") => Some(FieldPrediction("", "", false, Map(FIELD_DATA_TYPE -> DateType.toString)))
         case _ => None
       }
       if (optExpression.isDefined) {

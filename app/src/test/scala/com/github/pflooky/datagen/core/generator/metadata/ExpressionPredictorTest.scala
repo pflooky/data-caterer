@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.metadata
 
-import com.github.pflooky.datacaterer.api.model.Constants.{LABEL_ADDRESS, LABEL_APP, LABEL_FOOD, LABEL_INTERNET, LABEL_JOB, LABEL_MONEY, LABEL_NAME, LABEL_NATION, LABEL_PHONE, LABEL_RELATIONSHIP, LABEL_USERNAME, LABEL_WEATHER}
-import org.apache.spark.sql.types.{StringType, StructField}
+import com.github.pflooky.datacaterer.api.model.Constants.{EXPRESSION, FIELD_LABEL, IS_PII, LABEL_ADDRESS, LABEL_APP, LABEL_FOOD, LABEL_INTERNET, LABEL_JOB, LABEL_MONEY, LABEL_NAME, LABEL_NATION, LABEL_PHONE, LABEL_RELATIONSHIP, LABEL_USERNAME, LABEL_WEATHER}
+import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.junit.runner.RunWith
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatestplus.junit.JUnitRunner
@@ -16,6 +16,23 @@ class ExpressionPredictorTest extends AnyFunSuite {
     val testResourcesFolder = getClass.getResource("/datafaker").getPath
     val file = Paths.get(s"$testResourcesFolder/expressions.txt")
     Files.write(file, allExpressions.mkString("\n").getBytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+  }
+
+  test("When given field that has nested fields, generate predictions for nested fields as well") {
+    val nestedFields = Array(StructField("firstName", StringType), StructField("my_custom_field", StringType))
+    val structType = StructType(nestedFields)
+    val baseField = StructField("my_nested_struct", structType)
+
+    val result = ExpressionPredictor.getFieldPredictions(baseField)
+
+    assert(result.dataType.typeName == "struct")
+    val resNested = result.dataType.asInstanceOf[StructType].fields
+    assert(resNested.length == 2)
+    assert(resNested.exists(_.name == "firstName"))
+    assert(resNested.filter(_.name == "firstName").head.metadata.getString(EXPRESSION) == "#{Name.firstname}")
+    assert(resNested.filter(_.name == "firstName").head.metadata.getString(FIELD_LABEL) == LABEL_NAME)
+    assert(resNested.filter(_.name == "firstName").head.metadata.getString(IS_PII) == "true")
+    assert(resNested.exists(_.name == "my_custom_field"))
   }
 
   test("When given field with name first_name, use first name expression") {

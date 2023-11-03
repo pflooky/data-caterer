@@ -8,6 +8,7 @@ build
 *.iml
 *.ipr
 *.iws
+tmp
 
 app/out
 app/src/test/resources/sample/parquet

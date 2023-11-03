@@ -207,7 +207,13 @@ object FieldHelper {
     }
     val generator = Generator(generatorType, metadataOptions)
     val optStatic = if (structField.metadata.contains(STATIC)) Some(structField.metadata.getString(STATIC)) else None
-    val optSchema = if (structField.dataType.typeName == "struct") Some(SchemaHelper.fromStructType(structField.dataType.asInstanceOf[StructType])) else None
+    val optSchema = if (structField.dataType.typeName == "struct") {
+      Some(SchemaHelper.fromStructType(structField.dataType.asInstanceOf[StructType]))
+    } else if (structField.dataType.typeName == "array" && structField.dataType.asInstanceOf[ArrayType].elementType.typeName == "struct") {
+      Some(SchemaHelper.fromStructType(structField.dataType.asInstanceOf[ArrayType].elementType.asInstanceOf[StructType]))
+    } else {
+      None
+    }
     Field(structField.name, Some(structField.dataType.sql.toLowerCase), Some(generator), structField.nullable, optStatic, optSchema)
   }
 }
