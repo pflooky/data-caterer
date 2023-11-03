@@ -330,4 +330,7 @@ object Constants {
   lazy val VALIDATION_EXPRESSION = "expr"
   lazy val VALIDATION_GROUP_BY = "groupBy"
   lazy val VALIDATION_UNIQUE = "unique"
+
+  //trial
+  lazy val API_KEY = "API_KEY"
 }

@@ -100,6 +100,10 @@ java {
     withSourcesJar()
 }
 
+tasks.withType<ScalaCompile> {
+    targetCompatibility = "11"
+}
+
 tasks.shadowJar {
     archiveBaseName.set("datacaterer")
     archiveAppendix.set("api")

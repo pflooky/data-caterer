@@ -21,7 +21,8 @@ if [[ "$build_app" -ne 0 ]] ; then
 fi
 
 echo "Creating advanced jar"
-./gradlew -PapplicationType=advanced advancedJar -x shadowJar
+./gradlew -PapplicationType=advanced advancedJar -x shadowJar -x test
+./gradlew -PapplicationType=trial advancedTrialJar -x shadowJar -x test
 
 docker run --privileged --rm tonistiigi/binfmt --install all
 docker buildx create --use --name builder
@@ -38,3 +39,9 @@ docker buildx build --platform $platforms \
   --build-arg "APP_VERSION=$version" \
   --build-arg "SPARK_VERSION=$sparkVersion" \
   -t datacatering/data-caterer:$version --push .
+
+docker buildx build --platform $platforms \
+  --build-arg "APP_TYPE=trial" \
+  --build-arg "APP_VERSION=$version" \
+  --build-arg "SPARK_VERSION=$sparkVersion" \
+  -t datacatering/data-caterer-trial:$version --push .

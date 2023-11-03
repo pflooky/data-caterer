@@ -31,6 +31,10 @@ repositories {
     }
 }
 
+tasks.withType<ScalaCompile> {
+    targetCompatibility = "11"
+}
+
 val basicImpl: Configuration by configurations.creating
 val advancedImpl: Configuration by configurations.creating
 
@@ -190,9 +194,23 @@ tasks.register<ShadowJar>("advancedJar") {
     relocate("com.google.common", "shadow.com.google.common")
 }
 
+tasks.register<ShadowJar>("advancedTrialJar") {
+    from(project.sourceSets.main.get().output)
+    configurations = listOf(basicImpl, advancedImpl)
+    archiveBaseName.set("datacaterer")
+    archiveAppendix.set("trial")
+    archiveVersion.set(project.version.toString())
+    isZip64 = true
+    exclude("META-INF/INDEX.LIST", "META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "module-info.class")
+    dependencies {
+        exclude(dependency(project.dependencies.gradleApi()))
+    }
+    relocate("com.google.common", "shadow.com.google.common")
+}
+
 tasks.register("defineApplicationType") {
-    val applicationType = providers.gradleProperty("applicationType").getOrElse("basic")
-    if (applicationType.lowercase() == "advanced") setApplicationFlags(false) else setApplicationFlags(true)
+    val applicationType = providers.gradleProperty("applicationType").getOrElse("basic").lowercase()
+    setApplicationFlags(applicationType)
 }
 
 tasks.compileScala {
@@ -209,20 +227,21 @@ configure<ScoverageExtension> {
     excludedPackages.add("com.github.pflooky.datagen.core.exception.*")
 }
 
-fun setApplicationFlags(isBasicBuild: Boolean) {
+fun setApplicationFlags(applicationType: String) {
     val configParserFile = file("src/main/scala/com/github/pflooky/datagen/core/config/ConfigParser.scala")
     val mappedConfigParserLines = configParserFile.readLines()
         .map { line ->
-            if (line.contains("val applicationType") && line.contains("advanced") && isBasicBuild) {
-                line.replace("advanced", "basic")
-            } else if (line.contains("val applicationType") && line.contains("basic") && !isBasicBuild) {
-                line.replace("basic", "advanced")
-            } else line
+            val replaceRegex = "= .*$".toRegex()
+            if (line.contains("val applicationType")) {
+                line.replace(replaceRegex, "= \"$applicationType\"")
+            } else {
+                line
+            }
         }
     configParserFile.writeText(mappedConfigParserLines.joinToString("\n"))
 
     val dataSourceRegisterFile = file("src/main/resources/META-INF/services/org.apache.spark.sql.sources.DataSourceRegister")
-    if (isBasicBuild) {
+    if (applicationType == "basic") {
         dataSourceRegisterFile.writeText("")
     } else {
         dataSourceRegisterFile.writeText("org.apache.spark.sql.kafka010.KafkaSourceProvider")
