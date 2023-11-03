@@ -109,7 +109,7 @@ case object ArrayType extends ArrayType(StringType) {
   def instance: ArrayType.type = this
 }
 
-class StructType(innerType: List[(String, DataType)] = List()) extends DataType{
+class StructType(innerType: List[(String, DataType)] = List()) extends DataType {
   override def toString: String = {
     val innerStructType = innerType.map(t => s"${t._1}: ${t._2.toString}").mkString(",")
     s"struct<$innerStructType>"

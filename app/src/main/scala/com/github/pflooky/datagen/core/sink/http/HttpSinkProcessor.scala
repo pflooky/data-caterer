@@ -5,19 +5,16 @@ import com.github.pflooky.datagen.core.model.Constants.{DEFAULT_HTTP_CONTENT_TYP
 import com.github.pflooky.datagen.core.sink.{RealTimeSinkProcessor, SinkProcessor}
 import com.github.pflooky.datagen.core.util.HttpUtil.getAuthHeader
 import com.github.pflooky.datagen.core.util.RowUtil.getRowValue
-import io.netty.handler.codec.http.HttpHeaderNames
-import io.netty.handler.ssl.util.TrustManagerFactoryWrapper
-import io.netty.handler.ssl.{SslContext, SslContextBuilder}
-import org.apache.http.ssl.{SSLContexts, TrustStrategy}
+import io.netty.handler.ssl.SslContextBuilder
 import org.apache.log4j.Logger
 import org.apache.spark.sql.Row
-import org.asynchttpclient.{AsyncHttpClient, AsyncHttpClientConfig, DefaultAsyncHttpClientConfig, Request, Response}
 import org.asynchttpclient.Dsl.asyncHttpClient
+import org.asynchttpclient.{AsyncHttpClient, DefaultAsyncHttpClientConfig, Request, Response}
 
-import java.nio.charset.{Charset, StandardCharsets}
 import java.security.cert.X509Certificate
 import java.util.concurrent.CompletableFuture
-import javax.net.ssl.{TrustManager, X509TrustManager}
+import javax.net.ssl.{SSLContext, X509TrustManager}
+import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
@@ -45,13 +42,21 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] with Serializable {
   }
 
   override def close: Unit = {
+    close(5)
+  }
+
+  @tailrec
+  def close(numRetry: Int): Unit = {
     Thread.sleep(1000)
     val activeConnections = http.getClientStats.getTotalActiveConnectionCount
     val idleConnections = http.getClientStats.getTotalIdleConnectionCount
-    if (activeConnections == 0 && idleConnections == 0) {
+    LOGGER.debug(s"HTTP active connections: $activeConnections, idle connections: $idleConnections")
+    if ((activeConnections == 0 && idleConnections == 0) || numRetry == 0) {
+      LOGGER.debug(s"Closing HTTP connection now, remaining-retries=$numRetry")
       http.close()
     } else {
-      close
+      LOGGER.debug(s"Waiting until 0 active and idle connections, remaining-retries=$numRetry")
+      close(numRetry - 1)
     }
   }
 
@@ -72,7 +77,7 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] with Serializable {
           s"response-body=${resp.getResponseBody}")
         //TODO can save response body along with request in file for validations
       } else {
-        LOGGER.error(s"Failed HTTP request, url=, message=${error.getMessage}")
+        LOGGER.error(s"Failed HTTP request, url=${resp.getUri}, message=${error.getMessage}", error)
       }
     )
   }
@@ -111,15 +116,16 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] with Serializable {
   }
 
   private def buildClient: AsyncHttpClient = {
-    val trustManager = new X509TrustManager {
+    val trustManager = new X509TrustManager() {
       override def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
 
       override def checkServerTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
 
-      override def getAcceptedIssuers: Array[X509Certificate] = null
+      override def getAcceptedIssuers: Array[X509Certificate] = Array()
     }
     val sslContext = SslContextBuilder.forClient().trustManager(trustManager).build()
-    val config = new DefaultAsyncHttpClientConfig.Builder().setSslContext(sslContext)
-    asyncHttpClient
+    val config = new DefaultAsyncHttpClientConfig.Builder().setSslContext(sslContext).build()
+//    asyncHttpClient(config)
+    asyncHttpClient()
   }
 }

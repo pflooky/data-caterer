@@ -6,6 +6,7 @@ import com.github.pflooky.datacaterer.api.model.DataCatererConfiguration
 import com.github.pflooky.datagen.core.config.ConfigParser
 import com.github.pflooky.datagen.core.generator.DataGeneratorProcessor
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadataFactory
+import com.github.pflooky.datagen.core.model.Constants.TRIAL_APPLICATION
 import com.github.pflooky.datagen.core.util.{SparkProvider, TrialUtil}
 import org.apache.spark.sql.SparkSession
 
@@ -62,6 +63,8 @@ object PlanProcessor {
       case (_, Some(plan)) => dataGeneratorProcessor.generateData(plan._plan, plan._tasks, Some(plan._validations))
       case _ => dataGeneratorProcessor.generateData()
     }
+    sparkSession.close()
+    System.exit(0)
   }
 
   private def getPlanClass: Option[String] = {
@@ -75,7 +78,7 @@ object PlanProcessor {
   }
 
   private def isTrialValid: Boolean = {
-    if (ConfigParser.applicationType == "trial") {
+    if (ConfigParser.applicationType == TRIAL_APPLICATION) {
       TrialUtil.checkApiKey()
     } else true
   }

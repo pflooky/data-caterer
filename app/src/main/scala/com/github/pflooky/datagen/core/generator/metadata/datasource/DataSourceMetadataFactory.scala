@@ -6,7 +6,7 @@ import com.github.pflooky.datagen.core.config.ConfigParser
 import com.github.pflooky.datagen.core.generator.metadata.PlanGenerator.writeToFiles
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.{ColumnMetadata, ForeignKeyRelationship}
 import com.github.pflooky.datagen.core.generator.metadata.validation.ValidationPredictor
-import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING}
+import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING, TRIAL_APPLICATION}
 import com.github.pflooky.datagen.core.model.{TaskHelper, ValidationConfigurationHelper}
 import com.github.pflooky.datagen.core.util.MetadataUtil.getMetadataFromConnectionConfig
 import com.github.pflooky.datagen.core.util.{ForeignKeyUtil, MetadataUtil}
@@ -22,7 +22,8 @@ class DataSourceMetadataFactory(dataCatererConfiguration: DataCatererConfigurati
   private val applicationType = ConfigParser.applicationType
 
   def extractAllDataSourceMetadata(optPlanRun: Option[PlanRun]): Option[(Plan, List[Task], ValidationConfiguration)] = {
-    if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION) && flagsConfig.enableGeneratePlanAndTasks) {
+    if ((applicationType.equalsIgnoreCase(ADVANCED_APPLICATION) || applicationType.equalsIgnoreCase(TRIAL_APPLICATION)) &&
+      flagsConfig.enableGeneratePlanAndTasks) {
       LOGGER.info("Attempting to extract all data source metadata as defined in connection configurations in application config")
       val connectionMetadata = dataCatererConfiguration.connectionConfigByName.map(getMetadataFromConnectionConfig).filter(_.isDefined).map(_.get).toList
 

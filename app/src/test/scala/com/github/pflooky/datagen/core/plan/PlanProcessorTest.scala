@@ -140,9 +140,9 @@ class PlanProcessorTest extends SparkSuite {
   }
 
   ignore("Can run Postgres plan run") {
-    PlanProcessor.determineAndExecutePlan(Some(new TestOpenMetadata()))
+//    PlanProcessor.determineAndExecutePlan(Some(new TestOpenMetadata()))
     //    PlanProcessor.determineAndExecutePlan(Some(new TestPostgres()))
-    //    PlanProcessor.determineAndExecutePlan(Some(new TestOpenAPI()))
+        PlanProcessor.determineAndExecutePlan(Some(new TestOpenAPI()))
     //    PlanProcessor.determineAndExecutePlan(Some(new TestValidation()))
   }
 

@@ -13,6 +13,7 @@ import org.apache.log4j.Logger
 
 import scala.annotation.tailrec
 import scala.collection.JavaConverters.{asScalaBufferConverter, asScalaSetConverter, mapAsScalaMapConverter}
+import scala.util.{Failure, Success, Try}
 
 class OpenAPIConverter(openAPI: OpenAPI = new OpenAPI()) {
 
@@ -52,8 +53,14 @@ class OpenAPIConverter(openAPI: OpenAPI = new OpenAPI()) {
           LOGGER.warn(s"Unsupported request body content type, defaulting to 'application/json', content-type=$x")
           s"TO_JSON($REAL_TIME_BODY_CONTENT_COL)"
       }
-      val bodyContentColsDataType = columnsMetadata.map(_.metadata(FIELD_DATA_TYPE)).mkString(",")
-      val bodyContentDataType = if (columnsMetadata.size > 1) s"struct<$bodyContentColsDataType>" else bodyContentColsDataType
+      val bodyContentDataType = if (columnsMetadata.size > 1) {
+        val bodyContentColsDataType = columnsMetadata.map(c => s"${c.column}: ${c.metadata(FIELD_DATA_TYPE)}").mkString(",")
+        s"struct<$bodyContentColsDataType>"
+      } else if (columnsMetadata.size == 1) {
+        columnsMetadata.head.metadata(FIELD_DATA_TYPE)
+      } else {
+        StringType.toString
+      }
 
       List(
         ColumnMetadata(REAL_TIME_BODY_COL, Map(), Map(FIELD_DATA_TYPE -> StringType.toString, SQL_GENERATOR -> sqlGenerator)),
@@ -213,22 +220,35 @@ class OpenAPIConverter(openAPI: OpenAPI = new OpenAPI()) {
       LOGGER.warn("Schema is missing from OpenAPI document, defaulting to data type string")
       StringType
     } else {
-      (schema.getType, schema.getFormat) match {
-        case ("string", "date") => DateType
-        case ("string", "date-time") => TimestampType
-        case ("string", "binary") => BinaryType
-        case ("string", _) => StringType
-        case ("number", "float") => FloatType
-        case ("number", _) => DoubleType
-        case ("integer", "int64") => LongType
-        case ("integer", _) => IntegerType
-        case ("array", _) =>
-          val innerType = getDataType(schema.getItems)
-          new ArrayType(innerType)
-        case ("object" | null, _) =>
-          val innerType = schema.getProperties.asScala.map(s => (s._1, getDataType(s._2))).toList
-          new StructType(innerType)
-        case (x, _) => DataType.fromString(x)
+      if (schema.get$ref() != null) {
+        val fields = getFields(schema)
+        val mappedFields = fields.map(field => field._1 -> getDataType(field._2)).toList
+        new StructType(mappedFields)
+      } else {
+        (schema.getType, schema.getFormat) match {
+          case ("string", "date") => DateType
+          case ("string", "date-time") => TimestampType
+          case ("string", "binary") => BinaryType
+          case ("string", _) => StringType
+          case ("number", "float") => FloatType
+          case ("number", _) => DoubleType
+          case ("integer", "int64") => LongType
+          case ("integer", _) => IntegerType
+          case ("array", _) =>
+            val innerType = getDataType(schema.getItems)
+            new ArrayType(innerType)
+          case ("object", _) =>
+            val innerType = schema.getProperties.asScala.map(s => (s._1, getDataType(s._2))).toList
+            new StructType(innerType)
+          case (x, _) =>
+            val tryDataType = Try(DataType.fromString(x))
+            tryDataType match {
+              case Failure(exception) =>
+                LOGGER.error(s"Unable to convert field to data type, schema=$schema, field-type=${schema.getType}, field-format=${schema.getFormat}")
+                throw new RuntimeException(exception)
+              case Success(value) => value
+            }
+        }
       }
     }
   }

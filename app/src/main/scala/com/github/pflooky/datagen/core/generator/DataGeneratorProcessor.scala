@@ -5,7 +5,7 @@ import com.github.pflooky.datagen.core.config.ConfigParser
 import com.github.pflooky.datagen.core.generator.delete.DeleteRecordProcessor
 import com.github.pflooky.datagen.core.generator.result.DataGenerationResultWriter
 import com.github.pflooky.datagen.core.listener.SparkRecordListener
-import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING}
+import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, DATA_CATERER_SITE_PRICING, TRIAL_APPLICATION}
 import com.github.pflooky.datagen.core.model.PlanImplicits.TaskOps
 import com.github.pflooky.datagen.core.parser.PlanParser
 import com.github.pflooky.datagen.core.validator.ValidationProcessor
@@ -50,7 +50,7 @@ class DataGeneratorProcessor(dataCatererConfiguration: DataCatererConfiguration)
     (flagsConfig.enableGenerateData, flagsConfig.enableDeleteGeneratedRecords, applicationType) match {
       case (true, _, _) =>
         generateData(plan, summaryWithTask, optValidations, faker)
-      case (_, true, ADVANCED_APPLICATION) =>
+      case (_, true, ADVANCED_APPLICATION | TRIAL_APPLICATION) =>
         val stepsByName = tasks.flatMap(_.steps).filter(_.enabled).map(s => (s.name, s)).toMap
         deleteRecordProcessor.deleteGeneratedRecords(plan, stepsByName, summaryWithTask)
       case (_, true, BASIC_APPLICATION) =>

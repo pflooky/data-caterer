@@ -87,7 +87,6 @@ object MetadataUtil {
 
   private def getStructFields(colsMetadata: Array[ColumnMetadata]): Array[StructField] = {
     colsMetadata.map(colMetadata => {
-      //TODO get nested data type
       var dataType = DataType.fromDDL(colMetadata.metadata.getOrElse(FIELD_DATA_TYPE, DEFAULT_FIELD_TYPE))
       if (colMetadata.nestedColumns.nonEmpty && dataType.typeName == "struct") {
         dataType = StructType(getStructFields(colMetadata.nestedColumns.toArray))

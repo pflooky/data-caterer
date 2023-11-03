@@ -7,6 +7,7 @@ object Constants {
   //app type
   lazy val BASIC_APPLICATION = "basic"
   lazy val ADVANCED_APPLICATION = "advanced"
+  lazy val TRIAL_APPLICATION = "trial"
 
   //base config
   lazy val RUNTIME_MASTER = "runtime.master"

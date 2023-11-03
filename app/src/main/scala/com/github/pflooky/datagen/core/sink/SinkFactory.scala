@@ -2,7 +2,7 @@ package com.github.pflooky.datagen.core.sink
 
 import com.github.pflooky.datacaterer.api.model.Constants.{DRIVER, FORMAT, HTTP, JDBC, JMS, OMIT, PARTITIONS, PARTITION_BY, POSTGRES_DRIVER, RATE, ROWS_PER_SECOND, SAVE_MODE}
 import com.github.pflooky.datacaterer.api.model.{FlagsConfig, MetadataConfig, Step}
-import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS, BATCH, DATA_CATERER_SITE_PRICING, DEFAULT_ROWS_PER_SECOND, FAILED, FINISHED, PER_COLUMN_INDEX_COL, REAL_TIME, STARTED}
+import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS, BATCH, DATA_CATERER_SITE_PRICING, DEFAULT_ROWS_PER_SECOND, FAILED, FINISHED, PER_COLUMN_INDEX_COL, REAL_TIME, STARTED, TRIAL_APPLICATION}
 import com.github.pflooky.datagen.core.model.SinkResult
 import com.github.pflooky.datagen.core.sink.http.HttpSinkProcessor
 import com.github.pflooky.datagen.core.util.KryoSerializationWrapper
@@ -50,7 +50,7 @@ class SinkFactory(
     val baseSinkResult = SinkResult(dataSourceName, format, saveMode.name())
     val sinkResult = if (saveTiming.equalsIgnoreCase(BATCH)) {
       saveBatchData(dataSourceName, df, saveMode, connectionConfig, step.options, count, startTime)
-    } else if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION)) {
+    } else if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION) || applicationType.equalsIgnoreCase(TRIAL_APPLICATION)) {
       saveRealTimeData(dataSourceName, df, format, connectionConfig, step, count, startTime)
     } else if (applicationType.equalsIgnoreCase(BASIC_APPLICATION)) {
       LOGGER.warn(s"Please upgrade from the free plan to paid plan to enable generating real-time data. More details here: $DATA_CATERER_SITE_PRICING")
@@ -130,7 +130,6 @@ class SinkFactory(
     val saveResult = new ListBuffer[Try[Unit]]()
     val permitsPerSecond = rowsPerSecond.toInt / df.rdd.getNumPartitions.toDouble
 
-    df.show(false)
     df.foreachPartition((partition: Iterator[Row]) => {
       val rateLimiter = RateLimiter.create(permitsPerSecond)
       val rows = partition.toList
