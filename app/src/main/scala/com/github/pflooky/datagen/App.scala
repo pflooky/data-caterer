@@ -19,5 +19,6 @@ object App {
     val endTime = LocalDateTime.now()
     val duration = Duration.between(startTime, endTime)
     LOGGER.info(s"Completed in ${duration.toSeconds}s")
+    System.exit(0)
   }
 }

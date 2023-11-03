@@ -64,7 +64,6 @@ object PlanProcessor {
       case _ => dataGeneratorProcessor.generateData()
     }
     sparkSession.close()
-    System.exit(0)
   }
 
   private def getPlanClass: Option[String] = {
