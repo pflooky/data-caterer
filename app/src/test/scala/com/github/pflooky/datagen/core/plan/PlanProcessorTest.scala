@@ -195,6 +195,12 @@ class PlanProcessorTest extends SparkSuite {
     val conf = configuration.enableGeneratePlanAndTasks(true)
       .generatedReportsFolderPath("/Users/peter/code/spark-datagen/tmp/report")
 
-    execute(conf, httpTask)
+    val myPlan = plan.addForeignKeyRelationship(
+      foreignField("my_http", "POST/pets", "bodyContent.id"),
+      foreignField("my_http", "GET/pets/{id}", "pathParamid"),
+      foreignField("my_http", "DELETE/pets/{id}", "pathParamid")
+    )
+
+    execute(myPlan, conf, httpTask)
   }
 }

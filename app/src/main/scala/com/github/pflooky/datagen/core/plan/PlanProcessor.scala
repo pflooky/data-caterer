@@ -63,7 +63,6 @@ object PlanProcessor {
       case (_, Some(plan)) => dataGeneratorProcessor.generateData(plan._plan, plan._tasks, Some(plan._validations))
       case _ => dataGeneratorProcessor.generateData()
     }
-    sparkSession.close()
   }
 
   private def getPlanClass: Option[String] = {
