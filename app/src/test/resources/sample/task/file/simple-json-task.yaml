@@ -44,7 +44,7 @@ steps:
                   false
                 END
         - name: "updated_time"
-          type: "string"
+          type: "timestamp"
           generator:
             type: "sql"
             options:
@@ -56,10 +56,10 @@ steps:
             options:
               sql: "element_at(sort_array(transactions.txn_date), 1)"
         - name: "details"
+          type: "struct"
           schema:
             fields:
               - name: "name"
-                type: "string"
                 generator:
                   type: "random"
               - name: "txn_date"
@@ -70,10 +70,10 @@ steps:
                     minValue: "2021-01-01"
                     maxValue: "2021-12-31"
               - name: "updated_by"
+                type: "struct"
                 schema:
                   fields:
                     - name: "user"
-                      type: "string"
                       generator:
                         type: "random"
                     - name: "time"

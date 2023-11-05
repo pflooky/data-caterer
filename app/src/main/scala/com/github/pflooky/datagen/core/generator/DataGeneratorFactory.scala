@@ -43,8 +43,8 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
       .getOrElse(df)
     if (!perColDf.storageLevel.useMemory) perColDf.cache()
 
-    val dfWithMetadata = sparkSession.createDataFrame(perColDf.selectExpr(structType.fieldNames: _*).rdd, structType)
-    val dfAllFields = applySqlExpressions(dfWithMetadata)
+    val dfWithMetadata = attachMetadata(perColDf, structType)
+    val dfAllFields = attachMetadata(applySqlExpressions(dfWithMetadata), structType)
     if (!dfAllFields.storageLevel.useMemory) dfAllFields.cache()
     dfAllFields
   }
@@ -127,5 +127,9 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
       val length = RANDOM.nextInt(maxLength + 1) + minLength
       RANDOM.alphanumeric.take(length).mkString("")
     }).asNondeterministic())
+  }
+
+  private def attachMetadata(df: DataFrame, structType: StructType): DataFrame = {
+    sparkSession.createDataFrame(df.selectExpr(structType.fieldNames: _*).rdd, structType)
   }
 }

@@ -9,9 +9,10 @@ import com.github.pflooky.datagen.core.model.PlanImplicits.{ForeignKeyRelationOp
 import com.github.pflooky.datagen.core.util.GeneratorUtil.applySqlExpressions
 import org.apache.log4j.Logger
 import org.apache.spark.sql.functions.col
-import org.apache.spark.sql.types.{LongType, MetadataBuilder, StructField, StructType}
+import org.apache.spark.sql.types.{ArrayType, DataType, LongType, Metadata, MetadataBuilder, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 
 object ForeignKeyUtil {
@@ -72,7 +73,8 @@ object ForeignKeyUtil {
     val subForeignKeySources = fkr._2.map(_.dataSource)
     val isSubForeignKeySourceEnabled = subForeignKeySources.forall(enabledSources.contains)
     val disabledSubSources = subForeignKeySources.filter(s => !enabledSources.contains(s))
-    val columnExistsMain = fkr._1.columns.forall(generatedDataForeachTask(fkr._1.dataFrameName).columns.contains)
+    val mainDfFields = generatedDataForeachTask(fkr._1.dataFrameName).schema.fields
+    val columnExistsMain = fkr._1.columns.forall(c => hasDfContainColumn(c, mainDfFields))
 
     if (!isMainForeignKeySourceEnabled) {
       LOGGER.warn(s"Foreign key data source is not enabled. Data source needs to be enabled for foreign key relationship " +
@@ -87,10 +89,39 @@ object ForeignKeyUtil {
     isMainForeignKeySourceEnabled && isSubForeignKeySourceEnabled && columnExistsMain
   }
 
+  def hasDfContainColumn(column: String, fields: Array[StructField]): Boolean = {
+    if (column.contains(".")) {
+      val spt = column.split("\\.")
+      fields.find(_.name == spt.head)
+        .exists(field => checkNestedFields(spt, field.dataType))
+    } else {
+      fields.exists(_.name == column)
+    }
+  }
+
+  @tailrec
+  private def checkNestedFields(spt: Array[String], dataType: DataType): Boolean = {
+    val tailColName = spt.tail
+    dataType match {
+      case StructType(nestedFields) =>
+        hasDfContainColumn(tailColName.mkString("."), nestedFields)
+      case ArrayType(elementType, _) =>
+        checkNestedFields(spt, elementType)
+      case _ => false
+    }
+  }
+
   private def applyForeignKeysToTargetDf(sourceDf: DataFrame, targetDf: DataFrame, sourceColumns: List[String], targetColumns: List[String]): DataFrame = {
     if (!sourceDf.storageLevel.useMemory) sourceDf.cache() //TODO do we checkpoint instead of cache? checkpoint based on total number of records?
     if (!targetDf.storageLevel.useMemory) targetDf.cache()
-    val sourceColRename = sourceColumns.map(c => (c, s"_src_$c")).toMap
+    val sourceColRename = sourceColumns.map(c => {
+      if (c.contains(".")) {
+        val lastCol = c.split("\\.").last
+        (lastCol, s"_src_$lastCol")
+      } else {
+        (c, s"_src_$c")
+      }
+    }).toMap
     val distinctSourceKeys = zipWithIndex(
       sourceDf.selectExpr(sourceColumns: _*).distinct()
         .withColumnsRenamed(sourceColRename)
@@ -100,7 +131,14 @@ object ForeignKeyUtil {
     LOGGER.debug(s"Attempting to join source DF keys with target DF, source=${sourceColumns.mkString(",")}, target=${targetColumns.mkString(",")}")
     val joinDf = distinctSourceKeys.join(distinctTargetKeys, Seq("_join_foreign_key"))
       .drop("_join_foreign_key")
-    val targetColRename = targetColumns.zip(sourceColumns).map(c => (c._1, col(s"_src_${c._2}"))).toMap
+    val targetColRename = targetColumns.zip(sourceColumns).map(c => {
+      if (c._2.contains(".")) {
+        val lastCol = c._2.split("\\.").last
+        (c._1, col(s"_src_$lastCol"))
+      } else {
+        (c._1, col(s"_src_${c._2}"))
+      }
+    }).toMap
     val res = targetDf.join(joinDf, targetColumns)
       .withColumns(targetColRename)
       .drop(sourceColRename.values.toList: _*)
@@ -221,12 +259,35 @@ object ForeignKeyUtil {
 
   private def combineMetadata(sourceDf: DataFrame, sourceCols: List[String], targetDf: DataFrame, targetCols: List[String], df: DataFrame): DataFrame = {
     val sourceColsMetadata = sourceCols.map(c => {
-      val baseMetadata = sourceDf.schema.fields.find(_.name.equalsIgnoreCase(c)).get.metadata
+      val baseMetadata = getMetadata(c, sourceDf.schema.fields)
       new MetadataBuilder().withMetadata(baseMetadata).remove(OMIT).build()
     })
-    val targetColsMetadata = targetCols.map(c => (c, targetDf.schema.fields.find(_.name.equalsIgnoreCase(c)).get.metadata))
+    val targetColsMetadata = targetCols.map(c => (c, getMetadata(c, targetDf.schema.fields)))
     val newMetadata = sourceColsMetadata.zip(targetColsMetadata).map(meta => (meta._2._1, new MetadataBuilder().withMetadata(meta._2._2).withMetadata(meta._1).build()))
     //also should apply any further sql statements
     newMetadata.foldLeft(df)((metaDf, meta) => metaDf.withMetadata(meta._1, meta._2))
+  }
+
+  private def getMetadata(column: String, fields: Array[StructField]): Metadata = {
+    val optMetadata = if (column.contains(".")) {
+      val spt = column.split("\\.")
+      val optField = fields.find(_.name == spt.head)
+      optField.map(field => checkNestedForMetadata(spt, field.dataType))
+    } else {
+      fields.find(_.name == column).map(_.metadata)
+    }
+    if (optMetadata.isEmpty) {
+      LOGGER.warn(s"Unable to find metadata for column, defaulting to empty metadata, column-name=$column")
+      Metadata.empty
+    } else optMetadata.get
+  }
+
+  @tailrec
+  private def checkNestedForMetadata(spt: Array[String], dataType: DataType): Metadata = {
+    dataType match {
+      case StructType(nestedFields) => getMetadata(spt.tail.mkString("."), nestedFields)
+      case ArrayType(elementType, _) => checkNestedForMetadata(spt, elementType)
+      case _ => Metadata.empty
+    }
   }
 }

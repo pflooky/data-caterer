@@ -56,7 +56,10 @@
             "required": true,
             "schema": {
               "type": "string",
-              "enum": ["application/json", "application/xml"]
+              "enum": [
+                "application/json",
+                "application/xml"
+              ]
             }
           },
           {
@@ -227,19 +230,21 @@
         ]
       },
       "NewPet": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "required": [
-            "name"
-          ],
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "tag": {
-              "type": "string"
-            }
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
           }
         }
       },

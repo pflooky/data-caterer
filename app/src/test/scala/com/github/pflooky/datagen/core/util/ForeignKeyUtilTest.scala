@@ -5,6 +5,7 @@ import com.github.pflooky.datacaterer.api.model.Constants.FOREIGN_KEY_DELIMITER
 import com.github.pflooky.datacaterer.api.model.{ForeignKeyRelation, Plan, SinkOptions, TaskSummary}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ForeignKeyRelationship
 import org.apache.spark.sql.Encoders
+import org.apache.spark.sql.types.{ArrayType, StringType, StructField, StructType}
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
 
@@ -192,6 +193,17 @@ class ForeignKeyUtilTest extends SparkSuite {
       List(s"my_postgres${FOREIGN_KEY_DELIMITER}public.orders${FOREIGN_KEY_DELIMITER}customer_id")))
     assert(result.contains(s"my_postgres${FOREIGN_KEY_DELIMITER}public.account${FOREIGN_KEY_DELIMITER}account_id" ->
       List(s"my_postgres${FOREIGN_KEY_DELIMITER}public.orders${FOREIGN_KEY_DELIMITER}customer_id")))
+  }
+
+  test("Can link foreign keys with nested column names") {
+    val nestedStruct = StructType(Array(StructField("account_id", StringType)))
+    val nestedInArray = ArrayType(nestedStruct)
+    val fields = Array(StructField("my_json", nestedStruct), StructField("my_array", nestedInArray))
+
+    assert(ForeignKeyUtil.hasDfContainColumn("my_array.account_id", fields))
+    assert(ForeignKeyUtil.hasDfContainColumn("my_json.account_id", fields))
+    assert(!ForeignKeyUtil.hasDfContainColumn("my_json.name", fields))
+    assert(!ForeignKeyUtil.hasDfContainColumn("my_array.name", fields))
   }
 
   class ForeignKeyPlanRun extends PlanRun {

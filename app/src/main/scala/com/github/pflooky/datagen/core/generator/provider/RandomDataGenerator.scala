@@ -223,7 +223,7 @@ object RandomDataGenerator {
     }
 
     override def generateSqlExpression: String = {
-      s"TIMESTAMP_MILLIS(CAST($sqlRandom * ${max - min} + $min AS LONG))"
+      s"CAST(TIMESTAMP_MILLIS(CAST($sqlRandom * ${max - min} + $min AS LONG)) AS TIMESTAMP)"
     }
   }
 
