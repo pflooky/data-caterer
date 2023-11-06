@@ -71,15 +71,15 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] with Serializable {
     val request = createHttpRequest(row)
     val completableFutureResp = http.executeRequest(request).toCompletableFuture
 
-    completableFutureResp.whenComplete((resp, error) =>
-      if (error == null) {
+    completableFutureResp.whenComplete((resp, error) => {
+      if (error == null && resp.getStatusCode >= 200 && resp.getStatusCode < 300) {
         LOGGER.debug(s"Successful HTTP request, url=${resp.getUri}, status-code=${resp.getStatusCode}, status-text=${resp.getStatusText}, " +
           s"response-body=${resp.getResponseBody}")
         //TODO can save response body along with request in file for validations
       } else {
-        LOGGER.error(s"Failed HTTP request, url=${resp.getUri}, message=${error.getMessage}", error)
+        LOGGER.error(s"Failed HTTP request, url=${resp.getUri}, status-code=${resp.getStatusCode}, status-text=${resp.getStatusText}, message=${error.getMessage}", error)
       }
-    )
+    })
   }
 
   def createHttpRequest(row: Row, connectionConfig: Option[Map[String, String]] = None): Request = {
@@ -93,7 +93,7 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] with Serializable {
     val basePrepareRequest = http.prepare(method, httpUrl)
       .setBody(body)
 
-    (getHeaders(headers) ++ Map("content-type" -> contentType))
+    getHeaders(headers)
       .foldLeft(basePrepareRequest)((req, header) => {
         val tryAddHeader = Try(req.addHeader(header._1, header._2))
         tryAddHeader match {

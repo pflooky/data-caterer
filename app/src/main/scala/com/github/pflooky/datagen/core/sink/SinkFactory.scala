@@ -120,7 +120,7 @@ class SinkFactory(
 
   private def saveRealTimeData(dataSourceName: String, df: DataFrame, format: String, connectionConfig: Map[String, String],
                                step: Step, count: String, startTime: LocalDateTime): SinkResult = {
-    val rowsPerSecond = step.options.getOrElse(ROWS_PER_SECOND, DEFAULT_ROWS_PER_SECOND)
+    val rowsPerSecond = step.options.getOrElse(ROWS_PER_SECOND, connectionConfig.getOrElse(ROWS_PER_SECOND, DEFAULT_ROWS_PER_SECOND))
     LOGGER.info(s"Rows per second for generating data, rows-per-second=$rowsPerSecond")
     saveRealTimeGuava(dataSourceName, df, format, connectionConfig, step, rowsPerSecond, count, startTime)
   }
@@ -128,10 +128,10 @@ class SinkFactory(
   private def saveRealTimeGuava(dataSourceName: String, df: DataFrame, format: String, connectionConfig: Map[String, String],
                                 step: Step, rowsPerSecond: String, count: String, startTime: LocalDateTime): SinkResult = {
     val saveResult = new ListBuffer[Try[Unit]]()
-    val permitsPerSecond = rowsPerSecond.toInt / df.rdd.getNumPartitions.toDouble
+    val permitsPerSecond = Math.max(rowsPerSecond.toInt, 1)
 
-    df.foreachPartition((partition: Iterator[Row]) => {
-      val rateLimiter = RateLimiter.create(permitsPerSecond)
+    df.repartition(permitsPerSecond).foreachPartition((partition: Iterator[Row]) => {
+      val rateLimiter = RateLimiter.create(1)
       val rows = partition.toList
       val sinkProcessor = SinkProcessor.getConnection(format, connectionConfig, step)
 

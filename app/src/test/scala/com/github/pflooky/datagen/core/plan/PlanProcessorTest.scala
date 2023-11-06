@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.plan
 
 import com.github.pflooky.datacaterer.api.PlanRun
-import com.github.pflooky.datacaterer.api.model.Constants.{OPEN_METADATA_AUTH_TYPE_OPEN_METADATA, OPEN_METADATA_JWT_TOKEN, OPEN_METADATA_TABLE_FQN, SAVE_MODE}
+import com.github.pflooky.datacaterer.api.model.Constants.{OPEN_METADATA_AUTH_TYPE_OPEN_METADATA, OPEN_METADATA_JWT_TOKEN, OPEN_METADATA_TABLE_FQN, ROWS_PER_SECOND, SAVE_MODE}
 import com.github.pflooky.datacaterer.api.model.{ArrayType, DateType, DoubleType, IntegerType, TimestampType}
 import com.github.pflooky.datagen.core.util.{ObjectMapperUtil, SparkSuite}
 import org.junit.runner.RunWith
@@ -188,7 +188,7 @@ class PlanProcessorTest extends SparkSuite {
   }
 
   class TestOpenAPI extends PlanRun {
-    val httpTask = http("my_http")
+    val httpTask = http("my_http", options = Map(ROWS_PER_SECOND -> "5"))
       .schema(metadataSource.openApi("/Users/peter/code/spark-datagen/app/src/test/resources/sample/http/openapi/petstore.json"))
       .count(count.records(10))
 

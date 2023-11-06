@@ -361,20 +361,28 @@ object PlanImplicits {
   implicit class FieldOps(field: Field) {
     def toStructField: StructField = {
       if (field.static.isDefined) {
-        val metadata = new MetadataBuilder().putString(STATIC, field.static.get).build()
+        val metadata = new MetadataBuilder().withMetadata(getMetadata).putString(STATIC, field.static.get).build()
         StructField(field.name, DataType.fromDDL(field.`type`.get), field.nullable, metadata)
       } else if (field.schema.isDefined) {
         val innerStructFields = field.schema.get.toStructType
         StructField(
           field.name,
           if (field.`type`.isDefined && field.`type`.get.toLowerCase.startsWith("array")) ArrayType(innerStructFields, field.nullable) else innerStructFields,
-          field.nullable
+          field.nullable,
+          getMetadata
         )
-      } else if (field.generator.isDefined && field.`type`.isDefined) {
-        val metadata = Metadata.fromJson(ObjectMapperUtil.jsonObjectMapper.writeValueAsString(field.generator.get.options))
-        StructField(field.name, DataType.fromDDL(field.`type`.get), field.nullable, metadata)
+      } else if (field.`type`.isDefined) {
+        StructField(field.name, DataType.fromDDL(field.`type`.get), field.nullable, getMetadata)
       } else {
         throw new InvalidFieldConfigurationException(this.field)
+      }
+    }
+
+    private def getMetadata: Metadata = {
+      if (field.generator.isDefined) {
+        Metadata.fromJson(ObjectMapperUtil.jsonObjectMapper.writeValueAsString(field.generator.get.options))
+      } else {
+        Metadata.empty
       }
     }
   }

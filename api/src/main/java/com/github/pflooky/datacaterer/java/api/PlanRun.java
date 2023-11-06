@@ -259,6 +259,10 @@ public abstract class PlanRun {
         return basePlanRun.http(name, username, password, toScalaMap(options));
     }
 
+    public HttpBuilder http(String name, Map<String, String> options) {
+        return basePlanRun.http(name, "", "", toScalaMap(options));
+    }
+
     public HttpBuilder http(String name) {
         return basePlanRun.httpJava(name);
     }

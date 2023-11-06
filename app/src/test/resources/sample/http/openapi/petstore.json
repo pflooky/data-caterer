@@ -48,28 +48,6 @@
               "type": "integer",
               "format": "int32"
             }
-          },
-          {
-            "name": "Content-Type",
-            "in": "header",
-            "description": "Content type of the request body",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "application/json",
-                "application/xml"
-              ]
-            }
-          },
-          {
-            "name": "Content-Length",
-            "in": "header",
-            "description": "Content length of the request body",
-            "required": false,
-            "schema": {
-              "type": "integer"
-            }
           }
         ],
         "responses": {
@@ -101,6 +79,20 @@
       "post": {
         "description": "Creates a new pet in the store. Duplicates are allowed",
         "operationId": "addPet",
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "description": "Content type of the request body",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "application/json"
+              ]
+            }
+          }
+        ],
         "requestBody": {
           "description": "Pet to add to the store",
           "required": true,
