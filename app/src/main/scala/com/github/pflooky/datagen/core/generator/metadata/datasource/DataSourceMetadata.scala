@@ -1,5 +1,7 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource
 
+import com.github.pflooky.datacaterer.api.ValidationBuilder
+import com.github.pflooky.datacaterer.api.model.DataSourceValidation
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.{ColumnMetadata, ForeignKeyRelationship}
 import org.apache.spark.sql.{Dataset, Encoder, Encoders, SparkSession}
 
@@ -25,6 +27,8 @@ trait DataSourceMetadata {
   def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[SubDataSourceMetadata]
 
   def toStepName(options: Map[String, String]): String
+
+  def getDataSourceValidations(dataSourceReadOptions: Map[String, String]): List[ValidationBuilder] = List()
 }
 
 case class SubDataSourceMetadata(readOptions: Map[String, String] = Map(), optColumnMetadata: Option[Dataset[ColumnMetadata]] = None)

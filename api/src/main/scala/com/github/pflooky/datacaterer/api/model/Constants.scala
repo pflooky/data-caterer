@@ -185,6 +185,7 @@ object Constants {
     "spark.sql.adaptive.enabled" -> "true",
     "spark.sql.cbo.planStats.enabled" -> "true",
     "spark.sql.legacy.allowUntypedScalaUDF" -> "true",
+    "spark.sql.legacy.allowParameterlessCount" -> "true",
     "spark.sql.statistics.histogram.enabled" -> "true",
     "spark.sql.shuffle.partitions" -> "10",
     "spark.sql.catalog.postgres" -> "",
@@ -326,6 +327,7 @@ object Constants {
   lazy val AGGREGATION_MAX = "max"
   lazy val AGGREGATION_MIN = "min"
   lazy val AGGREGATION_AVG = "avg"
+  lazy val AGGREGATION_STDDEV = "stddev"
 
   //validation types
   lazy val VALIDATION_EXPRESSION = "expr"

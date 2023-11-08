@@ -1,12 +1,13 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.openmetadata
 
-import com.github.pflooky.datacaterer.api.model.Constants.{SOURCE_COLUMN_DATA_TYPE, _}
+import com.github.pflooky.datacaterer.api.ValidationBuilder
+import com.github.pflooky.datacaterer.api.model.Constants._
 import com.github.pflooky.datacaterer.api.model.{ArrayType, BinaryType, BooleanType, ByteType, DataType, DateType, DecimalType, DoubleType, FloatType, IntegerType, LongType, ShortType, StringType, StructType, TimestampType}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ColumnMetadata
 import com.github.pflooky.datagen.core.generator.metadata.datasource.{DataSourceMetadata, SubDataSourceMetadata}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
-import org.openmetadata.client.api.TablesApi
+import org.openmetadata.client.api.{TablesApi, TestCasesApi, TestDefinitionsApi}
 import org.openmetadata.client.gateway.OpenMetadata
 import org.openmetadata.client.model.Column.DataTypeEnum
 import org.openmetadata.client.model.{Column, Table}
@@ -49,17 +50,13 @@ case class OpenMetadataDataSourceMetadata(
     OPEN_METADATA_CUSTOM_OIDC_SECRET_KEY,
     OPEN_METADATA_CUSTOM_OIDC_TOKEN_ENDPOINT
   )
+  private lazy val gateway = getGateway
 
   override val hasSourceData: Boolean = false
 
   override def toStepName(options: Map[String, String]): String = options.getOrElse(METADATA_IDENTIFIER, DEFAULT_STEP_NAME)
 
   override def getSubDataSourcesMetadata(implicit sparkSession: SparkSession): Array[SubDataSourceMetadata] = {
-    val server = new OpenMetadataConnection
-    server.setHostPort(getConfig(OPEN_METADATA_HOST))
-    server.setApiVersion(getConfig(OPEN_METADATA_API_VERSION))
-    authenticate(server)
-    val gateway = new OpenMetadata(server)
     val tablesApi = gateway.buildClient(classOf[TablesApi])
     val configWithoutAuth = connectionConfig.filter(c => !AUTH_CONFIGURATION.contains(c._1))
       .map(x => (x._1, x._2.asInstanceOf[Object])).asJava
@@ -95,6 +92,40 @@ case class OpenMetadataDataSourceMetadata(
       val columnMetadataDataset = sparkSession.createDataset(columnMetadata)
       SubDataSourceMetadata(allOptions, Some(columnMetadataDataset))
     }).toArray
+  }
+
+  private def getGateway: OpenMetadata = {
+    val server = new OpenMetadataConnection
+    server.setHostPort(getConfig(OPEN_METADATA_HOST))
+    server.setApiVersion(getConfig(OPEN_METADATA_API_VERSION))
+    authenticate(server)
+    new OpenMetadata(server)
+  }
+
+  override def getDataSourceValidations(dataSourceReadOptions: Map[String, String]): List[ValidationBuilder] = {
+    val entityNameWithColumnPattern = "^(.+?)\\.(.+?)\\.(.+?)\\.(.+?)\\.(.+?)$".r
+    val testCasesApi = gateway.buildClient(classOf[TestCasesApi])
+    val listTestCases = testCasesApi.listTestCases(Map.empty[String, Object].asJava)
+
+    if (listTestCases.getErrors != null && listTestCases.getErrors.size() > 0) {
+      LOGGER.error("Failed to retrieve test cases from OpenMetadata")
+      listTestCases.getErrors.asScala.foreach(error => LOGGER.error(s"OpenMetadata error: $error"))
+      throw new RuntimeException("Failed to retrieve test cases from OpenMetadata")
+    } else {
+      listTestCases.getData.asScala
+        .filter(t => t.getEntityFQN.startsWith(dataSourceReadOptions(METADATA_IDENTIFIER)) && !t.getDeleted)
+        .flatMap(testCase => {
+          val testParams = testCase.getParameterValues.asScala.map(testParam => {
+            (testParam.getName, testParam.getValue)
+          }).toMap
+          val optColumnName = testCase.getEntityFQN match {
+            case entityNameWithColumnPattern(_, _, _, _, column) => Some(column)
+            case _ => None
+          }
+
+          OpenMetadataDataValidations.getDataValidations(testCase, testParams, optColumnName)
+        }).toList
+    }
   }
 
   private def getMiscMetadata(column: Column, dataType: DataType): (Map[String, String], DataType) = {

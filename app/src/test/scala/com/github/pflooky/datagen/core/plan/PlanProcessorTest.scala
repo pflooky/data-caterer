@@ -140,9 +140,9 @@ class PlanProcessorTest extends SparkSuite {
   }
 
   ignore("Can run Postgres plan run") {
-    //    PlanProcessor.determineAndExecutePlan(Some(new TestOpenMetadata()))
+    PlanProcessor.determineAndExecutePlan(Some(new TestOpenMetadata()))
     //    PlanProcessor.determineAndExecutePlan(Some(new TestPostgres()))
-    PlanProcessor.determineAndExecutePlan(Some(new TestOpenAPI()))
+    //    PlanProcessor.determineAndExecutePlan(Some(new TestOpenAPI()))
     //    PlanProcessor.determineAndExecutePlan(Some(new TestValidation()))
   }
 
@@ -176,12 +176,13 @@ class PlanProcessorTest extends SparkSuite {
       .schema(metadataSource.openMetadata("http://localhost:8585/api", OPEN_METADATA_AUTH_TYPE_OPEN_METADATA,
         Map(
           OPEN_METADATA_JWT_TOKEN -> "abc123",
-          OPEN_METADATA_TABLE_FQN -> "sample_data.ecommerce_db.shopify.raw_customer"
+          OPEN_METADATA_TABLE_FQN -> "sample_data.ecommerce_db.shopify.dim_address"
         )))
       .schema(field.name("customer").schema(field.name("sex").oneOf("M", "F")))
       .count(count.records(10))
 
     val conf = configuration.enableGeneratePlanAndTasks(true)
+      .enableGenerateValidations(true)
       .generatedReportsFolderPath("/Users/peter/code/spark-datagen/tmp/report")
 
     execute(conf, jsonTask)

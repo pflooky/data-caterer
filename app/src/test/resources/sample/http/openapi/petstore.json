@@ -139,8 +139,7 @@
             "description": "ID of pet to fetch",
             "required": true,
             "schema": {
-              "type": "integer",
-              "format": "int64"
+              "type": "string"
             }
           }
         ],
@@ -177,8 +176,7 @@
             "description": "ID of pet to delete",
             "required": true,
             "schema": {
-              "type": "integer",
-              "format": "int64"
+              "type": "string"
             }
           }
         ],
@@ -214,8 +212,7 @@
             ],
             "properties": {
               "id": {
-                "type": "integer",
-                "format": "int64"
+                "type": "string"
               }
             }
           }
@@ -229,8 +226,7 @@
         ],
         "properties": {
           "id": {
-            "type": "integer",
-            "format": "int64"
+            "type": "string"
           },
           "name": {
             "type": "string"

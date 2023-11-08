@@ -1,7 +1,7 @@
 package com.github.pflooky.datacaterer.api
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.github.pflooky.datacaterer.api.model.Constants.{AGGREGATION_AVG, AGGREGATION_COUNT, AGGREGATION_MAX, AGGREGATION_MIN, AGGREGATION_SUM, VALIDATION_UNIQUE}
+import com.github.pflooky.datacaterer.api.model.Constants.{AGGREGATION_AVG, AGGREGATION_COUNT, AGGREGATION_MAX, AGGREGATION_MIN, AGGREGATION_STDDEV, AGGREGATION_SUM, VALIDATION_UNIQUE}
 import com.github.pflooky.datacaterer.api.model.{DataExistsWaitCondition, DataSourceValidation, ExpressionValidation, FileExistsWaitCondition, GroupByValidation, PauseWaitCondition, Validation, ValidationConfiguration, WaitCondition, WebhookWaitCondition}
 import com.github.pflooky.datacaterer.api.parser.ValidationBuilderSerializer
 import com.softwaremill.quicklens.ModifyPimp
@@ -224,6 +224,10 @@ case class ColumnValidationBuilder(column: String = "", validationBuilder: Valid
     validationBuilder.expr(s"$column IN (${values.map(colValueToString).mkString(",")})")
   }
 
+  @varargs def notIn(values: Any*): ValidationBuilder = {
+    validationBuilder.expr(s"NOT $column IN (${values.map(colValueToString).mkString(",")})")
+  }
+
   def matches(regex: String): ValidationBuilder = {
     validationBuilder.expr(s"REGEXP($column, '$regex')")
   }
@@ -305,6 +309,10 @@ case class GroupByValidationBuilder(
     setGroupValidation(column, AGGREGATION_COUNT)
   }
 
+  def count(): ColumnValidationBuilder = {
+    setGroupValidation("", AGGREGATION_COUNT)
+  }
+
   def min(column: String): ColumnValidationBuilder = {
     setGroupValidation(column, AGGREGATION_MIN)
   }
@@ -317,11 +325,16 @@ case class GroupByValidationBuilder(
     setGroupValidation(column, AGGREGATION_AVG)
   }
 
+  def stddev(column: String): ColumnValidationBuilder = {
+    setGroupValidation(column, AGGREGATION_STDDEV)
+  }
+
   private def setGroupValidation(column: String, aggType: String) = {
     val groupByValidation = GroupByValidation(groupByCols, column, aggType)
     groupByValidation.errorThreshold = validationBuilder.validation.errorThreshold
     groupByValidation.description = validationBuilder.validation.description
-    ColumnValidationBuilder(s"$aggType($column)", validationBuilder.modify(_.validation).setTo(groupByValidation))
+    val colName = if (column.isEmpty) aggType else s"$aggType($column)"
+    ColumnValidationBuilder(colName, validationBuilder.modify(_.validation).setTo(groupByValidation))
   }
 }
 

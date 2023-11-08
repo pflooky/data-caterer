@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.model
 
 import com.github.pflooky.datacaterer.api.PlanRun
-import com.github.pflooky.datacaterer.api.model.Constants.{MINIMUM, ONE_OF_GENERATOR}
+import com.github.pflooky.datacaterer.api.model.Constants.{MINIMUM, ONE_OF_GENERATOR, OPEN_METADATA_API_VERSION, OPEN_METADATA_HOST}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceDetail
 import com.github.pflooky.datagen.core.generator.metadata.datasource.openmetadata.OpenMetadataDataSourceMetadata
 import org.apache.spark.sql.types.{IntegerType, MetadataBuilder, StringType, StructField, StructType}
@@ -9,6 +9,7 @@ import org.junit.runner.RunWith
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatestplus.junit.JUnitRunner
 
+import scala.collection.immutable.Map
 import scala.collection.mutable
 
 @RunWith(classOf[JUnitRunner])
@@ -23,9 +24,10 @@ class TaskHelperTest extends AnyFunSuite {
       StructField("sex", StringType),
     ))),
   ))
+  private val openMetadataConf = Map(OPEN_METADATA_HOST -> "localhost:8585", OPEN_METADATA_API_VERSION -> "v1")
 
   test("Can create task from metadata generated values") {
-    val dataSourceMetadata = OpenMetadataDataSourceMetadata("my_json", "json", Map())
+    val dataSourceMetadata = OpenMetadataDataSourceMetadata("my_json", "json", openMetadataConf)
 
     val result = TaskHelper.fromMetadata(None, "task_name", "json", List(DataSourceDetail(dataSourceMetadata, Map(), structType, List())))
 
@@ -52,7 +54,7 @@ class TaskHelperTest extends AnyFunSuite {
 
   test("Can merge in user defined values with metadata generated values") {
     val userDefinedPlan = new JsonPlanRun
-    val dataSourceMetadata = OpenMetadataDataSourceMetadata("my_json", "json", Map())
+    val dataSourceMetadata = OpenMetadataDataSourceMetadata("my_json", "json", openMetadataConf)
 
     val result = TaskHelper.fromMetadata(Some(userDefinedPlan), "my_json", "json", List(DataSourceDetail(dataSourceMetadata, Map(), structType, List())))
 

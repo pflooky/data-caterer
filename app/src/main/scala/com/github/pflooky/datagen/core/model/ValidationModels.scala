@@ -107,16 +107,17 @@ object ValidationImplicits {
   implicit class GroupByValidationOps(groupByValidation: GroupByValidation) extends ValidationOps(groupByValidation) {
     override def validate(df: DataFrame, dfCount: Long): ValidationResult = {
       val groupByDf = df.groupBy(groupByValidation.groupByCols.map(col): _*)
-      val aggregateDf = if (groupByValidation.aggCol == VALIDATION_UNIQUE && groupByValidation.aggType == AGGREGATION_COUNT) {
-        groupByDf.count()
+      val (aggregateDf, validationCount) = if ((groupByValidation.aggCol == VALIDATION_UNIQUE || groupByValidation.aggCol.isEmpty) && groupByValidation.aggType == AGGREGATION_COUNT) {
+        (groupByDf.count(), 1L)
       } else {
-        groupByDf.agg(Map(
+        val aggDf = groupByDf.agg(Map(
           groupByValidation.aggCol -> groupByValidation.aggType
         ))
+        (aggDf, aggDf.count())
       }
       val notEqualDf = aggregateDf.where(s"!(${groupByValidation.expr})")
-      val (isSuccess, sampleErrors, numErrors) = ValidationOps(groupByValidation).getIsSuccessAndSampleErrors(notEqualDf, dfCount)
-      ValidationResult(groupByValidation, isSuccess, numErrors, dfCount, sampleErrors)
+      val (isSuccess, sampleErrors, numErrors) = ValidationOps(groupByValidation).getIsSuccessAndSampleErrors(notEqualDf, validationCount)
+      ValidationResult(groupByValidation, isSuccess, numErrors, validationCount, sampleErrors)
     }
   }
   //second argument can have both sides expressed as SQL expressions

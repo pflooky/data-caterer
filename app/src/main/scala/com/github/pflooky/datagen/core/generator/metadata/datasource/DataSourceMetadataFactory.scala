@@ -109,7 +109,9 @@ class DataSourceMetadataFactory(dataCatererConfiguration: DataCatererConfigurati
                                       structFields: Array[StructField]): List[ValidationBuilder] = {
     if (flagsConfig.enableGenerateValidations) {
       LOGGER.debug("Generate validations is enabled")
-      ValidationPredictor.suggestValidations(dataSourceMetadata, dataSourceReadOptions, structFields)
+      val suggestedValidations = ValidationPredictor.suggestValidations(dataSourceMetadata, dataSourceReadOptions, structFields)
+      val validationsFromDataSource = dataSourceMetadata.getDataSourceValidations(dataSourceReadOptions)
+      suggestedValidations ++ validationsFromDataSource
     } else {
       LOGGER.debug("Generate validations is disabled")
       List()
