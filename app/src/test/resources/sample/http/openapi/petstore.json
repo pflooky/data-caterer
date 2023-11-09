@@ -91,6 +91,15 @@
                 "application/json"
               ]
             }
+          },
+          {
+            "name": "Content-Length",
+            "in": "header",
+            "description": "Content length of the request body",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "requestBody": {

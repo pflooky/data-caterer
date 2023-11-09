@@ -119,22 +119,22 @@ class OpenAPIConverter(openAPI: OpenAPI = new OpenAPI()) {
     if (headerParams.isEmpty) {
       List()
     } else {
-      val headers = headerParams
+      headerParams
         .map(p => {
-          val headerValueMetadata = getSchemaMetadata(p.getSchema)
+          val headerValueMetadata = getSchemaMetadata(p.getSchema) ++ Map(HTTP_HEADER_COL_PREFIX -> p.getName)
           val isNullableMap = if (p.getRequired) {
             Map(IS_NULLABLE -> "false")
           } else {
             Map(IS_NULLABLE -> "true", ENABLED_NULL -> "true")
           }
-          val headerKey = ColumnMetadata("key", Map(), Map(STATIC -> p.getName))
-          val headerVal = ColumnMetadata("value", Map(), headerValueMetadata)
+          val isContentLengthMap = if (p.getName == "Content-Length") Map(SQL_GENERATOR -> s"LENGTH($REAL_TIME_BODY_COL)") else Map()
           val cleanColName = p.getName.replaceAll("-", "_")
-          ColumnMetadata(s"$HTTP_HEADER_COL_PREFIX$cleanColName", Map(), Map(FIELD_DATA_TYPE -> DEFAULT_REAL_TIME_HEADERS_INNER_DATA_TYPE) ++ isNullableMap, List(headerKey, headerVal))
+          ColumnMetadata(
+            s"$HTTP_HEADER_COL_PREFIX$cleanColName",
+            Map(),
+            headerValueMetadata ++ isNullableMap ++ isContentLengthMap
+          )
         })
-      val headerSqlGenerator = s"ARRAY(${headers.map(c => s"${c.column}").mkString(",")})"
-      val baseMetadata = Map(FIELD_DATA_TYPE -> DEFAULT_REAL_TIME_HEADERS_DATA_TYPE, SQL_GENERATOR -> headerSqlGenerator)
-      List(ColumnMetadata(REAL_TIME_HEADERS_COL, Map(), baseMetadata)) ++ headers
     }
   }
 

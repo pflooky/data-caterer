@@ -140,8 +140,8 @@ class PlanProcessorTest extends SparkSuite {
   }
 
   ignore("Can run Postgres plan run") {
-//    PlanProcessor.determineAndExecutePlan(Some(new TestHttp))
-    PlanProcessor.determineAndExecutePlan(Some(new TestSolace))
+    PlanProcessor.determineAndExecutePlan(Some(new TestHttp))
+//    PlanProcessor.determineAndExecutePlan(Some(new TestSolace))
 //    PlanProcessor.determineAndExecutePlan(Some(new TestOpenMetadata))
     //    PlanProcessor.determineAndExecutePlan(Some(new TestPostgres))
     //    PlanProcessor.determineAndExecutePlan(Some(new TestOpenAPI))
@@ -232,10 +232,12 @@ class PlanProcessorTest extends SparkSuite {
   }
 
   class TestHttp extends PlanRun {
-    val httpTask = http("my_http", options = Map(ROWS_PER_SECOND -> "1"))
-      .schema(field.name("url").static("http://localhost:80/anything"))
+    val httpTask = http("my_http", options = Map(ROWS_PER_SECOND -> "5"))
+      .schema(metadataSource.openApi("/Users/peter/code/spark-datagen/app/src/test/resources/sample/http/openapi/petstore.json"))
       .count(count.records(10))
 
-    execute(httpTask)
+    val conf = configuration.enableGeneratePlanAndTasks(true)
+
+    execute(conf, httpTask)
   }
 }

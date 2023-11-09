@@ -2,7 +2,7 @@ package com.github.pflooky.datagen.core.sink.http
 
 import com.github.pflooky.datacaterer.api.model.Constants.DEFAULT_REAL_TIME_HEADERS_DATA_TYPE
 import com.github.pflooky.datacaterer.api.model.Step
-import com.github.pflooky.datagen.core.model.Constants.{DEFAULT_HTTP_METHOD, REAL_TIME_BODY_COL, REAL_TIME_HEADERS_COL, REAL_TIME_METHOD_COL, REAL_TIME_URL_COL}
+import com.github.pflooky.datagen.core.model.Constants.{DEFAULT_HTTP_METHOD, HTTP_HEADER_COL_PREFIX, REAL_TIME_BODY_COL, REAL_TIME_HEADERS_COL, REAL_TIME_METHOD_COL, REAL_TIME_URL_COL}
 import com.github.pflooky.datagen.core.sink.{RealTimeSinkProcessor, SinkProcessor}
 import com.github.pflooky.datagen.core.util.HttpUtil.getAuthHeader
 import com.github.pflooky.datagen.core.util.RowUtil.getRowValue
@@ -73,7 +73,7 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] with Serializable {
     pushRowToSinkFuture(row)
   }
 
-  private def pushRowToSinkFuture(row: Row): Response = {
+  private def pushRowToSinkFuture(row: Row): Unit = {
     if (http.isClosed) {
       http = buildClient
     }
@@ -110,12 +110,11 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] with Serializable {
     val httpUrl = getRowValue[String](row, REAL_TIME_URL_COL)
     val method = getRowValue[String](row, REAL_TIME_METHOD_COL, DEFAULT_HTTP_METHOD)
     val body = getRowValue[String](row, REAL_TIME_BODY_COL, "")
-    val headers = getRowValue[mutable.WrappedArray[Row]](row, REAL_TIME_HEADERS_COL, mutable.WrappedArray.empty[Row])
 
     val basePrepareRequest = http.prepare(method, httpUrl)
       .setBody(body)
 
-    getHeaders(headers)
+    getHeaders(row)
       .foldLeft(basePrepareRequest)((req, header) => {
         val tryAddHeader = Try(req.addHeader(header._1, header._2))
         tryAddHeader match {
@@ -129,12 +128,13 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] with Serializable {
     basePrepareRequest.build()
   }
 
-  private def getHeaders(rowHeaders: mutable.WrappedArray[Row]): Map[String, String] = {
-    val baseHeaders = rowHeaders.map(r => (
-      r.getAs[String]("key"),
-      new String(r.getAs[Array[Byte]]("value"), StandardCharsets.UTF_8)
-    )).toMap
-    baseHeaders ++ getAuthHeader(connectionConfig)
+  private def getHeaders(row: Row): Map[String, String] = {
+    row.schema.fields.filter(_.name.startsWith(HTTP_HEADER_COL_PREFIX))
+      .map(field => {
+        val headerName = field.metadata.getString(HTTP_HEADER_COL_PREFIX)
+        val fieldValue = row.getAs[Any](field.name).toString
+        headerName -> fieldValue
+      }).toMap ++ getAuthHeader(connectionConfig)
   }
 
   private def buildClient: AsyncHttpClient = {
@@ -146,8 +146,8 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] with Serializable {
       override def getAcceptedIssuers: Array[X509Certificate] = Array()
     }
     val sslContext = SslContextBuilder.forClient().trustManager(trustManager).build()
-    val config = new DefaultAsyncHttpClientConfig.Builder().setSslContext(sslContext).build()
-    //    asyncHttpClient(config)
-    asyncHttpClient()
+    val config = new DefaultAsyncHttpClientConfig.Builder().setSslContext(sslContext)
+      .setRequestTimeout(5000).build()
+    asyncHttpClient(config)
   }
 }
