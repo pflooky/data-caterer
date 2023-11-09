@@ -158,7 +158,6 @@ class SinkFactory(
       case Failure(exception) => Some(exception)
       case Success(_) => None
     }.filter(_.isDefined).distinct
-//    val optException = saveResult.filter(_.nonEmpty)
     val optExceptionCount = optException.count()
 
     val isSuccess = if (optExceptionCount > 1) {
