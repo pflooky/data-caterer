@@ -1,18 +1,20 @@
 package com.github.pflooky.datagen.core.sink.http
 
+import com.github.pflooky.datacaterer.api.model.Constants.DEFAULT_REAL_TIME_HEADERS_DATA_TYPE
 import com.github.pflooky.datacaterer.api.model.Step
-import com.github.pflooky.datagen.core.model.Constants.{DEFAULT_HTTP_CONTENT_TYPE, DEFAULT_HTTP_METHOD, REAL_TIME_BODY_COL, REAL_TIME_CONTENT_TYPE_COL, REAL_TIME_HEADERS_COL, REAL_TIME_METHOD_COL, REAL_TIME_URL_COL}
+import com.github.pflooky.datagen.core.model.Constants.{DEFAULT_HTTP_METHOD, REAL_TIME_BODY_COL, REAL_TIME_HEADERS_COL, REAL_TIME_METHOD_COL, REAL_TIME_URL_COL}
 import com.github.pflooky.datagen.core.sink.{RealTimeSinkProcessor, SinkProcessor}
 import com.github.pflooky.datagen.core.util.HttpUtil.getAuthHeader
 import com.github.pflooky.datagen.core.util.RowUtil.getRowValue
 import io.netty.handler.ssl.SslContextBuilder
 import org.apache.log4j.Logger
 import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.StringType
 import org.asynchttpclient.Dsl.asyncHttpClient
 import org.asynchttpclient.{AsyncHttpClient, DefaultAsyncHttpClientConfig, ListenableFuture, Request, Response}
 
+import java.nio.charset.StandardCharsets
 import java.security.cert.X509Certificate
-import java.util.concurrent.CompletableFuture
 import javax.net.ssl.X509TrustManager
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -25,6 +27,13 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] with Serializable {
   var connectionConfig: Map[String, String] = _
   var step: Step = _
   var http: AsyncHttpClient = buildClient
+
+  override val expectedSchema: Map[String, String] = Map(
+    REAL_TIME_URL_COL -> StringType.typeName,
+    REAL_TIME_BODY_COL -> StringType.typeName,
+    REAL_TIME_METHOD_COL -> StringType.typeName,
+    REAL_TIME_HEADERS_COL -> DEFAULT_REAL_TIME_HEADERS_DATA_TYPE
+  )
 
   override def createConnections(connectionConfig: Map[String, String], step: Step): SinkProcessor[_] = {
     this.connectionConfig = connectionConfig
@@ -102,7 +111,6 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] with Serializable {
     val method = getRowValue[String](row, REAL_TIME_METHOD_COL, DEFAULT_HTTP_METHOD)
     val body = getRowValue[String](row, REAL_TIME_BODY_COL, "")
     val headers = getRowValue[mutable.WrappedArray[Row]](row, REAL_TIME_HEADERS_COL, mutable.WrappedArray.empty[Row])
-    val contentType = getRowValue[String](row, REAL_TIME_CONTENT_TYPE_COL, DEFAULT_HTTP_CONTENT_TYPE)
 
     val basePrepareRequest = http.prepare(method, httpUrl)
       .setBody(body)
@@ -124,7 +132,7 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] with Serializable {
   private def getHeaders(rowHeaders: mutable.WrappedArray[Row]): Map[String, String] = {
     val baseHeaders = rowHeaders.map(r => (
       r.getAs[String]("key"),
-      r.getAs[String]("value")
+      new String(r.getAs[Array[Byte]]("value"), StandardCharsets.UTF_8)
     )).toMap
     baseHeaders ++ getAuthHeader(connectionConfig)
   }

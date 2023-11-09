@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.http
 
-import com.github.pflooky.datacaterer.api.model.Constants.{ARRAY_MAXIMUM_LENGTH, ARRAY_MINIMUM_LENGTH, DEFAULT_HTTP_HEADERS_DATA_TYPE, DEFAULT_HTTP_HEADERS_INNER_DATA_TYPE, ENABLED_NULL, FIELD_DATA_TYPE, HTTP_HEADER_PARAMETER, HTTP_PARAMETER_TYPE, HTTP_PATH_PARAMETER, HTTP_QUERY_PARAMETER, IS_NULLABLE, MAXIMUM, MAXIMUM_LENGTH, MINIMUM, MINIMUM_LENGTH, ONE_OF_GENERATOR, ONE_OF_GENERATOR_DELIMITER, POST_SQL_EXPRESSION, REGEX_GENERATOR, SQL_GENERATOR, STATIC}
+import com.github.pflooky.datacaterer.api.model.Constants.{ARRAY_MAXIMUM_LENGTH, ARRAY_MINIMUM_LENGTH, DEFAULT_REAL_TIME_HEADERS_DATA_TYPE, DEFAULT_REAL_TIME_HEADERS_INNER_DATA_TYPE, ENABLED_NULL, FIELD_DATA_TYPE, HTTP_HEADER_PARAMETER, HTTP_PARAMETER_TYPE, HTTP_PATH_PARAMETER, HTTP_QUERY_PARAMETER, IS_NULLABLE, MAXIMUM, MAXIMUM_LENGTH, MINIMUM, MINIMUM_LENGTH, ONE_OF_GENERATOR, ONE_OF_GENERATOR_DELIMITER, POST_SQL_EXPRESSION, REGEX_GENERATOR, SQL_GENERATOR, STATIC}
 import com.github.pflooky.datacaterer.api.model.{ArrayType, BinaryType, DataType, DateType, DoubleType, FloatType, IntegerType, LongType, StringType, StructType, TimestampType}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ColumnMetadata
 import com.github.pflooky.datagen.core.model.Constants.{HTTP_HEADER_COL_PREFIX, HTTP_PATH_PARAM_COL_PREFIX, HTTP_QUERY_PARAM_COL_PREFIX, REAL_TIME_BODY_COL, REAL_TIME_BODY_CONTENT_COL, REAL_TIME_CONTENT_TYPE_COL, REAL_TIME_HEADERS_COL, REAL_TIME_METHOD_COL, REAL_TIME_URL_COL}
@@ -130,10 +130,10 @@ class OpenAPIConverter(openAPI: OpenAPI = new OpenAPI()) {
           val headerKey = ColumnMetadata("key", Map(), Map(STATIC -> p.getName))
           val headerVal = ColumnMetadata("value", Map(), headerValueMetadata)
           val cleanColName = p.getName.replaceAll("-", "_")
-          ColumnMetadata(s"$HTTP_HEADER_COL_PREFIX$cleanColName", Map(), Map(FIELD_DATA_TYPE -> DEFAULT_HTTP_HEADERS_INNER_DATA_TYPE) ++ isNullableMap, List(headerKey, headerVal))
+          ColumnMetadata(s"$HTTP_HEADER_COL_PREFIX$cleanColName", Map(), Map(FIELD_DATA_TYPE -> DEFAULT_REAL_TIME_HEADERS_INNER_DATA_TYPE) ++ isNullableMap, List(headerKey, headerVal))
         })
       val headerSqlGenerator = s"ARRAY(${headers.map(c => s"${c.column}").mkString(",")})"
-      val baseMetadata = Map(FIELD_DATA_TYPE -> DEFAULT_HTTP_HEADERS_DATA_TYPE, SQL_GENERATOR -> headerSqlGenerator)
+      val baseMetadata = Map(FIELD_DATA_TYPE -> DEFAULT_REAL_TIME_HEADERS_DATA_TYPE, SQL_GENERATOR -> headerSqlGenerator)
       List(ColumnMetadata(REAL_TIME_HEADERS_COL, Map(), baseMetadata)) ++ headers
     }
   }

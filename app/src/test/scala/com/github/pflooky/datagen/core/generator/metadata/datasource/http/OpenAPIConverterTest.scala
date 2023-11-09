@@ -1,6 +1,6 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.http
 
-import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_HTTP_HEADERS_DATA_TYPE, DEFAULT_HTTP_HEADERS_INNER_DATA_TYPE, ENABLED_NULL, FIELD_DATA_TYPE, HTTP_PARAMETER_TYPE, HTTP_PATH_PARAMETER, HTTP_QUERY_PARAMETER, IS_NULLABLE, ONE_OF_GENERATOR, POST_SQL_EXPRESSION, SQL_GENERATOR, STATIC}
+import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_REAL_TIME_HEADERS_DATA_TYPE, DEFAULT_REAL_TIME_HEADERS_INNER_DATA_TYPE, ENABLED_NULL, FIELD_DATA_TYPE, HTTP_PARAMETER_TYPE, HTTP_PATH_PARAMETER, HTTP_QUERY_PARAMETER, IS_NULLABLE, ONE_OF_GENERATOR, POST_SQL_EXPRESSION, SQL_GENERATOR, STATIC}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ColumnMetadata
 import com.github.pflooky.datagen.core.model.Constants.{HTTP_HEADER_COL_PREFIX, HTTP_PATH_PARAM_COL_PREFIX, HTTP_QUERY_PARAM_COL_PREFIX, REAL_TIME_BODY_COL, REAL_TIME_BODY_CONTENT_COL, REAL_TIME_CONTENT_TYPE_COL, REAL_TIME_HEADERS_COL, REAL_TIME_METHOD_COL, REAL_TIME_URL_COL}
 import io.swagger.v3.oas.models.PathItem.HttpMethod
@@ -107,7 +107,7 @@ class OpenAPIConverterTest extends AnyFunSuite {
     assert(contentTypeRes.isDefined)
     assert(contentLengthRes.isDefined)
     assert(combinedHeader.isDefined)
-    assert(contentTypeRes.get.metadata(FIELD_DATA_TYPE) == DEFAULT_HTTP_HEADERS_INNER_DATA_TYPE)
+    assert(contentTypeRes.get.metadata(FIELD_DATA_TYPE) == DEFAULT_REAL_TIME_HEADERS_INNER_DATA_TYPE)
     assert(contentTypeRes.get.nestedColumns.size == 2)
     assert(contentTypeRes.get.metadata(IS_NULLABLE) == "false")
     assert(contentTypeRes.get.nestedColumns.exists(_.column == "key"))
@@ -121,7 +121,7 @@ class OpenAPIConverterTest extends AnyFunSuite {
     assert(contentLengthRes.get.nestedColumns.find(_.column == "key").get.metadata(STATIC) == "Content-Length")
     assert(contentLengthRes.get.nestedColumns.exists(_.column == "value"))
     assert(contentLengthRes.get.nestedColumns.find(_.column == "value").get.metadata(FIELD_DATA_TYPE) == "integer")
-    assert(combinedHeader.get.metadata(FIELD_DATA_TYPE) == DEFAULT_HTTP_HEADERS_DATA_TYPE)
+    assert(combinedHeader.get.metadata(FIELD_DATA_TYPE) == DEFAULT_REAL_TIME_HEADERS_DATA_TYPE)
     assert(combinedHeader.get.metadata(SQL_GENERATOR) == s"ARRAY(${HTTP_HEADER_COL_PREFIX}Content_Type,${HTTP_HEADER_COL_PREFIX}Content_Length)")
   }
 

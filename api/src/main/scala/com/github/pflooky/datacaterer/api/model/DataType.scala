@@ -1,5 +1,7 @@
 package com.github.pflooky.datacaterer.api.model
 
+import scala.collection.JavaConverters.iterableAsScalaIterableConverter
+
 trait DataType {
   override def toString: String = getClass.getSimpleName.toLowerCase.stripSuffix("type$")
 }
@@ -110,6 +112,11 @@ case object ArrayType extends ArrayType(StringType) {
 }
 
 class StructType(innerType: List[(String, DataType)] = List()) extends DataType {
+
+  def this(innerType: java.util.List[java.util.Map.Entry[String, DataType]]) = {
+    this(innerType.asScala.map(entry => entry.getKey -> entry.getValue).toList)
+  }
+
   override def toString: String = {
     val innerStructType = innerType.map(t => s"${t._1}: ${t._2.toString}").mkString(",")
     s"struct<$innerStructType>"
@@ -118,4 +125,8 @@ class StructType(innerType: List[(String, DataType)] = List()) extends DataType 
 
 case object StructType extends StructType(List()) {
   def instance: StructType.type = this
+}
+
+object HeaderType {
+  def getType: DataType = new ArrayType(new StructType(List("key" -> StringType, "value" -> BinaryType)))
 }

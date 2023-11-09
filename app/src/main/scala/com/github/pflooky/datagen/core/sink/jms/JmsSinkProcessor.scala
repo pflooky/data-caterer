@@ -1,17 +1,19 @@
 package com.github.pflooky.datagen.core.sink.jms
 
-import com.github.pflooky.datacaterer.api.model.Constants.{JMS_CONNECTION_FACTORY, JMS_DESTINATION_NAME, JMS_INITIAL_CONTEXT_FACTORY, JMS_VPN_NAME, PASSWORD, URL, USERNAME}
+import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_REAL_TIME_HEADERS_DATA_TYPE, JMS_CONNECTION_FACTORY, JMS_DESTINATION_NAME, JMS_INITIAL_CONTEXT_FACTORY, JMS_VPN_NAME, PASSWORD, URL, USERNAME}
 import com.github.pflooky.datacaterer.api.model.Step
 import com.github.pflooky.datagen.core.model.Constants.{REAL_TIME_BODY_COL, REAL_TIME_HEADERS_COL, REAL_TIME_PARTITION_COL}
 import com.github.pflooky.datagen.core.sink.{RealTimeSinkProcessor, SinkProcessor}
 import com.github.pflooky.datagen.core.util.RowUtil.getRowValue
-import org.apache.hadoop.shaded.com.nimbusds.jose.util.StandardCharset
 import org.apache.log4j.Logger
 import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{IntegerType, StringType}
 
+import java.nio.charset.StandardCharsets
 import java.util.Properties
 import javax.jms.{Connection, ConnectionFactory, Destination, MessageProducer, Session, TextMessage}
 import javax.naming.{Context, InitialContext}
+import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 
@@ -21,6 +23,13 @@ object JmsSinkProcessor extends RealTimeSinkProcessor[(MessageProducer, Session,
 
   var connectionConfig: Map[String, String] = _
   var step: Step = _
+
+
+  override val expectedSchema: Map[String, String] = Map(
+    REAL_TIME_BODY_COL -> StringType.typeName,
+    REAL_TIME_PARTITION_COL -> IntegerType.typeName,
+    REAL_TIME_HEADERS_COL -> DEFAULT_REAL_TIME_HEADERS_DATA_TYPE
+  )
 
   override def pushRowToSink(row: Row): Unit = {
     val body = tryGetBody(row)
@@ -64,8 +73,11 @@ object JmsSinkProcessor extends RealTimeSinkProcessor[(MessageProducer, Session,
   private def setAdditionalMessageProperties(row: Row, message: TextMessage): Unit = {
     val jmsPriority = getRowValue(row, REAL_TIME_PARTITION_COL, 4)
     message.setJMSPriority(jmsPriority)
-    val properties = getRowValue[Array[(String, Array[Byte])]](row, REAL_TIME_HEADERS_COL, Array())
-    properties.foreach(property => message.setStringProperty(property._1, new String(property._2, StandardCharset.UTF_8)))
+    val properties = getRowValue[mutable.WrappedArray[Row]](row, REAL_TIME_HEADERS_COL, mutable.WrappedArray.empty[Row])
+      .map(row => {
+        row.getAs[String]("key") -> row.getAs[Array[Byte]]("value")
+      })
+    properties.foreach(property => message.setStringProperty(property._1, new String(property._2, StandardCharsets.UTF_8)))
   }
 
   override def createConnections(connectionConfig: Map[String, String], step: Step): SinkProcessor[_] = {

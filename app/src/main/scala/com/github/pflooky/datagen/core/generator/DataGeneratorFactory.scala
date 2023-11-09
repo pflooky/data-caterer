@@ -6,6 +6,7 @@ import com.github.pflooky.datagen.core.exception.InvalidStepCountGeneratorConfig
 import com.github.pflooky.datagen.core.generator.provider.DataGenerator
 import com.github.pflooky.datagen.core.model.Constants._
 import com.github.pflooky.datagen.core.model.PlanImplicits.FieldOps
+import com.github.pflooky.datagen.core.sink.SinkProcessor
 import com.github.pflooky.datagen.core.util.GeneratorUtil.{applySqlExpressions, getDataGenerator}
 import com.github.pflooky.datagen.core.util.ObjectMapperUtil
 import net.datafaker.Faker
@@ -34,6 +35,7 @@ class DataGeneratorFactory(faker: Faker)(implicit val sparkSession: SparkSession
 
   def generateDataViaSql(dataGenerators: List[DataGenerator[_]], step: Step, indexedDf: DataFrame): DataFrame = {
     val structType = StructType(dataGenerators.map(_.structField))
+    SinkProcessor.validateSchema(step.`type`, structType)
 
     val genSqlExpression = dataGenerators.map(dg => s"${dg.generateSqlExpressionWrapper} AS `${dg.structField.name}`")
     val df = indexedDf.selectExpr(genSqlExpression: _*)

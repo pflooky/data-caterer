@@ -2,7 +2,7 @@ package com.github.pflooky.datagen.core.plan
 
 import com.github.pflooky.datacaterer.api.PlanRun
 import com.github.pflooky.datacaterer.api.model.Constants.{OPEN_METADATA_AUTH_TYPE_OPEN_METADATA, OPEN_METADATA_JWT_TOKEN, OPEN_METADATA_TABLE_FQN, ROWS_PER_SECOND, SAVE_MODE}
-import com.github.pflooky.datacaterer.api.model.{ArrayType, DateType, DoubleType, IntegerType, TimestampType}
+import com.github.pflooky.datacaterer.api.model.{ArrayType, BinaryType, DateType, DoubleType, HeaderType, IntegerType, StringType, StructType, TimestampType}
 import com.github.pflooky.datagen.core.util.{ObjectMapperUtil, SparkSuite}
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
@@ -140,12 +140,12 @@ class PlanProcessorTest extends SparkSuite {
   }
 
   ignore("Can run Postgres plan run") {
-    PlanProcessor.determineAndExecutePlan(Some(new TestHttp))
-//    PlanProcessor.determineAndExecutePlan(Some(new TestSolace()))
-//    PlanProcessor.determineAndExecutePlan(Some(new TestOpenMetadata()))
-    //    PlanProcessor.determineAndExecutePlan(Some(new TestPostgres()))
-    //    PlanProcessor.determineAndExecutePlan(Some(new TestOpenAPI()))
-    //    PlanProcessor.determineAndExecutePlan(Some(new TestValidation()))
+//    PlanProcessor.determineAndExecutePlan(Some(new TestHttp))
+    PlanProcessor.determineAndExecutePlan(Some(new TestSolace))
+//    PlanProcessor.determineAndExecutePlan(Some(new TestOpenMetadata))
+    //    PlanProcessor.determineAndExecutePlan(Some(new TestPostgres))
+    //    PlanProcessor.determineAndExecutePlan(Some(new TestOpenAPI))
+    //    PlanProcessor.determineAndExecutePlan(Some(new TestValidation))
   }
 
   class TestValidation extends PlanRun {
@@ -212,6 +212,14 @@ class PlanProcessorTest extends SparkSuite {
       .destination("/JNDI/T/rest_test_topic")
       .schema(
         field.name("value").sql("TO_JSON(content)"),
+        field.name("headers") //set message properties via headers field
+          .`type`(HeaderType.getType)
+          .sql(
+            """ARRAY(
+              |  NAMED_STRUCT('key', 'account-id', 'value', TO_BINARY(content.account_id, 'utf-8')),
+              |  NAMED_STRUCT('key', 'name', 'value', TO_BINARY(content.name, 'utf-8'))
+              |)""".stripMargin
+          ),
         field.name("content").schema(
           field.name("account_id"),
           field.name("name").expression("#{Name.name}"),

@@ -130,7 +130,6 @@ class SinkFactory(
     implicit val tryEncoder: Encoder[Try[Unit]] = Encoders.kryo[Try[Unit]]
     implicit val stringEncoder: Encoder[String] = Encoders.kryo[String]
     val permitsPerSecond = Math.max(rowsPerSecond.toInt, 1)
-    //TODO check head row for schema
 
     val pushResults = df.repartition(permitsPerSecond).mapPartitions((partition: Iterator[Row]) => {
       val rateLimiter = RateLimiter.create(1)

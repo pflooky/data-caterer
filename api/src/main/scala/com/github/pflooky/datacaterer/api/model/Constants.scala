@@ -219,8 +219,8 @@ object Constants {
   lazy val DEFAULT_KAFKA_URL = "kafkaserver:9092"
 
   //http defaults
-  lazy val DEFAULT_HTTP_HEADERS_INNER_DATA_TYPE = "struct<key: string, value: string>"
-  lazy val DEFAULT_HTTP_HEADERS_DATA_TYPE = s"array<$DEFAULT_HTTP_HEADERS_INNER_DATA_TYPE>"
+  lazy val DEFAULT_REAL_TIME_HEADERS_INNER_DATA_TYPE = "struct<key: string, value: binary>"
+  lazy val DEFAULT_REAL_TIME_HEADERS_DATA_TYPE = s"array<$DEFAULT_REAL_TIME_HEADERS_INNER_DATA_TYPE>"
   lazy val HTTP_PATH_PARAMETER = "path"
   lazy val HTTP_QUERY_PARAMETER = "query"
   lazy val HTTP_HEADER_PARAMETER = "header"

@@ -13,6 +13,7 @@ import org.scalatestplus.junit.JUnitRunner
 import java.util
 import javax.jms.{Connection, Message, MessageProducer, Session, TextMessage}
 import javax.naming.Context
+import scala.collection.mutable
 
 @RunWith(classOf[JUnitRunner])
 class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
@@ -26,10 +27,11 @@ class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
     StructField(REAL_TIME_PARTITION_COL, IntegerType)
   )
   private val baseStruct = StructType(baseFieldsForStruct)
-  private val headerField = StructField(REAL_TIME_HEADERS_COL, ArrayType(StructType(Seq(
+  private val headerKeyValueStruct = StructType(Seq(
     StructField("key", StringType),
-    StructField("value", BinaryType))
-  )))
+    StructField("value", BinaryType)
+  ))
+  private val headerField = StructField(REAL_TIME_HEADERS_COL, ArrayType(headerKeyValueStruct))
   private val structWithHeader = StructType(baseFieldsForStruct ++ Seq(headerField))
 
   implicit val d: Defaultable[util.Enumeration[_]] = new Defaultable[java.util.Enumeration[_]] {
@@ -71,7 +73,8 @@ class JmsSinkProcessorTest extends AnyFunSuite with MockFactory {
     val mockMessageProducer = mock[MessageProducer]
     val jmsSinkProcessor = JmsSinkProcessor.createConnections(mockMessageProducer, mockSession, mockConnection, step.copy(schema = schema))
 
-    val mockRow = new GenericRowWithSchema(Array("some_value", "url", 4, Array(("account-id", "abc123".getBytes))), structWithHeader)
+    val innerRow = new GenericRowWithSchema(Array("account-id", "abc123".getBytes), headerKeyValueStruct)
+    val mockRow = new GenericRowWithSchema(Array("some_value", "url", 4, mutable.WrappedArray.make(Array(innerRow))), structWithHeader)
     val mockMessage = mock[TestTextMessage]
     (mockSession.createTextMessage(_: String)).expects("some_value").once().returns(mockMessage)
     (mockMessage.setStringProperty(_: String, _: String)).expects("account-id", "abc123").once()
