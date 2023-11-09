@@ -140,7 +140,9 @@ class PlanProcessorTest extends SparkSuite {
   }
 
   ignore("Can run Postgres plan run") {
-    PlanProcessor.determineAndExecutePlan(Some(new TestOpenMetadata()))
+    PlanProcessor.determineAndExecutePlan(Some(new TestHttp))
+//    PlanProcessor.determineAndExecutePlan(Some(new TestSolace()))
+//    PlanProcessor.determineAndExecutePlan(Some(new TestOpenMetadata()))
     //    PlanProcessor.determineAndExecutePlan(Some(new TestPostgres()))
     //    PlanProcessor.determineAndExecutePlan(Some(new TestOpenAPI()))
     //    PlanProcessor.determineAndExecutePlan(Some(new TestValidation()))
@@ -203,5 +205,29 @@ class PlanProcessorTest extends SparkSuite {
     )
 
     execute(myPlan, conf, httpTask)
+  }
+
+  class TestSolace extends PlanRun {
+    val solaceTask = solace("my_solace", "smf://localhost:55554")
+      .destination("/JNDI/T/rest_test_topic")
+      .schema(
+        field.name("value").sql("TO_JSON(content)"),
+        field.name("content").schema(
+          field.name("account_id"),
+          field.name("name").expression("#{Name.name}"),
+          field.name("age").`type`(IntegerType),
+        )
+      )
+      .count(count.records(10))
+
+    execute(solaceTask)
+  }
+
+  class TestHttp extends PlanRun {
+    val httpTask = http("my_http", options = Map(ROWS_PER_SECOND -> "1"))
+      .schema(field.name("url").static("http://localhost:80/anything"))
+      .count(count.records(10))
+
+    execute(httpTask)
   }
 }

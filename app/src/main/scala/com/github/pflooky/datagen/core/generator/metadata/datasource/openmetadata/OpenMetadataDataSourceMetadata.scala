@@ -7,7 +7,7 @@ import com.github.pflooky.datagen.core.generator.metadata.datasource.database.Co
 import com.github.pflooky.datagen.core.generator.metadata.datasource.{DataSourceMetadata, SubDataSourceMetadata}
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
-import org.openmetadata.client.api.{TablesApi, TestCasesApi, TestDefinitionsApi}
+import org.openmetadata.client.api.{TablesApi, TestCasesApi}
 import org.openmetadata.client.gateway.OpenMetadata
 import org.openmetadata.client.model.Column.DataTypeEnum
 import org.openmetadata.client.model.{Column, Table}

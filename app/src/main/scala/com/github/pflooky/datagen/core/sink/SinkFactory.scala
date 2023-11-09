@@ -9,7 +9,7 @@ import com.github.pflooky.datagen.core.util.KryoSerializationWrapper
 import com.github.pflooky.datagen.core.util.MetadataUtil.getFieldMetadata
 import com.google.common.util.concurrent.RateLimiter
 import org.apache.log4j.Logger
-import org.apache.spark.sql.{DataFrame, DataFrameWriter, Dataset, Encoders, Row, SaveMode, SparkSession}
+import org.apache.spark.sql.{DataFrame, DataFrameWriter, Dataset, Encoder, Encoders, Row, SaveMode, SparkSession}
 
 import java.time.LocalDateTime
 import java.util.concurrent.CompletableFuture
@@ -127,32 +127,39 @@ class SinkFactory(
 
   private def saveRealTimeGuava(dataSourceName: String, df: DataFrame, format: String, connectionConfig: Map[String, String],
                                 step: Step, rowsPerSecond: String, count: String, startTime: LocalDateTime): SinkResult = {
-    val saveResult = new ListBuffer[Try[Unit]]()
+    implicit val tryEncoder: Encoder[Try[Unit]] = Encoders.kryo[Try[Unit]]
+    implicit val stringEncoder: Encoder[String] = Encoders.kryo[String]
     val permitsPerSecond = Math.max(rowsPerSecond.toInt, 1)
+    //TODO check head row for schema
 
-    df.repartition(permitsPerSecond).foreachPartition((partition: Iterator[Row]) => {
+    val pushResults = df.repartition(permitsPerSecond).mapPartitions((partition: Iterator[Row]) => {
       val rateLimiter = RateLimiter.create(1)
       val rows = partition.toList
       val sinkProcessor = SinkProcessor.getConnection(format, connectionConfig, step)
 
-      rows.foreach(row => {
+      val pushResult = rows.map(row => {
         rateLimiter.acquire()
-        saveResult.append(Try(sinkProcessor.pushRowToSink(row)))
+        Try(sinkProcessor.pushRowToSink(row))
       })
       sinkProcessor.close
+      pushResult.toIterator
     })
-    val CheckExceptionAndSuccess(optException, isSuccess) = checkExceptionAndSuccess(dataSourceName, format, step, count, saveResult)
-    mapToSinkResult(dataSourceName, df, SaveMode.Append, connectionConfig, step.options, count, format, isSuccess, startTime, optException.headOption.flatten)
+    pushResults.cache()
+    val CheckExceptionAndSuccess(optException, isSuccess) = checkExceptionAndSuccess(dataSourceName, format, step, count, pushResults)
+    val someExp = if (optException.count() > 0) optException.head else None
+    mapToSinkResult(dataSourceName, df, SaveMode.Append, connectionConfig, step.options, count, format, isSuccess, startTime, someExp)
   }
 
-  case class CheckExceptionAndSuccess(optException: ListBuffer[Option[Throwable]], isSuccess: Boolean)
+  case class CheckExceptionAndSuccess(optException: Dataset[Option[Throwable]], isSuccess: Boolean)
 
-  private def checkExceptionAndSuccess(dataSourceName: String, format: String, step: Step, count: String, saveResult: ListBuffer[Try[Unit]]): CheckExceptionAndSuccess = {
+  private def checkExceptionAndSuccess(dataSourceName: String, format: String, step: Step, count: String, saveResult: Dataset[Try[Unit]]): CheckExceptionAndSuccess = {
+    implicit val optionThrowableEncoder: Encoder[Option[Throwable]] = Encoders.kryo[Option[Throwable]]
     val optException = saveResult.map {
       case Failure(exception) => Some(exception)
       case Success(_) => None
     }.filter(_.isDefined).distinct
-    val optExceptionCount = optException.size
+//    val optException = saveResult.filter(_.nonEmpty)
+    val optExceptionCount = optException.count()
 
     val isSuccess = if (optExceptionCount > 1) {
       LOGGER.error(s"Multiple exceptions occurred when pushing to event sink, data-source-name=$dataSourceName, " +

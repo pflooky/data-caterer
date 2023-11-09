@@ -6,25 +6,59 @@ import com.github.pflooky.datagen.core.model.Constants.{REAL_TIME_BODY_COL, REAL
 import com.github.pflooky.datagen.core.sink.{RealTimeSinkProcessor, SinkProcessor}
 import com.github.pflooky.datagen.core.util.RowUtil.getRowValue
 import org.apache.hadoop.shaded.com.nimbusds.jose.util.StandardCharset
+import org.apache.log4j.Logger
 import org.apache.spark.sql.Row
 
 import java.util.Properties
 import javax.jms.{Connection, ConnectionFactory, Destination, MessageProducer, Session, TextMessage}
 import javax.naming.{Context, InitialContext}
+import scala.util.{Failure, Success, Try}
 
 
 object JmsSinkProcessor extends RealTimeSinkProcessor[(MessageProducer, Session, Connection)] {
 
+  private val LOGGER = Logger.getLogger(getClass.getName)
+
   var connectionConfig: Map[String, String] = _
   var step: Step = _
 
-  def pushRowToSink(row: Row): Unit = {
-    val body = row.getAs[String](REAL_TIME_BODY_COL)
+  override def pushRowToSink(row: Row): Unit = {
+    val body = tryGetBody(row)
     val (messageProducer, session, connection) = getConnectionFromPool
-    val message = session.createTextMessage(body)
+    val message = tryCreateMessage(body, messageProducer, session, connection)
+    trySendMessage(row, messageProducer, session, connection, message)
+  }
+
+  private def trySendMessage(row: Row, messageProducer: MessageProducer, session: Session, connection: Connection, message: TextMessage): Unit = {
     setAdditionalMessageProperties(row, message)
-    messageProducer.send(message)
+    Try(messageProducer.send(message)) match {
+      case Failure(exception) =>
+        LOGGER.error(s"Failed to send JMS message, step-name=${step.name}, step-type=${step.`type`}", exception)
+        returnConnectionToPool((messageProducer, session, connection))
+        throw new RuntimeException(exception)
+      case Success(_) => //do nothing
+    }
     returnConnectionToPool((messageProducer, session, connection))
+  }
+
+  private def tryCreateMessage(body: String, messageProducer: MessageProducer, session: Session, connection: Connection): TextMessage = {
+    Try(session.createTextMessage(body)) match {
+      case Failure(exception) =>
+        LOGGER.error(s"Failed to create JMS text message from $REAL_TIME_BODY_COL column, " +
+          s"step-name=${step.name}, step-type=${step.`type`}", exception)
+        returnConnectionToPool((messageProducer, session, connection))
+        throw new RuntimeException(exception)
+      case Success(value) => value
+    }
+  }
+
+  private def tryGetBody(row: Row): String = {
+    Try(row.getAs[String](REAL_TIME_BODY_COL)) match {
+      case Failure(exception) =>
+        LOGGER.error(s"Required column name not defined in schema, required-column=$REAL_TIME_BODY_COL")
+        throw new RuntimeException(exception)
+      case Success(value) => value
+    }
   }
 
   private def setAdditionalMessageProperties(row: Row, message: TextMessage): Unit = {
@@ -58,13 +92,13 @@ object JmsSinkProcessor extends RealTimeSinkProcessor[(MessageProducer, Session,
 
   def close: Unit = {
     //TODO hack to wait for all producers to be finished, hard to know as connections are used across all partitions
-    Thread.sleep(1000)
-    while (connectionPool.size() > 0) {
-      val (messageProducer, session, connection) = connectionPool.take()
-      messageProducer.close()
-      connection.close()
-      session.close()
-    }
+    //    Thread.sleep(1000)
+    //    while (connectionPool.size() > 0) {
+    //      val (messageProducer, session, connection) = connectionPool.take()
+    //      messageProducer.close()
+    //      connection.close()
+    //      session.close()
+    //    }
   }
 
   protected def createInitialConnection(connectionConfig: Map[String, String]): (Connection, InitialContext) = {

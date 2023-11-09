@@ -9,11 +9,11 @@ import io.netty.handler.ssl.SslContextBuilder
 import org.apache.log4j.Logger
 import org.apache.spark.sql.Row
 import org.asynchttpclient.Dsl.asyncHttpClient
-import org.asynchttpclient.{AsyncHttpClient, DefaultAsyncHttpClientConfig, Request, Response}
+import org.asynchttpclient.{AsyncHttpClient, DefaultAsyncHttpClientConfig, ListenableFuture, Request, Response}
 
 import java.security.cert.X509Certificate
 import java.util.concurrent.CompletableFuture
-import javax.net.ssl.{SSLContext, X509TrustManager}
+import javax.net.ssl.X509TrustManager
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
@@ -64,22 +64,36 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] with Serializable {
     pushRowToSinkFuture(row)
   }
 
-  private def pushRowToSinkFuture(row: Row): CompletableFuture[Response] = {
+  private def pushRowToSinkFuture(row: Row): Response = {
     if (http.isClosed) {
       http = buildClient
     }
     val request = createHttpRequest(row)
-    val completableFutureResp = http.executeRequest(request).toCompletableFuture
+    Try(http.executeRequest(request)) match {
+      case Failure(exception) =>
+        LOGGER.error(s"Failed to execute HTTP request, url=${request.getUri}, method=${request.getMethod}", exception)
+        throw exception
+      case Success(value) => handleResponse(value, request)
+    }
+  }
 
-    completableFutureResp.whenComplete((resp, error) => {
-      if (error == null && resp.getStatusCode >= 200 && resp.getStatusCode < 300) {
-        LOGGER.debug(s"Successful HTTP request, url=${resp.getUri}, status-code=${resp.getStatusCode}, status-text=${resp.getStatusText}, " +
-          s"response-body=${resp.getResponseBody}")
-        //TODO can save response body along with request in file for validations
-      } else {
-        LOGGER.error(s"Failed HTTP request, url=${resp.getUri}, status-code=${resp.getStatusCode}, status-text=${resp.getStatusText}, message=${error.getMessage}", error)
-      }
-    })
+  private def handleResponse(value: ListenableFuture[Response], request: Request) = {
+    value.toCompletableFuture
+      .exceptionally(error => {
+        LOGGER.error(s"Failed to send HTTP request, url=${request.getUri}, method=${request.getMethod}", error)
+        throw error
+      })
+      .whenComplete((resp, error) => {
+        if (error == null && resp.getStatusCode >= 200 && resp.getStatusCode < 300) {
+          LOGGER.debug(s"Successful HTTP request, url=${resp.getUri}, method=${request.getMethod}, status-code=${resp.getStatusCode}, " +
+            s"status-text=${resp.getStatusText}, response-body=${resp.getResponseBody}")
+          //TODO can save response body along with request in file for validations
+        } else {
+          LOGGER.error(s"Failed HTTP request, url=${resp.getUri}, method=${request.getMethod}, status-code=${resp.getStatusCode}, " +
+            s"status-text=${resp.getStatusText}", error)
+          throw error
+        }
+      }).join()
   }
 
   def createHttpRequest(row: Row, connectionConfig: Option[Map[String, String]] = None): Request = {
@@ -125,7 +139,7 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] with Serializable {
     }
     val sslContext = SslContextBuilder.forClient().trustManager(trustManager).build()
     val config = new DefaultAsyncHttpClientConfig.Builder().setSslContext(sslContext).build()
-//    asyncHttpClient(config)
+    //    asyncHttpClient(config)
     asyncHttpClient()
   }
 }
