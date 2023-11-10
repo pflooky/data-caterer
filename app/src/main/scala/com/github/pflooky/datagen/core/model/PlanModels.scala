@@ -184,8 +184,8 @@ object SchemaHelper {
           field.`type`
         } else {
           LOGGER.warn(s"User has defined data type different to metadata source or from data source. " +
-            s"Using user defined type, field-name=${field.name}, user-type=$f2Type, data-source-type=$fType")
-          f2.`type`
+            s"Using data source defined type, field-name=${field.name}, user-type=$f2Type, data-source-type=$fType")
+          field.`type`
         }
       case (Some(_), None) => field.`type`
       case (None, Some(_)) => f2.`type`

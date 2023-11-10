@@ -232,12 +232,19 @@ class PlanProcessorTest extends SparkSuite {
   }
 
   class TestHttp extends PlanRun {
-    val httpTask = http("my_http", options = Map(ROWS_PER_SECOND -> "5"))
+    val httpTask = http("my_http")
       .schema(metadataSource.openApi("/Users/peter/code/spark-datagen/app/src/test/resources/sample/http/openapi/petstore.json"))
-      .count(count.records(10))
+      .schema(field.name("bodyContent").schema(field.name("id").regex("ID[0-9]{8}")))
+      .count(count.records(20))
+
+    val myPlan = plan.addForeignKeyRelationship(
+      foreignField("my_http", "POST/pets", "bodyContent.id"),
+      foreignField("my_http", "DELETE/pets/{id}", "pathParamid"),
+      foreignField("my_http", "GET/pets/{id}", "pathParamid"),
+    )
 
     val conf = configuration.enableGeneratePlanAndTasks(true)
 
-    execute(conf, httpTask)
+    execute(myPlan, conf, httpTask)
   }
 }

@@ -128,7 +128,6 @@ class SinkFactory(
   private def saveRealTimeGuava(dataSourceName: String, df: DataFrame, format: String, connectionConfig: Map[String, String],
                                 step: Step, rowsPerSecond: String, count: String, startTime: LocalDateTime): SinkResult = {
     implicit val tryEncoder: Encoder[Try[Unit]] = Encoders.kryo[Try[Unit]]
-    implicit val stringEncoder: Encoder[String] = Encoders.kryo[String]
     val permitsPerSecond = Math.max(rowsPerSecond.toInt, 1)
 
     val pushResults = df.repartition(permitsPerSecond).mapPartitions((partition: Iterator[Row]) => {

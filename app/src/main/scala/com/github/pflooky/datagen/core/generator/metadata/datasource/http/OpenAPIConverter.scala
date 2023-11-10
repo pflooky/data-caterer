@@ -1,9 +1,9 @@
 package com.github.pflooky.datagen.core.generator.metadata.datasource.http
 
-import com.github.pflooky.datacaterer.api.model.Constants.{ARRAY_MAXIMUM_LENGTH, ARRAY_MINIMUM_LENGTH, DEFAULT_REAL_TIME_HEADERS_DATA_TYPE, DEFAULT_REAL_TIME_HEADERS_INNER_DATA_TYPE, ENABLED_NULL, FIELD_DATA_TYPE, HTTP_HEADER_PARAMETER, HTTP_PARAMETER_TYPE, HTTP_PATH_PARAMETER, HTTP_QUERY_PARAMETER, IS_NULLABLE, MAXIMUM, MAXIMUM_LENGTH, MINIMUM, MINIMUM_LENGTH, ONE_OF_GENERATOR, ONE_OF_GENERATOR_DELIMITER, POST_SQL_EXPRESSION, REGEX_GENERATOR, SQL_GENERATOR, STATIC}
+import com.github.pflooky.datacaterer.api.model.Constants.{ARRAY_MAXIMUM_LENGTH, ARRAY_MINIMUM_LENGTH, ENABLED_NULL, FIELD_DATA_TYPE, HTTP_HEADER_PARAMETER, HTTP_PARAMETER_TYPE, HTTP_PATH_PARAMETER, HTTP_QUERY_PARAMETER, IS_NULLABLE, MAXIMUM, MAXIMUM_LENGTH, MINIMUM, MINIMUM_LENGTH, ONE_OF_GENERATOR, ONE_OF_GENERATOR_DELIMITER, POST_SQL_EXPRESSION, REGEX_GENERATOR, SQL_GENERATOR, STATIC}
 import com.github.pflooky.datacaterer.api.model.{ArrayType, BinaryType, DataType, DateType, DoubleType, FloatType, IntegerType, LongType, StringType, StructType, TimestampType}
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.ColumnMetadata
-import com.github.pflooky.datagen.core.model.Constants.{HTTP_HEADER_COL_PREFIX, HTTP_PATH_PARAM_COL_PREFIX, HTTP_QUERY_PARAM_COL_PREFIX, REAL_TIME_BODY_COL, REAL_TIME_BODY_CONTENT_COL, REAL_TIME_CONTENT_TYPE_COL, REAL_TIME_HEADERS_COL, REAL_TIME_METHOD_COL, REAL_TIME_URL_COL}
+import com.github.pflooky.datagen.core.model.Constants.{HTTP_HEADER_COL_PREFIX, HTTP_PATH_PARAM_COL_PREFIX, HTTP_QUERY_PARAM_COL_PREFIX, REAL_TIME_BODY_COL, REAL_TIME_BODY_CONTENT_COL, REAL_TIME_CONTENT_TYPE_COL, REAL_TIME_METHOD_COL, REAL_TIME_URL_COL}
 import io.swagger.v3.oas.models.PathItem.HttpMethod
 import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.parameters.Parameter
@@ -105,12 +105,12 @@ class OpenAPIConverter(openAPI: OpenAPI = new OpenAPI()) {
     params
       .filter(p => p.getIn != null && p.getIn == HTTP_PATH_PARAMETER)
       .map(p => {
-        val metadata = Map(
+        val baseMetadata = getSchemaMetadata(p.getSchema) ++ Map(
           HTTP_PARAMETER_TYPE -> HTTP_PATH_PARAMETER,
-          IS_NULLABLE -> (!p.getRequired).toString,
-          ENABLED_NULL -> (!p.getRequired).toString,
-        ) ++ getSchemaMetadata(p.getSchema)
-        ColumnMetadata(s"$HTTP_PATH_PARAM_COL_PREFIX${p.getName}", Map(), metadata)
+          IS_NULLABLE -> "false", //path param cannot be nullable
+          ENABLED_NULL -> "false" //path param cannot be nullable
+        )
+        ColumnMetadata(s"$HTTP_PATH_PARAM_COL_PREFIX${p.getName}", Map(), baseMetadata)
       })
   }
 
@@ -186,9 +186,11 @@ class OpenAPIConverter(openAPI: OpenAPI = new OpenAPI()) {
             }
             ColumnMetadata(field._1, Map(), fieldMetadata, nestedCols)
           }).toList
-      } else {
+      } else if (schema.getName != null) {
         val fieldMetadata = getSchemaMetadata(schema)
         List(ColumnMetadata(schema.getName, Map(), fieldMetadata))
+      } else {
+        List()
       }
     }
   }
@@ -198,8 +200,7 @@ class OpenAPIConverter(openAPI: OpenAPI = new OpenAPI()) {
     if (schema.getProperties != null) {
       schema.getProperties.entrySet().asScala.map(entry => (entry.getKey, entry.getValue)).toSet
     } else if (schema.get$ref() != null) {
-      val componentName = schema.get$ref().split("/").last
-      getFields(openAPI.getComponents.getSchemas.get(componentName))
+      getFields(getRefSchema(schema))
     } else if (schema.getType == "array") {
       val arrayName = if (schema.getName != null) schema.getName else "array"
       Set(arrayName -> schema)
@@ -255,7 +256,8 @@ class OpenAPIConverter(openAPI: OpenAPI = new OpenAPI()) {
 
   private def getMiscMetadata(field: Schema[_], optFieldName: Option[String], optParentSchema: Option[Schema[_]]): Map[String, String] = {
     val nullabilityMap = optParentSchema.map(schema => {
-      val requiredFields = if (schema.getRequired != null) schema.getRequired.asScala.toList else List()
+      val parentSchema = if (schema.get$ref() != null) getRefSchema(schema) else schema
+      val requiredFields = if (parentSchema.getRequired != null) parentSchema.getRequired.asScala.toList else List()
       if (requiredFields.contains(optFieldName.getOrElse(""))) {
         Map(IS_NULLABLE -> false)
       } else {
@@ -271,6 +273,11 @@ class OpenAPIConverter(openAPI: OpenAPI = new OpenAPI()) {
 
     (nullabilityMap ++ oneOfMap ++ Map(REGEX_GENERATOR -> field.getPattern))
       .flatMap(getMetadataFromSchemaAsMap)
+  }
+
+  private def getRefSchema(schema: Schema[_]): Schema[_] = {
+    val componentName = schema.get$ref().split("/").last
+    openAPI.getComponents.getSchemas.get(componentName)
   }
 
   private def getMinMax(schema: Schema[_]): Map[String, String] = {
