@@ -252,13 +252,13 @@ class PlanProcessorTest extends SparkSuite {
   class TestValidation extends PlanRun {
     val jsonTask = json("my_json", "/opt/app/data/json")
       .validations(
-        validation.col("name").matches("[A-Z][a-z]+ [A-Z][a-z]+").errorThreshold(0.1).description("Names generally follow the same pattern"),
+        validation.col("customer_details.name").matches("[A-Z][a-z]+ [A-Z][a-z]+").errorThreshold(0.1).description("Names generally follow the same pattern"),
         validation.col("date").isNotNull.errorThreshold(10),
         validation.col("balance").greaterThan(500),
         validation.expr("YEAR(date) == year"),
         validation.col("status").in("open", "closed", "pending").errorThreshold(0.2).description("Could be new status introduced"),
         validation.col("customer_details.age").greaterThan(18),
-        validation.col("update_history.updated_time").greaterThan(Timestamp.valueOf("2022-01-01 00:00:00")),
+        validation.expr("FORALL(update_history, x -> x.updated_time > TIMESTAMP('2022-01-01 00:00:00'))")
       )
 
     val config = configuration

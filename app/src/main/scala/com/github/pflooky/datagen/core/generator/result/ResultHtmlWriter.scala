@@ -310,10 +310,11 @@ class ResultHtmlWriter {
             </tbody>
           </table>
         </div>
-        <div class="slider">...</div>
-        <div class="bottom-container" id="current-field-metadata">
-          {fieldMetadata(stepResultSummary.head.step, stepResultSummary.head.dataSourceResults)}
-        </div>
+        <div class="slider">...</div>{if (stepResultSummary.nonEmpty) {
+          <div class="bottom-container" id="current-field-metadata">
+            {fieldMetadata(stepResultSummary.head.step, stepResultSummary.head.dataSourceResults)}
+          </div>
+        }}
       </div>
       </body>{bodyScripts}
     </html>
