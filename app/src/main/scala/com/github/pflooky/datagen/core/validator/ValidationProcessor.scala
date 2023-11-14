@@ -24,7 +24,6 @@ Different types of validations:
 - data profile (how close the generated data profile is compared to the expected data profile)
  */
 class ValidationProcessor(
-                           enableValidation: Boolean,
                            connectionConfigsByName: Map[String, Map[String, String]],
                            optValidationConfigs: Option[List[ValidationConfiguration]],
                            validationFolderPath: String
@@ -33,27 +32,22 @@ class ValidationProcessor(
   private val LOGGER = Logger.getLogger(getClass.getName)
 
   def executeValidations: List[ValidationConfigResult] = {
-    if (enableValidation) {
-      LOGGER.info("Executing data validations")
-      val validationResults = getValidations.map(vc => {
-        val dataSourceValidationResults = vc.dataSources.flatMap(dataSource => {
-          val dataSourceName = dataSource._1
-          val dataSourceValidations = dataSource._2
-          val numValidations = dataSourceValidations.flatMap(_.validations).size
+    LOGGER.info("Executing data validations")
+    val validationResults = getValidations.map(vc => {
+      val dataSourceValidationResults = vc.dataSources.flatMap(dataSource => {
+        val dataSourceName = dataSource._1
+        val dataSourceValidations = dataSource._2
+        val numValidations = dataSourceValidations.flatMap(_.validations).size
 
-          LOGGER.info(s"Executing data validations for data source, name=${vc.name}," +
-            s"data-source-name=$dataSourceName, num-validations=$numValidations")
-          dataSourceValidations.map(dataSourceValidation => executeDataValidations(vc, dataSourceName, dataSourceValidation))
-        }).toList
-        ValidationConfigResult(vc.name, vc.description, dataSourceValidationResults)
+        LOGGER.info(s"Executing data validations for data source, name=${vc.name}," +
+          s"data-source-name=$dataSourceName, num-validations=$numValidations")
+        dataSourceValidations.map(dataSourceValidation => executeDataValidations(vc, dataSourceName, dataSourceValidation))
       }).toList
+      ValidationConfigResult(vc.name, vc.description, dataSourceValidationResults)
+    }).toList
 
-      logValidationErrors(validationResults)
-      validationResults
-    } else {
-      LOGGER.debug("Data validations disabled")
-      List()
-    }
+    logValidationErrors(validationResults)
+    validationResults
   }
 
   private def executeDataValidations(

@@ -140,7 +140,8 @@ class PlanProcessorTest extends SparkSuite {
   }
 
   ignore("Can run Postgres plan run") {
-    PlanProcessor.determineAndExecutePlan(Some(new TestHttp))
+    PlanProcessor.determineAndExecutePlan(Some(new TestValidation))
+//    PlanProcessor.determineAndExecutePlan(Some(new TestHttp))
 //    PlanProcessor.determineAndExecutePlan(Some(new TestSolace))
 //    PlanProcessor.determineAndExecutePlan(Some(new TestOpenMetadata))
     //    PlanProcessor.determineAndExecutePlan(Some(new TestPostgres))
@@ -148,7 +149,7 @@ class PlanProcessorTest extends SparkSuite {
     //    PlanProcessor.determineAndExecutePlan(Some(new TestValidation))
   }
 
-  class TestValidation extends PlanRun {
+  class TestCsvPostgres extends PlanRun {
     val csvTask = csv("my_csv", "/tmp/data/csv", Map("saveMode" -> "overwrite", "header" -> "true"))
       .numPartitions(1)
       .schema(metadataSource.marquez("http://localhost:5001", "food_delivery", "public.delivery_7_days"))
@@ -246,5 +247,25 @@ class PlanProcessorTest extends SparkSuite {
     val conf = configuration.enableGeneratePlanAndTasks(true)
 
     execute(myPlan, conf, httpTask)
+  }
+
+  class TestValidation extends PlanRun {
+    val jsonTask = json("my_json", "/opt/app/data/json")
+      .validations(
+        validation.col("name").matches("[A-Z][a-z]+ [A-Z][a-z]+").errorThreshold(0.1).description("Names generally follow the same pattern"),
+        validation.col("date").isNotNull.errorThreshold(10),
+        validation.col("balance").greaterThan(500),
+        validation.expr("YEAR(date) == year"),
+        validation.col("status").in("open", "closed", "pending").errorThreshold(0.2).description("Could be new status introduced"),
+        validation.col("customer_details.age").greaterThan(18),
+        validation.col("update_history.updated_time").greaterThan(Timestamp.valueOf("2022-01-01 00:00:00")),
+      )
+
+    val config = configuration
+      .generatedReportsFolderPath("/opt/app/data/report")
+      .enableValidation(true)
+      .enableGenerateData(false)
+
+    execute(config, jsonTask)
   }
 }

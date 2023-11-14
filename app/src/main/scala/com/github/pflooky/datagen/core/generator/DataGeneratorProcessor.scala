@@ -47,16 +47,14 @@ class DataGeneratorProcessor(dataCatererConfiguration: DataCatererConfiguration)
     val summaryWithTask = plan.tasks.map(t => (t, tasksByName(t.name)))
     val faker = getDataFaker(plan)
 
-    (flagsConfig.enableGenerateData, flagsConfig.enableDeleteGeneratedRecords, applicationType) match {
-      case (true, _, _) =>
-        generateData(plan, summaryWithTask, optValidations, faker)
-      case (_, true, ADVANCED_APPLICATION | TRIAL_APPLICATION) =>
+    generateData(plan, summaryWithTask, optValidations, faker)
+    (flagsConfig.enableDeleteGeneratedRecords, applicationType) match {
+      case (true, ADVANCED_APPLICATION | TRIAL_APPLICATION) =>
         val stepsByName = tasks.flatMap(_.steps).filter(_.enabled).map(s => (s.name, s)).toMap
         deleteRecordProcessor.deleteGeneratedRecords(plan, stepsByName, summaryWithTask)
-      case (_, true, BASIC_APPLICATION) =>
+      case (true, BASIC_APPLICATION) =>
         LOGGER.warn(s"Please upgrade from the free plan to paid plan to enable generated records to be deleted. More details here: $DATA_CATERER_SITE_PRICING")
-      case _ =>
-        LOGGER.warn("Data generation is disabled")
+      case _ => //do nothing
     }
   }
 
@@ -73,10 +71,15 @@ class DataGeneratorProcessor(dataCatererConfiguration: DataCatererConfiguration)
     if (summaryWithTask.isEmpty) {
       LOGGER.warn("No tasks found or no tasks enabled. No data will be generated")
     } else {
-      LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=$stepNames")
-      val generationResult = batchDataProcessor.splitAndProcess(plan, summaryWithTask, faker)
-      val validationResults = new ValidationProcessor(flagsConfig.enableValidation, connectionConfigsByName, optValidations, foldersConfig.validationFolderPath)
-        .executeValidations
+      val generationResult = if (flagsConfig.enableGenerateData) {
+        LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=$stepNames")
+        batchDataProcessor.splitAndProcess(plan, summaryWithTask, faker)
+      } else List()
+
+      val validationResults = if (flagsConfig.enableValidation) {
+        new ValidationProcessor(connectionConfigsByName, optValidations, foldersConfig.validationFolderPath)
+          .executeValidations
+      } else List()
 
       if (flagsConfig.enableSaveReports) {
         dataGenerationResultWriter.writeResult(plan, generationResult, validationResults, sparkRecordListener)
