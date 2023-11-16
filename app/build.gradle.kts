@@ -45,7 +45,7 @@ configurations {
     }
     all {
         resolutionStrategy {
-            force("com.fasterxml.jackson.core:jackson-databind:2.15.2")
+            force("com.fasterxml.jackson.core:jackson-databind:2.16.0")
             force("org.antlr:antlr4-runtime:4.9.3")
             force("org.antlr:antlr4-tool:4.9.3")
         }
@@ -102,7 +102,7 @@ dependencies {
     basicImpl("com.github.pureconfig:pureconfig_$scalaVersion:0.17.2") {
         exclude(group = "org.scala-lang")
     }
-    basicImpl("com.fasterxml.jackson.core:jackson-databind:2.15.2") {
+    basicImpl("com.fasterxml.jackson.core:jackson-databind:2.16.0") {
         version {
             strictly("2.15.2")
         }
