@@ -19,9 +19,9 @@ repositories {
 }
 
 dependencies {
-	implementation("com.slack.api:bolt:1.35.0")
-	implementation("com.slack.api:bolt-servlet:1.35.0")
-	implementation("com.slack.api:bolt-jetty:1.35.0")
+	implementation("com.slack.api:bolt:1.36.1")
+	implementation("com.slack.api:bolt-servlet:1.36.1")
+	implementation("com.slack.api:bolt-jetty:1.36.1")
 	implementation("org.slf4j:slf4j-simple:2.0.5")
 	implementation("joda-time:joda-time:2.12.5")
 }
