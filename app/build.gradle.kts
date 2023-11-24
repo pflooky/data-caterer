@@ -78,7 +78,7 @@ dependencies {
     }
     // http
     advancedImpl("org.asynchttpclient:async-http-client:2.12.3")
-    advancedImpl("io.swagger.parser.v3:swagger-parser-v3:2.1.16")
+    advancedImpl("io.swagger.parser.v3:swagger-parser-v3:2.1.19")
     // kafka
     advancedImpl("org.apache.spark:spark-sql-kafka-0-10_$scalaVersion:$sparkVersion") {
         exclude(group = "org.scala-lang")
