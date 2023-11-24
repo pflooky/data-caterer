@@ -107,7 +107,7 @@ dependencies {
             strictly("2.15.2")
         }
     }
-    basicImpl("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.2") {
+    basicImpl("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.16.0") {
         version {
             strictly("2.15.2")
         }
