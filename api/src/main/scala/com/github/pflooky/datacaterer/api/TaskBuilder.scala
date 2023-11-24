@@ -323,9 +323,6 @@ case class CountBuilder(count: Count = Count()) {
   def perColumn(perColumnCountBuilder: PerColumnCountBuilder): CountBuilder =
     this.modify(_.count.perColumn).setTo(Some(perColumnCountBuilder.perColumnCount))
 
-  @varargs def columns(cols: String*): CountBuilder =
-    this.modify(_.count.perColumn).setTo(Some(perColCount.columns(cols: _*).perColumnCount))
-
   @varargs def recordsPerColumn(records: Long, cols: String*): CountBuilder =
     this.modify(_.count.perColumn).setTo(Some(perColCount.records(records, cols: _*).perColumnCount))
 
@@ -412,6 +409,9 @@ case class FieldBuilder(field: Field = Field()) {
 
   @varargs def schema(fields: FieldBuilder*): FieldBuilder =
     this.modify(_.field.schema).setTo(Some(getSchema.addFields(fields: _*).schema))
+
+  def schema(metadataSourceBuilder: MetadataSourceBuilder): FieldBuilder =
+    this.modify(_.field.generator).setTo(Some(getGenBuilder.options(metadataSourceBuilder.metadataSource.allOptions).generator))
 
   def nullable(nullable: Boolean): FieldBuilder =
     this.modify(_.field.nullable).setTo(nullable)

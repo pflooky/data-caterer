@@ -1,12 +1,15 @@
 package com.github.pflooky.datagen.core.validator
 
 import com.github.pflooky.datacaterer.api.model.Constants.{FORMAT, HTTP, JMS}
-import com.github.pflooky.datacaterer.api.model.{DataSourceValidation, ExpressionValidation, GroupByValidation, ValidationConfiguration}
-import com.github.pflooky.datagen.core.model.ValidationImplicits.{ValidationOps, WaitConditionOps}
+import com.github.pflooky.datacaterer.api.model.{DataSourceValidation, ExpressionValidation, FoldersConfig, GroupByValidation, UpstreamDataSourceValidation, ValidationConfig, ValidationConfiguration}
 import com.github.pflooky.datagen.core.model.{DataSourceValidationResult, ValidationConfigResult}
 import com.github.pflooky.datagen.core.parser.ValidationParser
+import com.github.pflooky.datagen.core.validator.ValidationWaitImplicits.WaitConditionOps
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SparkSession}
+
+import java.io.File
+import scala.reflect.io.Directory
 
 /*
 Given a list of validations, check and report on the success and failure of each
@@ -20,13 +23,14 @@ Different types of validations:
 - simple column validations (amount < 100)
 - aggregates (sum of amount per account is > 500)
 - ordering (transactions are ordered by date)
-- relationship (at least one account entry in history table per account in accounts table)
+- relationship (one account entry in history table per account in accounts table)
 - data profile (how close the generated data profile is compared to the expected data profile)
  */
 class ValidationProcessor(
                            connectionConfigsByName: Map[String, Map[String, String]],
                            optValidationConfigs: Option[List[ValidationConfiguration]],
-                           validationFolderPath: String
+                           validationConfig: ValidationConfig,
+                           foldersConfig: FoldersConfig
                          )(implicit sparkSession: SparkSession) {
 
   private val LOGGER = Logger.getLogger(getClass.getName)
@@ -60,21 +64,38 @@ class ValidationProcessor(
     dataSourceValidation.waitCondition.waitForCondition(connectionConfigsByName)
 
     val df = getDataFrame(dataSourceName, dataSourceValidation.options)
-    val count = df.count()
-    if (count == 0) {
-      LOGGER.info("No data validations found")
+    if (df.isEmpty) {
+      LOGGER.info("No data found to run validations")
       DataSourceValidationResult(dataSourceName, dataSourceValidation.options, List())
     } else {
-      val results = dataSourceValidation.validations.map(validBuilder => validBuilder.validation.validate(df, count))
+      val count = df.count()
+      val results = dataSourceValidation.validations.map(validBuilder => {
+        val validationOps = validBuilder.validation match {
+          case exprValid: ExpressionValidation => new ExpressionValidationOps(exprValid)
+          case grpValid: GroupByValidation => new GroupByValidationOps(grpValid)
+          case upValid: UpstreamDataSourceValidation => new UpstreamDataSourceValidationOps(upValid, foldersConfig.recordTrackingForValidationFolderPath)
+          case x => throw new RuntimeException(s"Unsupported validation type, validation=$x")
+        }
+        validationOps.validate(df, count)
+      })
       df.unpersist()
       LOGGER.debug(s"Finished data validations, name=${vc.name}," +
         s"data-source-name=$dataSourceName, details=${dataSourceValidation.options}, num-validations=${dataSourceValidation.validations.size}")
+      cleanRecordTrackingFiles()
       DataSourceValidationResult(dataSourceName, dataSourceValidation.options, results)
     }
   }
 
+  private def cleanRecordTrackingFiles(): Unit = {
+    if (validationConfig.enableDeleteRecordTrackingFiles) {
+      LOGGER.debug(s"Deleting all record tracking files from directory, " +
+        s"record-tracking-for-validation-directory=${foldersConfig.recordTrackingForValidationFolderPath}")
+      new Directory(new File(foldersConfig.recordTrackingForValidationFolderPath)).deleteRecursively()
+    }
+  }
+
   private def getValidations: Array[ValidationConfiguration] = {
-    optValidationConfigs.map(_.toArray).getOrElse(ValidationParser.parseValidation(validationFolderPath))
+    optValidationConfigs.map(_.toArray).getOrElse(ValidationParser.parseValidation(foldersConfig.validationFolderPath))
   }
 
   private def getDataFrame(dataSourceName: String, options: Map[String, String]): DataFrame = {
@@ -105,9 +126,11 @@ class ValidationProcessor(
           val (validationType, validationCheck) = validationRes.validation match {
             case ExpressionValidation(expr) => ("expression", expr)
             case GroupByValidation(_, _, _, expr) => ("groupByAggregate", expr)
+            //TODO get validationCheck from validationBuilder -> make this a recursive method to get validationCheck
+            case UpstreamDataSourceValidation(validationBuilder, upstreamDataSource, _, _, _) => ("upstreamDataSource", "")
             case _ => ("Unknown", "")
           }
-          val sampleErrors = validationRes.sampleErrorValues.get.take(5).map(_.json).mkString(",")
+          val sampleErrors = validationRes.sampleErrorValues.get.take(validationConfig.numSampleErrorRecords).map(_.json).mkString(",")
           LOGGER.error(s"Failed validation: validation-name=${vcr.name}, description=${vcr.description}, data-source-name=${dsr.dataSourceName}, " +
             s"data-source-options=${dsr.options}, is-success=${validationRes.isSuccess}, validation-type=$validationType, check=$validationCheck, sample-errors=$sampleErrors")
         })

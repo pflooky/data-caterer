@@ -65,6 +65,45 @@ class TasksBuilderTest extends AnyFunSuite {
     assert(result.generator.isEmpty)
   }
 
+  test("Can create records per column from count builder") {
+    val result = CountBuilder()
+      .recordsPerColumn(20, "account_id")
+      .count
+
+    assert(result.records.contains(1000))
+    assert(result.perColumn.isDefined)
+    assert(result.perColumn.get.count.contains(20))
+    assert(result.perColumn.get.columnNames == List("account_id"))
+    assert(result.perColumn.get.generator.isEmpty)
+    assert(result.generator.isEmpty)
+  }
+
+  test("Can create generated records per column from count builder") {
+    val result = CountBuilder()
+      .recordsPerColumnGenerator(GeneratorBuilder(), "account_id")
+      .count
+
+    assert(result.records.contains(1000))
+    assert(result.perColumn.isDefined)
+    assert(result.perColumn.get.count.contains(10))
+    assert(result.perColumn.get.columnNames == List("account_id"))
+    assert(result.perColumn.get.generator.isDefined)
+    assert(result.generator.isEmpty)
+  }
+
+  test("Can create generated records per column with total records from count builder") {
+    val result = CountBuilder()
+      .recordsPerColumnGenerator(100, GeneratorBuilder(), "account_id")
+      .count
+
+    assert(result.records.contains(100))
+    assert(result.perColumn.isDefined)
+    assert(result.perColumn.get.count.contains(10))
+    assert(result.perColumn.get.columnNames == List("account_id"))
+    assert(result.perColumn.get.generator.isDefined)
+    assert(result.generator.isEmpty)
+  }
+
   test("Can create per column count with generator") {
     val result = CountBuilder()
       .perColumn(PerColumnCountBuilder()

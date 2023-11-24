@@ -96,7 +96,8 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] with Serializable {
         if (error == null && resp.getStatusCode >= 200 && resp.getStatusCode < 300) {
           LOGGER.debug(s"Successful HTTP request, url=${resp.getUri}, method=${request.getMethod}, status-code=${resp.getStatusCode}, " +
             s"status-text=${resp.getStatusText}, response-body=${resp.getResponseBody}")
-          //TODO can save response body along with request in file for validations
+          //TODO can save response body along with request in file for validations, save as parquet or json?
+          // save request url, request headers, request body, response status code, response status text, response body, response headers, response cookies
         } else {
           LOGGER.error(s"Failed HTTP request, url=${resp.getUri}, method=${request.getMethod}, status-code=${resp.getStatusCode}, " +
             s"status-text=${resp.getStatusText}", error)
@@ -135,6 +136,10 @@ object HttpSinkProcessor extends RealTimeSinkProcessor[Unit] with Serializable {
         val fieldValue = row.getAs[Any](field.name).toString
         headerName -> fieldValue
       }).toMap ++ getAuthHeader(connectionConfig)
+  }
+
+  private def saveToFile(request: Request, response: Response): Unit = {
+
   }
 
   private def buildClient: AsyncHttpClient = {

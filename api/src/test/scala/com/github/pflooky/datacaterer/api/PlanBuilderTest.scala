@@ -1,5 +1,6 @@
 package com.github.pflooky.datacaterer.api
 
+import com.github.pflooky.datacaterer.api.connection.FileBuilder
 import com.github.pflooky.datacaterer.api.model.Constants.FOREIGN_KEY_DELIMITER
 import com.github.pflooky.datacaterer.api.model.{DataCatererConfiguration, ExpressionValidation, ForeignKeyRelation, PauseWaitCondition}
 import org.junit.runner.RunWith
@@ -127,4 +128,74 @@ class PlanBuilderTest extends AnyFunSuite {
     assert(dataSourceHead._2.head.waitCondition == PauseWaitCondition())
   }
 
+  test("Can define random seed and locale that get used across all data generators") {
+    val result = PlanBuilder().sinkOptions(SinkOptionsBuilder().locale("es").seed(1)).plan
+
+    assert(result.sinkOptions.isDefined)
+    assert(result.sinkOptions.get.locale.contains("es"))
+    assert(result.sinkOptions.get.seed.contains("1"))
+  }
+
+  test("Can define foreign key via connection task builder") {
+    val jsonTask = ConnectionConfigWithTaskBuilder().file("my_json", "json")
+      .schema(FieldBuilder().name("account_id"))
+    val csvTask = ConnectionConfigWithTaskBuilder().file("my_csv", "csv")
+      .schema(FieldBuilder().name("account_id"))
+    val result = PlanBuilder().addForeignKeyRelationship(
+      jsonTask, List("account_id"),
+      List(csvTask -> List("account_id"))
+    ).plan
+
+    assert(result.sinkOptions.isDefined)
+    val fk = result.sinkOptions.get.foreignKeys
+    assert(fk.nonEmpty)
+    assert(fk.size == 1)
+    assert(fk.exists(f => f._1.startsWith("my_json") && f._1.endsWith("account_id") &&
+      f._2.size == 1 && f._2.head.startsWith("my_csv") && f._2.head.endsWith("account_id")
+    ))
+
+    val result2 = PlanBuilder().addForeignKeyRelationship(
+      jsonTask, "account_id",
+      List(csvTask -> "account_id")
+    ).plan
+
+    assert(result2.sinkOptions.isDefined)
+    val fk2 = result2.sinkOptions.get.foreignKeys
+    assert(fk2.nonEmpty)
+    assert(fk2.size == 1)
+  }
+
+  test("Throw runtime exception when foreign key column is not defined in data sources") {
+    val jsonTask = ConnectionConfigWithTaskBuilder().file("my_json", "json")
+    val csvTask = ConnectionConfigWithTaskBuilder().file("my_csv", "csv")
+
+    assertThrows[RuntimeException](PlanBuilder().addForeignKeyRelationship(
+      jsonTask, List("account_id"),
+      List(csvTask -> List("account_id"))
+    ).plan)
+  }
+
+  test("Throw runtime exception when foreign key column is not defined in data sources with other columns") {
+    val jsonTask = ConnectionConfigWithTaskBuilder().file("my_json", "json").schema(FieldBuilder().name("account_number"))
+    val csvTask = ConnectionConfigWithTaskBuilder().file("my_csv", "csv").schema(FieldBuilder().name("account_type"))
+
+    assertThrows[RuntimeException](PlanBuilder().addForeignKeyRelationship(
+      jsonTask, List("account_id"),
+      List(csvTask -> List("account_id"))
+    ).plan)
+  }
+
+  test("Don't throw runtime exception when data source schema is defined from metadata source") {
+    val jsonTask = ConnectionConfigWithTaskBuilder().file("my_json", "json").schema(MetadataSourceBuilder().openApi("localhost:8080"))
+    val csvTask = ConnectionConfigWithTaskBuilder().file("my_csv", "csv").schema(MetadataSourceBuilder().openApi("localhost:8080"))
+    val result = PlanBuilder().addForeignKeyRelationship(
+      jsonTask, List("account_id"),
+      List(csvTask -> List("account_id"))
+    ).plan
+
+    assert(result.sinkOptions.isDefined)
+    val fk = result.sinkOptions.get.foreignKeys
+    assert(fk.nonEmpty)
+    assert(fk.size == 1)
+  }
 }

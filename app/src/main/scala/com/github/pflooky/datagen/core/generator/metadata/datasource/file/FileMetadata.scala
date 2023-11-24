@@ -33,7 +33,7 @@ case class FileMetadata(name: String, format: String, connectionConfig: Map[Stri
     val filePaths = df.distinct().collect()
       .map(r => r.getAs[String]("file_path"))
     val baseFilePaths = getBaseFolderPathways(filePaths)
-    baseFilePaths.map(p => SubDataSourceMetadata(connectionConfig ++ Map(PATH -> p, FORMAT -> format)))
+    baseFilePaths.map(p => SubDataSourceMetadata(connectionConfig ++ Map(PATH -> p.replaceFirst(".+?://", ""), FORMAT -> format)))
   }
 
   private def getBaseFolderPathways(filePaths: Array[String]): Array[String] = {

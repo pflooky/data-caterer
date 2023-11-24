@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.util
 
 import com.github.pflooky.datacaterer.api.model.Constants._
-import com.github.pflooky.datacaterer.api.model.{Field, MetadataConfig, OpenMetadataSource}
+import com.github.pflooky.datacaterer.api.model.{Field, MetadataConfig, OpenMetadataSource, Step}
 import com.github.pflooky.datagen.core.generator.metadata.ExpressionPredictor
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceMetadata
 import com.github.pflooky.datagen.core.generator.metadata.datasource.database.{CassandraMetadata, ColumnMetadata, MysqlMetadata, PostgresMetadata}
@@ -171,24 +171,25 @@ object MetadataUtil {
   def getSubDataSourcePath(
                             dataSourceName: String,
                             format: String,
-                            options: Map[String, String],
+                            step: Step,
                             recordTrackingFolderPath: String
                           ): String = {
     val lowerFormat = format.toLowerCase
     val subPath = lowerFormat match {
       case JDBC =>
-        val spt = options(JDBC_TABLE).split("\\.")
+        val spt = step.options(JDBC_TABLE).split("\\.")
         val (schema, table) = (spt.head, spt.last)
         s"$schema/$table"
       case CASSANDRA =>
-        s"${options(CASSANDRA_KEYSPACE)}/${options(CASSANDRA_TABLE)}"
+        s"${step.options(CASSANDRA_KEYSPACE)}/${step.options(CASSANDRA_TABLE)}"
       case PARQUET | CSV | JSON | DELTA | ORC =>
-        options(PATH).replaceAll("s3(a|n?)://|wasb(s?)://|gs://|file://|hdfs://[a-zA-Z0-9]+:[0-9]+", "")
+        step.options(PATH).replaceAll("s3(a|n?)://|wasb(s?)://|gs://|file://|hdfs://[a-zA-Z0-9]+:[0-9]+", "")
       case JMS =>
-        options(JMS_DESTINATION_NAME)
-      //      case HTTP =>
-      //        //TODO do we support delete via HTTP?
-      //        options(HTTP_METHOD)
+        step.options(JMS_DESTINATION_NAME)
+      case KAFKA =>
+        step.options(KAFKA_TOPIC)
+      case HTTP =>
+        step.name
       case _ =>
         LOGGER.warn(s"Unsupported data format for record tracking, format=$lowerFormat")
         throw new RuntimeException(s"Unsupported data format for record tracking, format=$lowerFormat")
@@ -198,7 +199,7 @@ object MetadataUtil {
 
   def getMetadataFromConnectionConfig(connectionConfig: (String, Map[String, String])): Option[DataSourceMetadata] = {
     val optExternalMetadataSource = connectionConfig._2.get(METADATA_SOURCE_TYPE)
-    val format = connectionConfig._2(FORMAT).toLowerCase
+    val format = connectionConfig._2.getOrElse(FORMAT, "").toLowerCase
     (optExternalMetadataSource, format) match {
       case (Some(metadataSourceType), _) =>
         metadataSourceType.toLowerCase match {
@@ -222,7 +223,9 @@ object MetadataUtil {
       case (_, HTTP) => Some(HttpMetadata(connectionConfig._1, format, connectionConfig._2))
       case (_, JMS) => Some(JmsMetadata(connectionConfig._1, format, connectionConfig._2))
       case _ =>
-        LOGGER.warn(s"Metadata extraction not supported for connection type '${connectionConfig._2(FORMAT)}', connection-name=${connectionConfig._1}")
+        if (format.nonEmpty) {
+          LOGGER.warn(s"Metadata extraction not supported for connection type '$format', connection-name=${connectionConfig._1}")
+        }
         None
     }
   }

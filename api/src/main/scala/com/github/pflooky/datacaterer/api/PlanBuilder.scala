@@ -28,9 +28,6 @@ case class PlanBuilder(plan: Plan = Plan(), tasks: List[TasksBuilder] = List()) 
   def sinkOptions(sinkOptionsBuilder: SinkOptionsBuilder): PlanBuilder =
     this.modify(_.plan.sinkOptions).setTo(Some(sinkOptionsBuilder.sinkOptions))
 
-  def sinkOptions(sinkOptions: SinkOptions): PlanBuilder =
-    this.modify(_.plan.sinkOptions).setTo(Some(sinkOptions))
-
   def seed(seed: Long): PlanBuilder =
     this.modify(_.plan.sinkOptions).setTo(Some(getSinkOpt.seed(seed).sinkOptions))
 
@@ -95,7 +92,7 @@ case class PlanBuilder(plan: Plan = Plan(), tasks: List[TasksBuilder] = List()) 
         }
         ForeignKeyRelation(dataSource, value.step.name, columns)
       case None =>
-        throw new RuntimeException(s"Not schema defined for data source. Cannot create foreign key relationship, data-source=$dataSource, column-name=$colNames")
+        throw new RuntimeException(s"No schema defined for data source. Cannot create foreign key relationship, data-source=$dataSource, column-name=$colNames")
     }
   }
 

@@ -11,13 +11,19 @@ trait ConnectionTaskBuilder[T] {
   var task: Option[TaskBuilder] = None
   var step: Option[StepBuilder] = None
 
-  def apply(builder: ConnectionConfigWithTaskBuilder, optTask: Option[Task], optStep: Option[Step]) = {
+  def apply(builder: ConnectionConfigWithTaskBuilder, optTask: Option[Task], optStep: Option[Step]): ConnectionTaskBuilder[T] = {
     this.connectionConfigWithTaskBuilder = builder
     this.task = optTask.map(TaskBuilder)
     this.step = optStep.map(s => StepBuilder(s))
+    this
   }
 
   def fromBaseConfig(connectionTaskBuilder: ConnectionTaskBuilder[T]): T
+
+  def step(stepBuilder: StepBuilder): ConnectionTaskBuilder[T] = {
+    this.step = Some(stepBuilder)
+    this
+  }
 
   @varargs def schema(fields: FieldBuilder*): ConnectionTaskBuilder[T] = {
     this.step = Some(getStep.schema(fields: _*))

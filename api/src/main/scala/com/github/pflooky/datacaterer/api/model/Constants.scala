@@ -167,6 +167,7 @@ object Constants {
   lazy val DEFAULT_GENERATED_REPORTS_FOLDER_PATH = "/opt/app/report"
   lazy val DEFAULT_RECORD_TRACKING_FOLDER_PATH = "/opt/app/record-tracking"
   lazy val DEFAULT_VALIDATION_FOLDER_PATH = "/opt/app/validation"
+  lazy val DEFAULT_RECORD_TRACKING_VALIDATION_FOLDER_PATH = "/opt/app/record-tracking-validation"
 
   //metadata defaults
   lazy val DEFAULT_NUM_RECORD_FROM_DATA_SOURCE = 10000
@@ -259,6 +260,12 @@ object Constants {
   //validation defaults
   lazy val DEFAULT_VALIDATION_CONFIG_NAME = "default_validation"
   lazy val DEFAULT_VALIDATION_DESCRIPTION = "Validation of data sources after generating data"
+  lazy val DEFAULT_VALIDATION_JOIN_TYPE = "outer"
+  lazy val DEFAULT_VALIDATION_NUM_ERROR_RECORDS = 5
+  lazy val DEFAULT_VALIDATION_DELETE_RECORD_TRACKING_FILES = true
+  lazy val DEFAULT_VALIDATION_WEBHOOK_HTTP_DATA_SOURCE_NAME = "tmp_http_data_source"
+  lazy val DEFAULT_VALIDATION_WEBHOOK_HTTP_METHOD = "GET"
+  lazy val DEFAULT_VALIDATION_WEBHOOK_HTTP_STATUS_CODES = List(200)
 
   //metadata source
   lazy val METADATA_SOURCE_TYPE = "metadata_source_type"
@@ -333,6 +340,7 @@ object Constants {
   lazy val VALIDATION_EXPRESSION = "expr"
   lazy val VALIDATION_GROUP_BY = "groupBy"
   lazy val VALIDATION_UNIQUE = "unique"
+  lazy val VALIDATION_PREFIX_JOIN_EXPRESSION = "expr:"
 
   //trial
   lazy val API_KEY = "API_KEY"

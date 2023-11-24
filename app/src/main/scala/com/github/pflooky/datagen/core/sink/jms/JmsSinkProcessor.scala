@@ -126,6 +126,9 @@ object JmsSinkProcessor extends RealTimeSinkProcessor[(MessageProducer, Session,
     properties.put(Context.PROVIDER_URL, connectionConfig(URL))
     properties.put(Context.SECURITY_PRINCIPAL, s"${connectionConfig(USERNAME)}@${connectionConfig(JMS_VPN_NAME)}")
     properties.put(Context.SECURITY_CREDENTIALS, connectionConfig(PASSWORD))
+    val addedConfig = List(JMS_INITIAL_CONTEXT_FACTORY, URL, USERNAME, PASSWORD, JMS_VPN_NAME)
+    connectionConfig.filter(x => !addedConfig.contains(x._1))
+      .foreach(c => properties.put(c._1, c._2))
     properties
   }
 }

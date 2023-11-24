@@ -9,13 +9,8 @@ import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BA
 import com.github.pflooky.datagen.core.model.PlanImplicits.TaskOps
 import com.github.pflooky.datagen.core.parser.PlanParser
 import com.github.pflooky.datagen.core.validator.ValidationProcessor
-import net.datafaker.Faker
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
-
-import java.io.Serializable
-import java.util.{Locale, Random}
-import scala.util.{Failure, Success, Try}
 
 class DataGeneratorProcessor(dataCatererConfiguration: DataCatererConfiguration)(implicit sparkSession: SparkSession) {
 
@@ -45,9 +40,8 @@ class DataGeneratorProcessor(dataCatererConfiguration: DataCatererConfiguration)
   def generateData(plan: Plan, tasks: List[Task], optValidations: Option[List[ValidationConfiguration]]): Unit = {
     val tasksByName = tasks.map(t => (t.name, t)).toMap
     val summaryWithTask = plan.tasks.map(t => (t, tasksByName(t.name)))
-    val faker = getDataFaker(plan)
 
-    generateData(plan, summaryWithTask, optValidations, faker)
+    generateDataWithResult(plan, summaryWithTask, optValidations)
     (flagsConfig.enableDeleteGeneratedRecords, applicationType) match {
       case (true, ADVANCED_APPLICATION | TRIAL_APPLICATION) =>
         val stepsByName = tasks.flatMap(_.steps).filter(_.enabled).map(s => (s.name, s)).toMap
@@ -58,7 +52,7 @@ class DataGeneratorProcessor(dataCatererConfiguration: DataCatererConfiguration)
     }
   }
 
-  private def generateData(plan: Plan, summaryWithTask: List[(TaskSummary, Task)], optValidations: Option[List[ValidationConfiguration]], faker: Faker with Serializable): Unit = {
+  private def generateDataWithResult(plan: Plan, summaryWithTask: List[(TaskSummary, Task)], optValidations: Option[List[ValidationConfiguration]]): Unit = {
     if (flagsConfig.enableDeleteGeneratedRecords) {
       LOGGER.warn("Both enableGenerateData and enableDeleteGeneratedData are true. Please only enable one at a time. Will continue with generating data")
     }
@@ -73,35 +67,17 @@ class DataGeneratorProcessor(dataCatererConfiguration: DataCatererConfiguration)
     } else {
       val generationResult = if (flagsConfig.enableGenerateData) {
         LOGGER.info(s"Following tasks are enabled and will be executed: num-tasks=${summaryWithTask.size}, tasks=$stepNames")
-        batchDataProcessor.splitAndProcess(plan, summaryWithTask, faker)
+        batchDataProcessor.splitAndProcess(plan, summaryWithTask, optValidations)
       } else List()
 
       val validationResults = if (flagsConfig.enableValidation) {
-        new ValidationProcessor(connectionConfigsByName, optValidations, foldersConfig.validationFolderPath)
+        new ValidationProcessor(connectionConfigsByName, optValidations, dataCatererConfiguration.validationConfig, foldersConfig)
           .executeValidations
       } else List()
 
       if (flagsConfig.enableSaveReports) {
         dataGenerationResultWriter.writeResult(plan, generationResult, validationResults, sparkRecordListener)
       }
-    }
-  }
-
-  private def getDataFaker(plan: Plan): Faker with Serializable = {
-    val optSeed = plan.sinkOptions.flatMap(_.seed)
-    val optLocale = plan.sinkOptions.flatMap(_.locale)
-    val trySeed = Try(optSeed.map(_.toInt).get)
-
-    (optSeed, trySeed, optLocale) match {
-      case (None, _, Some(locale)) =>
-        LOGGER.info(s"Locale defined at plan level. All data will be generated with the set locale, locale=$locale")
-        new Faker(Locale.forLanguageTag(locale)) with Serializable
-      case (Some(_), Success(seed), Some(locale)) =>
-        LOGGER.info(s"Seed and locale defined at plan level. All data will be generated with the set seed and locale, seed-value=$seed, locale=$locale")
-        new Faker(Locale.forLanguageTag(locale), new Random(seed)) with Serializable
-      case (Some(_), Failure(exception), _) =>
-        throw new RuntimeException("Failed to get seed value from plan sink options", exception)
-      case _ => new Faker() with Serializable
     }
   }
 

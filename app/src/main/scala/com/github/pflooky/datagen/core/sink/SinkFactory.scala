@@ -1,23 +1,20 @@
 package com.github.pflooky.datagen.core.sink
 
-import com.github.pflooky.datacaterer.api.model.Constants.{DRIVER, FORMAT, HTTP, JDBC, JMS, OMIT, PARTITIONS, PARTITION_BY, POSTGRES_DRIVER, RATE, ROWS_PER_SECOND, SAVE_MODE}
+import com.github.pflooky.datacaterer.api.model.Constants.{DRIVER, FORMAT, JDBC, OMIT, PARTITIONS, PARTITION_BY, POSTGRES_DRIVER, RATE, ROWS_PER_SECOND, SAVE_MODE}
 import com.github.pflooky.datacaterer.api.model.{FlagsConfig, MetadataConfig, Step}
-import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS, BATCH, DATA_CATERER_SITE_PRICING, DEFAULT_ROWS_PER_SECOND, FAILED, FINISHED, PER_COLUMN_INDEX_COL, REAL_TIME, STARTED, TRIAL_APPLICATION}
+import com.github.pflooky.datagen.core.model.Constants.{ADVANCED_APPLICATION, BASIC_APPLICATION, BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS, BATCH, DATA_CATERER_SITE_PRICING, DEFAULT_ROWS_PER_SECOND, FAILED, FINISHED, PER_COLUMN_INDEX_COL, STARTED, TRIAL_APPLICATION}
 import com.github.pflooky.datagen.core.model.SinkResult
-import com.github.pflooky.datagen.core.sink.http.HttpSinkProcessor
-import com.github.pflooky.datagen.core.util.KryoSerializationWrapper
+import com.github.pflooky.datagen.core.util.ConfigUtil
+import com.github.pflooky.datagen.core.util.GeneratorUtil.determineSaveTiming
 import com.github.pflooky.datagen.core.util.MetadataUtil.getFieldMetadata
 import com.google.common.util.concurrent.RateLimiter
 import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, DataFrameWriter, Dataset, Encoder, Encoders, Row, SaveMode, SparkSession}
 
 import java.time.LocalDateTime
-import java.util.concurrent.CompletableFuture
-import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 class SinkFactory(
-                   val connectionConfigs: Map[String, Map[String, String]],
                    val flagsConfig: FlagsConfig,
                    val metadataConfig: MetadataConfig,
                    val applicationType: String = "advanced"
@@ -28,10 +25,9 @@ class SinkFactory(
 
   def pushToSink(df: DataFrame, dataSourceName: String, step: Step, flagsConfig: FlagsConfig, startTime: LocalDateTime): SinkResult = {
     val dfWithoutOmitFields = removeOmitFields(df)
-    val connectionConfig = connectionConfigs.getOrElse(dataSourceName, Map(FORMAT -> step.`type`))
-    val saveMode = connectionConfig.get(SAVE_MODE).map(_.toLowerCase.capitalize).map(SaveMode.valueOf).getOrElse(SaveMode.Append)
-    val format = connectionConfig(FORMAT)
-    val enrichedConnectionConfig = additionalConnectionConfig(format, connectionConfig)
+    val saveMode = step.options.get(SAVE_MODE).map(_.toLowerCase.capitalize).map(SaveMode.valueOf).getOrElse(SaveMode.Append)
+    val format = step.options(FORMAT)
+    val enrichedConnectionConfig = additionalConnectionConfig(format, step.options)
 
     val count = if (flagsConfig.enableCount) {
       dfWithoutOmitFields.count().toString
@@ -48,8 +44,12 @@ class SinkFactory(
                        saveMode: SaveMode, format: String, count: String, enableFailOnError: Boolean, startTime: LocalDateTime): SinkResult = {
     val saveTiming = determineSaveTiming(dataSourceName, format, step.name)
     val baseSinkResult = SinkResult(dataSourceName, format, saveMode.name())
-    val sinkResult = if (saveTiming.equalsIgnoreCase(BATCH)) {
-      saveBatchData(dataSourceName, df, saveMode, connectionConfig, step.options, count, startTime)
+    //TODO might have use case where empty data can be tested, is it okay just to check for empty schema?
+    val sinkResult = if (df.schema.isEmpty) {
+      LOGGER.debug(s"Generated data schema is empty, not saving to data source, data-source-name=$dataSourceName, format=$format")
+      baseSinkResult
+    } else if (saveTiming.equalsIgnoreCase(BATCH)) {
+      saveBatchData(dataSourceName, df, saveMode, connectionConfig, count, startTime)
     } else if (applicationType.equalsIgnoreCase(ADVANCED_APPLICATION) || applicationType.equalsIgnoreCase(TRIAL_APPLICATION)) {
       saveRealTimeData(dataSourceName, df, format, connectionConfig, step, count, startTime)
     } else if (applicationType.equalsIgnoreCase(BASIC_APPLICATION)) {
@@ -74,20 +74,8 @@ class SinkFactory(
     finalSinkResult
   }
 
-  private def determineSaveTiming(dataSourceName: String, format: String, stepName: String): String = {
-    format match {
-      case HTTP | JMS =>
-        LOGGER.debug(s"Given the step type is either HTTP or JMS, data will be generated in real-time mode. " +
-          s"It will be based on requests per second defined at plan level, data-source-name=$dataSourceName, step-name=$stepName, format=$format")
-        REAL_TIME
-      case _ =>
-        LOGGER.debug(s"Will generate data in batch mode for step, data-source-name=$dataSourceName, step-name=$stepName, format=$format")
-        BATCH
-    }
-  }
-
   private def saveBatchData(dataSourceName: String, df: DataFrame, saveMode: SaveMode, connectionConfig: Map[String, String],
-                            stepOptions: Map[String, String], count: String, startTime: LocalDateTime): SinkResult = {
+                            count: String, startTime: LocalDateTime): SinkResult = {
     val format = connectionConfig(FORMAT)
     if (applicationType.equalsIgnoreCase(BASIC_APPLICATION) && (
       !BASIC_APPLICATION_SUPPORTED_CONNECTION_FORMATS.contains(format) ||
@@ -97,17 +85,17 @@ class SinkFactory(
       return SinkResult(dataSourceName, format, saveMode.name())
     }
 
-    val partitionedDf = partitionDf(df, stepOptions)
+    val partitionedDf = partitionDf(df, connectionConfig)
     val trySaveData = Try(partitionedDf
       .format(format)
       .mode(saveMode)
-      .options(connectionConfig ++ stepOptions)
+      .options(connectionConfig)
       .save())
     val optException = trySaveData match {
       case Failure(exception) => Some(exception)
       case Success(_) => None
     }
-    mapToSinkResult(dataSourceName, df, saveMode, connectionConfig, stepOptions, count, format, trySaveData.isSuccess, startTime, optException)
+    mapToSinkResult(dataSourceName, df, saveMode, connectionConfig, count, format, trySaveData.isSuccess, startTime, optException)
   }
 
   private def partitionDf(df: DataFrame, stepOptions: Map[String, String]): DataFrameWriter[Row] = {
@@ -130,6 +118,10 @@ class SinkFactory(
     implicit val tryEncoder: Encoder[Try[Unit]] = Encoders.kryo[Try[Unit]]
     val permitsPerSecond = Math.max(rowsPerSecond.toInt, 1)
 
+    //TODO should return back the response so it could be saved for potential validations (i.e. validate HTTP request and response)
+    //if the real time data source is used as a data source for validations, save the df as parquet that can be used as the validation data source
+    //folder path needs to be something that can be used in validation logic
+    //or do we just always save the real time data as parquet and clean up (based on flag with default true) at the end of the job?
     val pushResults = df.repartition(permitsPerSecond).mapPartitions((partition: Iterator[Row]) => {
       val rateLimiter = RateLimiter.create(1)
       val rows = partition.toList
@@ -145,7 +137,7 @@ class SinkFactory(
     pushResults.cache()
     val CheckExceptionAndSuccess(optException, isSuccess) = checkExceptionAndSuccess(dataSourceName, format, step, count, pushResults)
     val someExp = if (optException.count() > 0) optException.head else None
-    mapToSinkResult(dataSourceName, df, SaveMode.Append, connectionConfig, step.options, count, format, isSuccess, startTime, someExp)
+    mapToSinkResult(dataSourceName, df, SaveMode.Append, connectionConfig, count, format, isSuccess, startTime, someExp)
   }
 
   case class CheckExceptionAndSuccess(optException: Dataset[Option[Throwable]], isSuccess: Boolean)
@@ -205,9 +197,9 @@ class SinkFactory(
   }
 
   private def mapToSinkResult(dataSourceName: String, df: DataFrame, saveMode: SaveMode, connectionConfig: Map[String, String],
-                              stepOptions: Map[String, String], count: String, format: String, isSuccess: Boolean, startTime: LocalDateTime,
+                              count: String, format: String, isSuccess: Boolean, startTime: LocalDateTime,
                               optException: Option[Throwable]): SinkResult = {
-    val cleansedOptions = cleanseOptions(connectionConfig, stepOptions)
+    val cleansedOptions = ConfigUtil.cleanseOptions(connectionConfig)
     val sinkResult = SinkResult(dataSourceName, format, saveMode.name(), cleansedOptions, count.toLong, isSuccess, Array(), startTime, exception = optException)
 
     if (flagsConfig.enableSinkMetadata) {
@@ -217,18 +209,6 @@ class SinkFactory(
     } else {
       sinkResult
     }
-  }
-
-  private def cleanseOptions(connectionConfig: Map[String, String], stepOptions: Map[String, String]) = {
-    (connectionConfig ++ stepOptions)
-      .filter(o =>
-        !(
-          o._1.toLowerCase.contains("password") || o._2.toLowerCase.contains("password") ||
-            o._1.toLowerCase.contains("token") ||
-            o._1.toLowerCase.contains("secret") ||
-            o._1.toLowerCase.contains("private")
-          )
-      )
   }
 
   private def removeOmitFields(df: DataFrame) = {

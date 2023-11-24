@@ -2,6 +2,7 @@ package com.github.pflooky.datagen.core.generator.delete
 
 import com.github.pflooky.datacaterer.api.model.Constants.{CASSANDRA, CSV, DELTA, FORMAT, JDBC, JSON, ORC, PARQUET, PATH}
 import com.github.pflooky.datacaterer.api.model.{Plan, Step, Task, TaskSummary}
+import com.github.pflooky.datagen.core.model.Constants.RECORD_TRACKING_VALIDATION_FORMAT
 import com.github.pflooky.datagen.core.model.ForeignKeyRelationHelper
 import com.github.pflooky.datagen.core.model.PlanImplicits.SinkOptionsOps
 import com.github.pflooky.datagen.core.util.ForeignKeyUtil
@@ -25,40 +26,41 @@ class DeleteRecordProcessor(connectionConfigsByName: Map[String, Map[String, Str
         val connectionConfig = connectionConfigsByName(foreignKeyRelation.dataSource)
         val format = connectionConfig(FORMAT)
         val step = stepsByName(foreignKeyRelation.step)
-        deleteRecords(foreignKeyRelation.dataSource, format, step.options, connectionConfig)
+        deleteRecords(foreignKeyRelation.dataSource, format, step, connectionConfig)
       })
     } else {
       summaryWithTask.foreach(task => {
         task._2.steps.foreach(step => {
           val connectionConfig = connectionConfigsByName(task._1.dataSourceName)
           val format = connectionConfig(FORMAT)
-          deleteRecords(task._1.dataSourceName, format, step.options, connectionConfig)
+          deleteRecords(task._1.dataSourceName, format, step, connectionConfig)
         })
       })
     }
   }
 
-  def deleteRecords(dataSourceName: String, format: String, options: Map[String, String], connectionConfig: Map[String, String]): Unit = {
-    val subDataSourcePath = getSubDataSourcePath(dataSourceName, format, options, recordTrackingFolderPath)
+  def deleteRecords(dataSourceName: String, format: String, step: Step, connectionConfig: Map[String, String]): Unit = {
+    val subDataSourcePath = getSubDataSourcePath(dataSourceName, format, step, recordTrackingFolderPath)
     val deleteRecordService = format.toLowerCase match {
       case JDBC => new JdbcDeleteRecordService
       case CASSANDRA => new CassandraDeleteRecordService
       case PARQUET | JSON | CSV | ORC | DELTA => new LocalFileDeleteRecordService
     }
     LOGGER.warn(s"Delete generated records is enabled. If 'enableRecordTracking' has been enabled, all generated records for this data source will be deleted, " +
-      s"data-source-name=$dataSourceName, format=$format, details=$options")
+      s"data-source-name=$dataSourceName, format=$format, details=${step.options}")
     val tryTrackedRecords = Try(getTrackedRecords(subDataSourcePath))
     tryTrackedRecords match {
       case Failure(exception) =>
-        LOGGER.error(s"Failed to get tracked records for data source, will continue to try delete other data sources, data-source-name=$dataSourceName, format=$format, details=$options, exception=${exception.getMessage}")
+        LOGGER.error(s"Failed to get tracked records for data source, will continue to try delete other data sources, " +
+          s"data-source-name=$dataSourceName, format=$format, details=${step.options}, exception=${exception.getMessage}")
       case Success(trackedRecords) =>
-        deleteRecordService.deleteRecords(dataSourceName, trackedRecords, options ++ connectionConfig)
+        deleteRecordService.deleteRecords(dataSourceName, trackedRecords, step.options ++ connectionConfig)
         deleteTrackedRecordsFile(subDataSourcePath)
     }
   }
 
   def getTrackedRecords(dataSourcePath: String): DataFrame = {
-    sparkSession.read.format(PARQUET)
+    sparkSession.read.format(RECORD_TRACKING_VALIDATION_FORMAT)
       .option(PATH, dataSourcePath)
       .load()
   }

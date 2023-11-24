@@ -1,8 +1,9 @@
 package com.github.pflooky.datacaterer.api
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import com.github.pflooky.datacaterer.api.model.Constants.{AGGREGATION_AVG, AGGREGATION_COUNT, AGGREGATION_MAX, AGGREGATION_MIN, AGGREGATION_STDDEV, AGGREGATION_SUM, VALIDATION_UNIQUE}
-import com.github.pflooky.datacaterer.api.model.{DataExistsWaitCondition, DataSourceValidation, ExpressionValidation, FileExistsWaitCondition, GroupByValidation, PauseWaitCondition, Validation, ValidationConfiguration, WaitCondition, WebhookWaitCondition}
+import com.github.pflooky.datacaterer.api.connection.{ConnectionTaskBuilder, FileBuilder}
+import com.github.pflooky.datacaterer.api.model.Constants.{AGGREGATION_AVG, AGGREGATION_COUNT, AGGREGATION_MAX, AGGREGATION_MIN, AGGREGATION_STDDEV, AGGREGATION_SUM, DEFAULT_VALIDATION_JOIN_TYPE, DEFAULT_VALIDATION_WEBHOOK_HTTP_DATA_SOURCE_NAME, VALIDATION_PREFIX_JOIN_EXPRESSION, VALIDATION_UNIQUE}
+import com.github.pflooky.datacaterer.api.model.{DataExistsWaitCondition, DataSourceValidation, ExpressionValidation, FileExistsWaitCondition, GroupByValidation, PauseWaitCondition, UpstreamDataSourceValidation, Validation, ValidationConfiguration, WaitCondition, WebhookWaitCondition}
 import com.github.pflooky.datacaterer.api.parser.ValidationBuilderSerializer
 import com.softwaremill.quicklens.ModifyPimp
 
@@ -143,7 +144,7 @@ case class ValidationBuilder(validation: Validation = ExpressionValidation()) {
    * @return ColumnValidationBuilder
    */
   def col(column: String): ColumnValidationBuilder = {
-    ColumnValidationBuilder(column, this)
+    ColumnValidationBuilder(this, column)
   }
 
   /**
@@ -153,7 +154,16 @@ case class ValidationBuilder(validation: Validation = ExpressionValidation()) {
    * @return ColumnValidationBuilder
    */
   @varargs def groupBy(columns: String*): GroupByValidationBuilder = {
-    GroupByValidationBuilder(this, ColumnValidationBuilder(), columns)
+    GroupByValidationBuilder(this, columns)
+  }
+
+  /**
+   * Check row count of dataset
+   *
+   * @return ColumnValidationBuilder to apply validation on row count
+   */
+  def count(): ColumnValidationBuilder = {
+    GroupByValidationBuilder().count()
   }
 
   /**
@@ -167,17 +177,40 @@ case class ValidationBuilder(validation: Validation = ExpressionValidation()) {
       .expr("count == 1")
   }
 
+  /**
+   * Define validations based on data in another data source.
+   * json(...)
+   *   .validations(
+   *     validation.upstreamData(csvTask).joinCols("account_id").withValidation(validation.col("upstream_name").isEqualCol("name")),
+   *     validation.upstreamData(csvTask).joinCols("account_id").withValidation(validation.expr("upstream_name == name")),
+   *     validation.upstreamData(csvTask).joinCols("account_id").withValidation(validation.groupBy("account_id").sum("amount").lessThanCol("balance")),
+   *   )
+   *
+   * @param connectionTaskBuilder
+   * @return
+   */
+  def upstreamData(connectionTaskBuilder: ConnectionTaskBuilder[_]): UpstreamDataSourceValidationBuilder = {
+    UpstreamDataSourceValidationBuilder(this, connectionTaskBuilder)
+  }
 }
 
-case class ColumnValidationBuilder(column: String = "", validationBuilder: ValidationBuilder = ValidationBuilder()) {
-  def this() = this("", ValidationBuilder())
+case class ColumnValidationBuilder(validationBuilder: ValidationBuilder = ValidationBuilder(), column: String = "") {
+  def this() = this(ValidationBuilder(), "")
 
   def isEqual(value: Any): ValidationBuilder = {
     validationBuilder.expr(s"$column == ${colValueToString(value)}")
   }
 
+  def isEqualCol(value: String): ValidationBuilder = {
+    validationBuilder.expr(s"$column == $value")
+  }
+
   def isNotEqual(value: Any): ValidationBuilder = {
     validationBuilder.expr(s"$column != ${colValueToString(value)}")
+  }
+
+  def isNotEqualCol(value: String): ValidationBuilder = {
+    validationBuilder.expr(s"$column != $value")
   }
 
   def isNull: ValidationBuilder = {
@@ -200,24 +233,48 @@ case class ColumnValidationBuilder(column: String = "", validationBuilder: Valid
     validationBuilder.expr(s"$column < ${colValueToString(value)}")
   }
 
+  def lessThanCol(value: String): ValidationBuilder = {
+    validationBuilder.expr(s"$column < $value")
+  }
+
   def lessThanOrEqual(value: Any): ValidationBuilder = {
     validationBuilder.expr(s"$column <= ${colValueToString(value)}")
+  }
+
+  def lessThanOrEqualCol(value: String): ValidationBuilder = {
+    validationBuilder.expr(s"$column <= $value")
   }
 
   def greaterThan(value: Any): ValidationBuilder = {
     validationBuilder.expr(s"$column > ${colValueToString(value)}")
   }
 
+  def greaterThanCol(value: String): ValidationBuilder = {
+    validationBuilder.expr(s"$column > $value")
+  }
+
   def greaterThanOrEqual(value: Any): ValidationBuilder = {
     validationBuilder.expr(s"$column >= ${colValueToString(value)}")
+  }
+
+  def greaterThanOrEqualCol(value: String): ValidationBuilder = {
+    validationBuilder.expr(s"$column >= $value")
   }
 
   def between(minValue: Any, maxValue: Any): ValidationBuilder = {
     validationBuilder.expr(s"$column BETWEEN ${colValueToString(minValue)} AND ${colValueToString(maxValue)}")
   }
 
+  def betweenCol(minValue: String, maxValue: String): ValidationBuilder = {
+    validationBuilder.expr(s"$column BETWEEN $minValue AND $maxValue")
+  }
+
   def notBetween(minValue: Any, maxValue: Any): ValidationBuilder = {
     validationBuilder.expr(s"$column NOT BETWEEN ${colValueToString(minValue)} AND ${colValueToString(maxValue)}")
+  }
+
+  def notBetweenCol(minValue: String, maxValue: String): ValidationBuilder = {
+    validationBuilder.expr(s"$column NOT BETWEEN $minValue AND $maxValue")
   }
 
   @varargs def in(values: Any*): ValidationBuilder = {
@@ -284,6 +341,10 @@ case class ColumnValidationBuilder(column: String = "", validationBuilder: Valid
     validationBuilder.expr(s"TYPEOF($column) == '${`type`}'")
   }
 
+  def expr(expr: String): ValidationBuilder = {
+    validationBuilder.expr(expr)
+  }
+
   private def colValueToString(value: Any): String = {
     value match {
       case _: String => s"'$value'"
@@ -296,10 +357,9 @@ case class ColumnValidationBuilder(column: String = "", validationBuilder: Valid
 
 case class GroupByValidationBuilder(
                                      validationBuilder: ValidationBuilder = ValidationBuilder(),
-                                     columnValidationBuilder: ColumnValidationBuilder = ColumnValidationBuilder(),
                                      groupByCols: Seq[String] = Seq()
                                    ) {
-  def this() = this(ValidationBuilder(), ColumnValidationBuilder(), Seq())
+  def this() = this(ValidationBuilder(), Seq())
 
   def sum(column: String): ColumnValidationBuilder = {
     setGroupValidation(column, AGGREGATION_SUM)
@@ -329,19 +389,43 @@ case class GroupByValidationBuilder(
     setGroupValidation(column, AGGREGATION_STDDEV)
   }
 
-  private def setGroupValidation(column: String, aggType: String) = {
+  private def setGroupValidation(column: String, aggType: String): ColumnValidationBuilder = {
     val groupByValidation = GroupByValidation(groupByCols, column, aggType)
     groupByValidation.errorThreshold = validationBuilder.validation.errorThreshold
     groupByValidation.description = validationBuilder.validation.description
     val colName = if (column.isEmpty) aggType else s"$aggType($column)"
-    ColumnValidationBuilder(colName, validationBuilder.modify(_.validation).setTo(groupByValidation))
+    ColumnValidationBuilder(validationBuilder.modify(_.validation).setTo(groupByValidation), colName)
   }
 }
 
-case class AggregationColumnValidationBuilder(groupByValidationBuilder: GroupByValidationBuilder = GroupByValidationBuilder()) {
-  def this() = this(GroupByValidationBuilder())
+case class UpstreamDataSourceValidationBuilder(
+                                                validationBuilder: ValidationBuilder = ValidationBuilder(),
+                                                connectionTaskBuilder: ConnectionTaskBuilder[_] = FileBuilder(),
+                                                readOptions: Map[String, String] = Map(),
+                                                joinColumns: List[String] = List(),
+                                                joinType: String = DEFAULT_VALIDATION_JOIN_TYPE
+                                              ) {
+  def this() = this(ValidationBuilder(), FileBuilder(), Map(), List(), DEFAULT_VALIDATION_JOIN_TYPE)
 
+  def readOptions(readOptions: Map[String, String]): UpstreamDataSourceValidationBuilder = {
+    this.modify(_.readOptions).setTo(readOptions)
+  }
 
+  @varargs def joinColumns(joinCols: String*): UpstreamDataSourceValidationBuilder = {
+    this.modify(_.joinColumns).setTo(joinCols.toList)
+  }
+
+  def joinExpr(expr: String): UpstreamDataSourceValidationBuilder = {
+    this.modify(_.joinColumns).setTo(List(s"$VALIDATION_PREFIX_JOIN_EXPRESSION$expr"))
+  }
+
+  def joinType(joinType: String): UpstreamDataSourceValidationBuilder = {
+    this.modify(_.joinType).setTo(joinType)
+  }
+
+  def withValidation(validationBuilder: ValidationBuilder): ValidationBuilder = {
+    validationBuilder.modify(_.validation).setTo(UpstreamDataSourceValidation(validationBuilder, connectionTaskBuilder, readOptions, joinColumns, joinType))
+  }
 }
 
 case class WaitConditionBuilder(waitCondition: WaitCondition = PauseWaitCondition()) {
@@ -382,7 +466,7 @@ case class WaitConditionBuilder(waitCondition: WaitCondition = PauseWaitConditio
    * @return WaitConditionBuilder
    */
   def webhook(url: String): WaitConditionBuilder =
-    webhook("tmp_http_data_source", url)
+    webhook(DEFAULT_VALIDATION_WEBHOOK_HTTP_DATA_SOURCE_NAME, url)
 
   /**
    * Wait until URL returns back one of the status codes provided before starting data validations.
@@ -393,7 +477,7 @@ case class WaitConditionBuilder(waitCondition: WaitCondition = PauseWaitConditio
    * @return WaitConditionBuilder
    */
   @varargs def webhook(url: String, method: String, statusCodes: Int*): WaitConditionBuilder =
-    webhook("tmp_http_data_source", url, method, statusCodes: _*)
+    webhook(DEFAULT_VALIDATION_WEBHOOK_HTTP_DATA_SOURCE_NAME, url, method, statusCodes: _*)
 
   /**
    * Wait until pre-defined HTTP data source with URL, returns back 200 status code from GET request before starting

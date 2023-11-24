@@ -454,7 +454,7 @@ trait PlanRun {
         .flatMap(_.optValidation)
         .map(dsValid => {
           DataSourceValidationBuilder()
-            .options(x.step.map(_.step.options).getOrElse(Map()))
+            .options(x.step.map(_.step.options).getOrElse(Map()) ++ x.connectionConfigWithTaskBuilder.options)
             .wait(dsValid.dataSourceValidation.waitCondition)
             .validations(dsValid.dataSourceValidation.validations: _*)
         })

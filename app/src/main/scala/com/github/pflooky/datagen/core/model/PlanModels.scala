@@ -2,7 +2,7 @@ package com.github.pflooky.datagen.core.model
 
 import com.github.pflooky.datacaterer.api.PlanRun
 import com.github.pflooky.datacaterer.api.connection.ConnectionTaskBuilder
-import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_FIELD_NULLABLE, FOREIGN_KEY_DELIMITER, FOREIGN_KEY_DELIMITER_REGEX, IS_PRIMARY_KEY, IS_UNIQUE, MAXIMUM, MINIMUM, ONE_OF_GENERATOR, PRIMARY_KEY_POSITION, RANDOM_GENERATOR, REGEX_GENERATOR, STATIC}
+import com.github.pflooky.datacaterer.api.model.Constants.{DEFAULT_FIELD_NULLABLE, FOREIGN_KEY_DELIMITER, FOREIGN_KEY_DELIMITER_REGEX, IS_PRIMARY_KEY, IS_UNIQUE, MAXIMUM, METADATA_SOURCE_TYPE, MINIMUM, ONE_OF_GENERATOR, PRIMARY_KEY_POSITION, RANDOM_GENERATOR, REGEX_GENERATOR, STATIC}
 import com.github.pflooky.datacaterer.api.model.{Count, Field, ForeignKeyRelation, Generator, PerColumnCount, Schema, SinkOptions, Step, Task}
 import com.github.pflooky.datagen.core.exception.InvalidFieldConfigurationException
 import com.github.pflooky.datagen.core.generator.metadata.datasource.DataSourceDetail
@@ -36,9 +36,17 @@ object TaskHelper {
   private val LOGGER = Logger.getLogger(getClass.getName)
 
   def fromMetadata(optPlanRun: Option[PlanRun], name: String, stepType: String, structTypes: List[DataSourceDetail]): (Task, Map[String, String]) = {
-    val steps = structTypes.zipWithIndex.map(structType => enrichWithUserDefinedOptions(name, stepType, structType._1, optPlanRun))
-    val mappedStepNames = steps.map(_._2).filter(_.isDefined).map(_.get).toMap
-    (Task(name, steps.map(_._1)), mappedStepNames)
+    val baseSteps = optPlanRun.map(planRun =>
+      planRun._connectionTaskBuilders
+        .filter(_.connectionConfigWithTaskBuilder.dataSourceName == name)
+        .flatMap(_.step.map(_.step))
+    ).getOrElse(Seq())
+    val stepsWithAdditionalMetadata = structTypes.map(structType => enrichWithUserDefinedOptions(name, stepType, structType, optPlanRun))
+    val mappedStepNames = stepsWithAdditionalMetadata.map(_._2).filter(_.isDefined).map(_.get).toMap
+    val mappedStepNamesWithoutDataSource = mappedStepNames.map(m => m._1.split(FOREIGN_KEY_DELIMITER_REGEX).last -> m._2.split(FOREIGN_KEY_DELIMITER_REGEX).last)
+    val stepsWithoutAdditionalMetadata = baseSteps.filter(step => !stepsWithAdditionalMetadata.exists(s => s._1.name == mappedStepNamesWithoutDataSource(step.name))).map(s => s -> None).toList
+    val allSteps = stepsWithoutAdditionalMetadata ++ stepsWithAdditionalMetadata
+    (Task(name, allSteps.map(_._1)), mappedStepNames)
   }
 
   private def enrichWithUserDefinedOptions(
@@ -80,6 +88,7 @@ object TaskHelper {
     }
 
     val count = optUserConf.flatMap(_._1.step.map(_.step.count)).getOrElse(Count())
+    //there might be some schemas inside the user schema that are gathered from metadata sources like Marquez or OpenMetadata
     val optUserSchema = optUserConf.flatMap(_._1.step.map(_.step.schema))
     val generatedSchema = SchemaHelper.fromStructType(generatedDetails.structType)
     val mergedSchema = optUserSchema.map(userSchema => SchemaHelper.mergeSchemaInfo(generatedSchema, userSchema)).getOrElse(generatedSchema)

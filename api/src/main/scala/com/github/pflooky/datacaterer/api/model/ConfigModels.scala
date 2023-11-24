@@ -2,8 +2,6 @@ package com.github.pflooky.datacaterer.api.model
 
 import com.github.pflooky.datacaterer.api.model.Constants._
 
-import scala.collection.JavaConverters.mapAsScalaMapConverter
-
 case class FlagsConfig(
                         enableCount: Boolean = DEFAULT_ENABLE_COUNT,
                         enableGenerateData: Boolean = DEFAULT_ENABLE_GENERATE_DATA,
@@ -25,6 +23,7 @@ case class FoldersConfig(
                           generatedReportsFolderPath: String = DEFAULT_GENERATED_REPORTS_FOLDER_PATH,
                           recordTrackingFolderPath: String = DEFAULT_RECORD_TRACKING_FOLDER_PATH,
                           validationFolderPath: String = DEFAULT_VALIDATION_FOLDER_PATH,
+                          recordTrackingForValidationFolderPath: String = DEFAULT_RECORD_TRACKING_VALIDATION_FOLDER_PATH,
                         )
 
 case class MetadataConfig(
@@ -40,11 +39,17 @@ case class GenerationConfig(
                              numRecordsPerStep: Option[Long] = None,
                            )
 
+case class ValidationConfig(
+                             numSampleErrorRecords: Int = DEFAULT_VALIDATION_NUM_ERROR_RECORDS,
+                             enableDeleteRecordTrackingFiles: Boolean = DEFAULT_VALIDATION_DELETE_RECORD_TRACKING_FILES,
+                           )
+
 case class DataCatererConfiguration(
                                      flagsConfig: FlagsConfig = FlagsConfig(),
                                      foldersConfig: FoldersConfig = FoldersConfig(),
                                      metadataConfig: MetadataConfig = MetadataConfig(),
                                      generationConfig: GenerationConfig = GenerationConfig(),
+                                     validationConfig: ValidationConfig = ValidationConfig(),
                                      connectionConfigByName: Map[String, Map[String, String]] = Map(),
                                      runtimeConfig: Map[String, String] = DEFAULT_RUNTIME_CONFIG,
                                      master: String = DEFAULT_MASTER

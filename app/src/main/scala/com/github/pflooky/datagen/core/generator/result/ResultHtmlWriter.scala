@@ -1,7 +1,7 @@
 package com.github.pflooky.datagen.core.generator.result
 
 import com.github.pflooky.datacaterer.api.model.Constants.HISTOGRAM
-import com.github.pflooky.datacaterer.api.model.{ExpressionValidation, FlagsConfig, Generator, GroupByValidation, Plan, Step}
+import com.github.pflooky.datacaterer.api.model.{ExpressionValidation, FlagsConfig, Generator, GroupByValidation, Plan, Step, UpstreamDataSourceValidation, Validation}
 import com.github.pflooky.datagen.core.listener.{SparkRecordListener, SparkTaskRecordSummary}
 import com.github.pflooky.datagen.core.model.Constants.{REPORT_DATA_SOURCES_HTML, REPORT_FIELDS_HTML, REPORT_HOME_HTML, REPORT_VALIDATIONS_HTML}
 import com.github.pflooky.datagen.core.model.PlanImplicits.CountOps
@@ -469,22 +469,7 @@ class ResultHtmlWriter {
                     {checkMark(validationRes.isSuccess)}
                   </td>
                   <td>
-                    {validationRes.validation match {
-                    case ExpressionValidation(expr) =>
-                      keyValueTable(List(
-                        List("expr", expr),
-                        List("errorThreshold", validationRes.validation.errorThreshold.getOrElse(0.0).toString)
-                      ))
-                    case GroupByValidation(groupByCols, aggCol, aggType, expr) =>
-                      keyValueTable(List(
-                        List("expr", expr),
-                        List("groupByColumns", groupByCols.mkString(",")),
-                        List("aggregationColumn", aggCol),
-                        List("aggregationType", aggType),
-                        List("errorThreshold", validationRes.validation.errorThreshold.getOrElse(0.0).toString)
-                      ))
-                    case _ => ""
-                  }}
+                    {keyValueTable(getValidationOptions(validationRes.validation))}
                   </td>
                   <td>
                     {if (validationRes.isSuccess) "" else keyValueTable(validationRes.sampleErrorValues.get.take(5).map(e => List(e.json)).toList)}
@@ -688,6 +673,33 @@ class ResultHtmlWriter {
         </a>
       }))
     }
+  }
+
+  private def getValidationOptions(validation: Validation): List[List[String]] = {
+    val options = validation match {
+      case ExpressionValidation(expr) =>
+        List(
+          List("expr", expr),
+          List("errorThreshold", validation.errorThreshold.getOrElse(0.0).toString)
+        )
+      case GroupByValidation(groupByCols, aggCol, aggType, expr) =>
+        List(
+          List("expr", expr),
+          List("groupByColumns", groupByCols.mkString(",")),
+          List("aggregationColumn", aggCol),
+          List("aggregationType", aggType),
+          List("errorThreshold", validation.errorThreshold.getOrElse(0.0).toString)
+        )
+      case UpstreamDataSourceValidation(validationBuilder, upstreamDataSource, _, joinCols, joinType) =>
+        val nestedValidation = getValidationOptions(validationBuilder.validation)
+        List(
+          List("upstreamDataSource", upstreamDataSource.connectionConfigWithTaskBuilder.dataSourceName),
+          List("joinColumns", joinCols.mkString(",")),
+          List("joinType", joinType),
+        ) ++ nestedValidation
+      case _ => List()
+    }
+    options.filter(_.forall(_.nonEmpty))
   }
 
   def bodyScripts: NodeBuffer = {

@@ -141,6 +141,7 @@ class PlanProcessorTest extends SparkSuite {
 
   ignore("Can run Postgres plan run") {
     PlanProcessor.determineAndExecutePlan(Some(new TestValidation))
+//    PlanProcessor.determineAndExecutePlan(Some(new TestValidationAndInnerSchemaFromMetadataSource))
 //    PlanProcessor.determineAndExecutePlan(Some(new TestHttp))
 //    PlanProcessor.determineAndExecutePlan(Some(new TestSolace))
 //    PlanProcessor.determineAndExecutePlan(Some(new TestOpenMetadata))
@@ -249,8 +250,46 @@ class PlanProcessorTest extends SparkSuite {
     execute(myPlan, conf, httpTask)
   }
 
-  class TestValidation extends PlanRun {
-    val jsonTask = json("my_json", "/opt/app/data/json")
+  class TestJson extends PlanRun {
+    val jsonTask = json("my_json", "/tmp/data/json", Map("saveMode" -> "overwrite"))
+      .schema(
+        field.name("account_id").regex("ACC[0-9]{8}"),
+        field.name("year").`type`(IntegerType).sql("YEAR(date)"),
+        field.name("balance").`type`(DoubleType).min(10).max(1000),
+        field.name("date").`type`(DateType).min(Date.valueOf("2022-01-01")),
+        field.name("status").sql("element_at(sort_array(update_history, false), 1).status"),
+        field.name("update_history")
+          .`type`(ArrayType)
+          .arrayMinLength(1)
+          .schema(
+            field.name("updated_time").`type`(TimestampType).min(Timestamp.valueOf("2022-01-01 00:00:00")),
+            field.name("status").oneOf("open", "closed")
+          ),
+        field.name("customer_details")
+          .schema(
+            field.name("name").expression("#{Name.name}"),
+            field.name("age").`type`(IntegerType).min(18).max(90),
+            field.name("city").expression("#{Address.city}")
+          )
+      )
+
+    execute(jsonTask)
+  }
+
+  class TestValidationAndInnerSchemaFromMetadataSource extends PlanRun {
+    val csvTask = json("my_big_json", "/tmp/data/big_json", Map("saveMode" -> "overwrite"))
+      .schema(
+        field.name("account_id"),
+        field.name("year").`type`(IntegerType).min(2020).max(2023),
+        field.name("content").schema(metadataSource.openMetadata("http://localhost:8585/api", OPEN_METADATA_AUTH_TYPE_OPEN_METADATA,
+          Map(
+            OPEN_METADATA_JWT_TOKEN -> "eyJraWQiOiJHYjM4OWEtOWY3Ni1nZGpzLWE5MmotMDI0MmJrOTQzNTYiLCJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJvcGVuLW1ldGFkYXRhLm9yZyIsInN1YiI6ImluZ2VzdGlvbi1ib3QiLCJlbWFpbCI6ImluZ2VzdGlvbi1ib3RAb3Blbm1ldGFkYXRhLm9yZyIsImlzQm90Ijp0cnVlLCJ0b2tlblR5cGUiOiJCT1QiLCJpYXQiOjE2OTcxNzc0MzgsImV4cCI6bnVsbH0.jnO65SJZG9GQuVlJvpyKrrBZejPpjV71crJEvWOMPyeozZkoEyYy-kcb8UkVenidDcoAdie4Zhl4saNyaLudiAO2MKhSU1Rf3yT2M3BQBf37kQ3Ma4pjrx-lXVk2SmCaHsgLFETksSHZTwgPrtx5L3d2FOCfF92dANI_tldTg5Jog51tjHyYWYV4y4_eU4AfC7gXjIhvU35vTJmzUWH7BUkDGfcwHnIVa0AOqLzwZUQT1S717yNoenj2CUTBNS4fxWlATWBQIMG9JaBmQAAYNWOFPKnVWfWGv7Ya1OEW5wtb7A69hyPAT1lS-_FIxOOMkGbdg2u3sFuu9rD1d2JMdg",
+            OPEN_METADATA_TABLE_FQN -> "sample_data.ecommerce_db.shopify.dim_address"
+          )))
+      )
+      .count(count.records(10))
+
+    val jsonTask = json("my_json", "/tmp/data/json")
       .validations(
         validation.col("customer_details.name").matches("[A-Z][a-z]+ [A-Z][a-z]+").errorThreshold(0.1).description("Names generally follow the same pattern"),
         validation.col("date").isNotNull.errorThreshold(10),
@@ -258,14 +297,73 @@ class PlanProcessorTest extends SparkSuite {
         validation.expr("YEAR(date) == year"),
         validation.col("status").in("open", "closed", "pending").errorThreshold(0.2).description("Could be new status introduced"),
         validation.col("customer_details.age").greaterThan(18),
-        validation.expr("FORALL(update_history, x -> x.updated_time > TIMESTAMP('2022-01-01 00:00:00'))")
+        validation.expr("FORALL(update_history, x -> x.updated_time > TIMESTAMP('2022-01-01 00:00:00'))"),
+        validation.unique("account_id"),
+        validation.groupBy().count().isEqual(1000),
+        validation.groupBy("account_id").max("balance").lessThan(900),
+        validation.upstreamData(csvTask).withValidation(validation.col("amount").isEqualCol("balance"))
       )
 
     val config = configuration
-      .generatedReportsFolderPath("/opt/app/data/report")
+      .generatedReportsFolderPath("/Users/peter/code/spark-datagen/tmp/report")
       .enableValidation(true)
-      .enableGenerateData(false)
+      .enableGeneratePlanAndTasks(true)
 
-    execute(config, jsonTask)
+    execute(config, csvTask, jsonTask)
+  }
+
+  class TestValidation extends PlanRun {
+    val firstJsonTask = json("my_first_json", "/tmp/data/first_json", Map("saveMode" -> "overwrite"))
+      .schema(
+        field.name("account_id").regex("ACC[0-9]{8}"),
+        field.name("year").`type`(IntegerType).sql("YEAR(date)"),
+        field.name("balance").`type`(DoubleType).min(10).max(1000),
+        field.name("date").`type`(DateType).min(Date.valueOf("2022-01-01")),
+        field.name("status").oneOf("open", "closed"),
+        field.name("update_history")
+          .`type`(ArrayType)
+          .schema(
+            field.name("updated_time").`type`(TimestampType).min(Timestamp.valueOf("2022-01-01 00:00:00")),
+            field.name("prev_status").oneOf("open", "closed"),
+            field.name("new_status").oneOf("open", "closed")
+          ),
+        field.name("customer_details")
+          .schema(
+            field.name("name").expression("#{Name.name}"),
+            field.name("age").`type`(IntegerType).min(18).max(90),
+            field.name("city").expression("#{Address.city}")
+          ),
+      )
+      .count(count.records(10))
+
+    val secondJsonTask = json("my_json", "/tmp/data/second_json", Map("saveMode" -> "overwrite"))
+      .schema(
+        field.name("account_id"),
+        field.name("amount").`type`(IntegerType).min(1).max(100),
+        field.name("name").expression("#{Name.name}"),
+      )
+      .count(count.records(10).recordsPerColumn(3, "account_id"))
+      .validations(
+        validation.upstreamData(firstJsonTask).joinColumns("account_id")
+          .withValidation(validation.col("my_first_json_customer_details.name").isEqualCol("name")),
+        validation.upstreamData(firstJsonTask).joinColumns("account_id")
+          .withValidation(validation.col("amount").isNotEqualCol("my_first_json_balance")),
+        validation.upstreamData(firstJsonTask).joinExpr("account_id == my_first_json_account_id")
+          .withValidation(validation.groupBy("account_id", "my_first_json_balance").sum("amount").betweenCol("my_first_json_balance * 0.8", "my_first_json_balance * 1.2")),
+        validation.upstreamData(firstJsonTask).joinColumns("account_id")
+          .withValidation(validation.groupBy("account_id", "my_first_json_balance").sum("amount").betweenCol("my_first_json_balance * 0.8", "my_first_json_balance * 1.2")),
+        validation.upstreamData(firstJsonTask).joinColumns("account_id").joinType("anti").withValidation(validation.count().isEqual(0)),
+        validation.upstreamData(firstJsonTask).joinColumns("account_id").withValidation(validation.count().isEqual(30)),
+      )
+
+    val config = configuration
+      .generatedReportsFolderPath("/Users/peter/code/spark-datagen/tmp/report")
+      .recordTrackingForValidationFolderPath("/tmp/record-tracking-validation")
+      .enableValidation(true)
+
+    val foreignPlan = plan
+      .addForeignKeyRelationship(firstJsonTask, "account_id", List(secondJsonTask -> "account_id"))
+
+    execute(foreignPlan, config, firstJsonTask, secondJsonTask)
   }
 }

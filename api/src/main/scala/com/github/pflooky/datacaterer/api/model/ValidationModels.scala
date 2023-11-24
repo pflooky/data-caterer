@@ -3,8 +3,9 @@ package com.github.pflooky.datacaterer.api.model
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id
 import com.fasterxml.jackson.annotation.{JsonIgnoreProperties, JsonTypeInfo}
 import com.fasterxml.jackson.databind.annotation.{JsonDeserialize, JsonTypeIdResolver}
-import com.github.pflooky.datacaterer.api.ValidationBuilder
-import com.github.pflooky.datacaterer.api.model.Constants.{AGGREGATION_SUM, DEFAULT_VALIDATION_CONFIG_NAME, DEFAULT_VALIDATION_DESCRIPTION, VALIDATION_UNIQUE}
+import com.github.pflooky.datacaterer.api.{ColumnValidationBuilder, ValidationBuilder}
+import com.github.pflooky.datacaterer.api.connection.{ConnectionTaskBuilder, FileBuilder}
+import com.github.pflooky.datacaterer.api.model.Constants.{AGGREGATION_SUM, DEFAULT_VALIDATION_CONFIG_NAME, DEFAULT_VALIDATION_DESCRIPTION, DEFAULT_VALIDATION_JOIN_TYPE, DEFAULT_VALIDATION_WEBHOOK_HTTP_METHOD, DEFAULT_VALIDATION_WEBHOOK_HTTP_STATUS_CODES}
 import com.github.pflooky.datacaterer.api.parser.ValidationIdResolver
 
 
@@ -26,6 +27,14 @@ case class GroupByValidation(
                               aggType: String = AGGREGATION_SUM,
                               expr: String = "true"
                             ) extends Validation
+
+case class UpstreamDataSourceValidation(
+                                         validationBuilder: ValidationBuilder = ValidationBuilder(),
+                                         upstreamDataSource: ConnectionTaskBuilder[_] = FileBuilder(),
+                                         upstreamReadOptions: Map[String, String] = Map(),
+                                         joinCols: List[String] = List(),
+                                         joinType: String = DEFAULT_VALIDATION_JOIN_TYPE,
+                                       ) extends Validation
 
 case class ValidationConfiguration(
                                     name: String = DEFAULT_VALIDATION_CONFIG_NAME,
@@ -64,6 +73,6 @@ case class DataExistsWaitCondition(
 case class WebhookWaitCondition(
                                  dataSourceName: String,
                                  url: String,
-                                 method: String = "GET",
-                                 statusCodes: List[Int] = List(200)
+                                 method: String = DEFAULT_VALIDATION_WEBHOOK_HTTP_METHOD,
+                                 statusCodes: List[Int] = DEFAULT_VALIDATION_WEBHOOK_HTTP_STATUS_CODES
                                ) extends WaitCondition

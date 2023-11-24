@@ -299,6 +299,9 @@ case class DataCatererConfigurationBuilder(build: DataCatererConfiguration = Dat
   def generatedPlanAndTaskFolderPath(path: String): DataCatererConfigurationBuilder =
     this.modify(_.build.foldersConfig.generatedPlanAndTaskFolderPath).setTo(path)
 
+  def recordTrackingForValidationFolderPath(path: String): DataCatererConfigurationBuilder =
+    this.modify(_.build.foldersConfig.recordTrackingForValidationFolderPath).setTo(path)
+
 
   def numRecordsFromDataSourceForDataProfiling(numRecords: Int): DataCatererConfigurationBuilder =
     this.modify(_.build.metadataConfig.numRecordsFromDataSource).setTo(numRecords)
@@ -321,6 +324,10 @@ case class DataCatererConfigurationBuilder(build: DataCatererConfiguration = Dat
 
   def numRecordsPerStep(numRecords: Long): DataCatererConfigurationBuilder =
     this.modify(_.build.generationConfig.numRecordsPerStep).setTo(Some(numRecords))
+
+
+  def numErrorSampleRecords(numRecords: Int): DataCatererConfigurationBuilder =
+    this.modify(_.build.validationConfig.numSampleErrorRecords).setTo(numRecords)
 }
 
 final case class ConnectionConfigWithTaskBuilder(

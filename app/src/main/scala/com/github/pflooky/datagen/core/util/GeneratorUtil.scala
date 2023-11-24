@@ -1,10 +1,10 @@
 package com.github.pflooky.datagen.core.util
 
-import com.github.pflooky.datacaterer.api.model.Constants.{ONE_OF_GENERATOR, RANDOM_GENERATOR, REGEX_GENERATOR, SQL_GENERATOR}
+import com.github.pflooky.datacaterer.api.model.Constants.{HTTP, JMS, ONE_OF_GENERATOR, RANDOM_GENERATOR, REGEX_GENERATOR, SQL_GENERATOR}
 import com.github.pflooky.datacaterer.api.model.{Generator, Step, TaskSummary}
 import com.github.pflooky.datagen.core.exception.UnsupportedDataGeneratorType
 import com.github.pflooky.datagen.core.generator.provider.{DataGenerator, OneOfDataGenerator, RandomDataGenerator, RegexDataGenerator}
-import com.github.pflooky.datagen.core.model.Constants.RECORD_COUNT_GENERATOR_COL
+import com.github.pflooky.datagen.core.model.Constants.{BATCH, REAL_TIME, RECORD_COUNT_GENERATOR_COL}
 import net.datafaker.Faker
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types.{LongType, Metadata, StructField, StructType}
@@ -76,6 +76,18 @@ object GeneratorUtil {
       .selectExpr(sqlExpressions: _*) //fix for nested SQL references but I don't think it would work longer term
     //TODO have to figure out the order of the SQL expressions and execute accordingly
     res
+  }
+  
+  def determineSaveTiming(dataSourceName: String, format: String, stepName: String): String = {
+    format match {
+      case HTTP | JMS =>
+        LOGGER.debug(s"Given the step type is either HTTP or JMS, data will be generated in real-time mode. " +
+          s"It will be based on requests per second defined at plan level, data-source-name=$dataSourceName, step-name=$stepName, format=$format")
+        REAL_TIME
+      case _ =>
+        LOGGER.debug(s"Will generate data in batch mode for step, data-source-name=$dataSourceName, step-name=$stepName, format=$format")
+        BATCH
+    }
   }
 
   private def getGeneratedCount(generator: Generator, faker: Faker): Long = {

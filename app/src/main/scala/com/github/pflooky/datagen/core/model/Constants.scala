@@ -60,6 +60,9 @@ object Constants {
   lazy val COUNT_COLUMNS = "columns"
   lazy val COUNT_NUM_RECORDS = "numRecords"
 
+  //validation
+  lazy val RECORD_TRACKING_VALIDATION_FORMAT = PARQUET
+
   //report
   lazy val REPORT_DATA_SOURCES_HTML = "data-sources.html"
   lazy val REPORT_FIELDS_HTML = "steps.html"

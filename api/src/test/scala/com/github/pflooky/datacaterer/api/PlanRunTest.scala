@@ -79,7 +79,8 @@ class PlanRunTest extends AnyFunSuite {
     assert(result._validations.head.dataSources.head._2.size == 1)
     val dsValidation = result._validations.head.dataSources.head
     assert(dsValidation._1 == "my_csv")
-    assert(dsValidation._2.head.options.isEmpty)
+    assert(dsValidation._2.head.options.nonEmpty)
+    assert(dsValidation._2.head.options == Map(FORMAT -> "csv", PATH -> "/my/data/path"))
     assert(dsValidation._2.head.validations.size == 1)
     assert(dsValidation._2.head.validations.head.validation.isInstanceOf[ExpressionValidation])
     val expressionValidation = dsValidation._2.head.validations.head.validation.asInstanceOf[ExpressionValidation]
@@ -124,7 +125,8 @@ class PlanRunTest extends AnyFunSuite {
     val validRes = result._validations.head.dataSources("my_csv").head
     assert(validRes.validations.size == 1)
     assert(validRes.validations.head.validation.asInstanceOf[ExpressionValidation].expr == "account_id != 'acc123'")
-    assert(validRes.options.isEmpty)
+    assert(validRes.options.nonEmpty)
+    assert(validRes.options == Map(FORMAT -> "csv", PATH -> "/my/csv"))
   }
 
 
