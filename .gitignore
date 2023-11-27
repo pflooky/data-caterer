@@ -1,0 +1,28 @@
+# Ignore Gradle project-specific cache directory
+.gradle
+
+# Ignore Gradle build output directory
+build
+.idea
+.DS_Store
+*.iml
+*.ipr
+*.iws
+tmp
+
+app/out
+app/src/test/resources/sample/parquet
+app/src/test/resources/sample/json
+app/src/test/resources/sample/data
+app/src/test/resources/sample/large
+app/src/test/resources/sample/html
+app/src/test/resources/sample/documentation
+app/src/test/resources/sample/java
+app/src/test/resources/sample/report
+app/src/test/resources/sample/plan-gen
+
+api/out
+api/src/test/resources/sample/documentation
+
+*.class
+*.log

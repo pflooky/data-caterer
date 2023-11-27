@@ -1,0 +1,6 @@
+name: "transaction_create_plan"
+description: "Create CSV transaction file"
+tasks:
+  - name: "csv_transaction_file"
+    dataSourceName: "csv"
+    enabled: true

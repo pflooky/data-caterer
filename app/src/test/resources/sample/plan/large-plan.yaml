@@ -1,0 +1,14 @@
+name: "large_json_plan"
+description: "Create account data in JSON"
+tasks:
+  - name: "large_json_file"
+    dataSourceName: "json"
+    enabled: true
+  - name: "large_csv_file"
+    dataSourceName: "csv"
+    enabled: true
+
+sinkOptions:
+  foreignKeys:
+    "json.file_account.account_id":
+      - "csv.transactions.account_id"

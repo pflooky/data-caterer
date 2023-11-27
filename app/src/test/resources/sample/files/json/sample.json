@@ -1,0 +1,13 @@
+{
+  "account-id": "ACC213813",
+  "name": "Peter",
+  "balance": 10.2,
+  "details": {
+    "date-of-birth": "01-01-1970",
+    "phone": "123456789",
+    "updated": {
+      "user": "peter",
+      "time": "01-01-2023 00:00:00"
+    }
+  }
+}

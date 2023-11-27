@@ -1,0 +1,50 @@
+name: "large_csv_file"
+steps:
+  - name: "transactions"
+    type: "csv"
+    options:
+      path: "app/src/test/resources/sample/large/csv/transactions"
+      partitions: 10
+      partitionBy: "year"
+    count:
+      records: 100000
+      perColumn:
+        count: 2
+        columnNames:
+          - "account_id"
+          - "name"
+    schema:
+      fields:
+        - name: "account_id"
+          type: "string"
+          generator:
+            type: "regex"
+            options:
+              regex: "ACC1[0-9]{9}"
+        - name: "name"
+          type: "string"
+          generator:
+            type: "random"
+            options:
+              expression: "#{Name.name}"
+        - name: "year"
+          type: "int"
+          generator:
+            type: "random"
+            options:
+              minValue: 2021
+              maxValue: 2022
+        - name: "amount"
+          type: "double"
+          generator:
+            type: "random"
+            options:
+              minValue: 10.0
+              maxValue: 100.0
+        - name: "txn_date"
+          type: "date"
+          generator:
+            type: "random"
+            options:
+              minValue: "2021-01-01"
+              maxValue: "2021-12-31"

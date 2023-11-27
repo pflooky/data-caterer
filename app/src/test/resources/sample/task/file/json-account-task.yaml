@@ -1,0 +1,148 @@
+name: "json_account_file"
+steps:
+  - name: "file_account"
+    type: "json"
+    count:
+      records: 1000
+    options:
+      path: "app/src/test/resources/sample/json/account-gen"
+    schema:
+      fields:
+        - name: "account_id"
+          type: "string"
+          generator:
+            type: "random"
+        - name: "year"
+          type: "int"
+          generator:
+            type: "random"
+            options:
+              min: 2021
+              max: 2022
+        - name: "is_early_customer"
+          type: "boolean"
+          generator:
+            type: "sql"
+            options:
+              sql: "CASE WHEN year == 2021 THEN true ELSE false END"
+        - name: "amount"
+          type: "double"
+          generator:
+            type: "random"
+            options:
+              min: 10.0
+              max: 100.0
+        - name: "is_large_amount"
+          type: "boolean"
+          generator:
+            type: "sql"
+            options:
+              sql: >-
+                CASE WHEN amount > 50 THEN
+                  true
+                ELSE
+                  false
+                END
+        - name: "updated_time"
+          type: "string"
+          generator:
+            type: "sql"
+            options:
+              sql: "details.updated_by.time"
+        - name: "first_txn_date"
+          type: "date"
+          generator:
+            type: "sql"
+            options:
+              sql: "element_at(sort_array(transactions.txn_date), 1)"
+        - name: "details"
+          schema:
+            fields:
+              - name: "name"
+                type: "string"
+                generator:
+                  type: "random"
+              - name: "txn_date"
+                type: "date"
+                generator:
+                  type: "random"
+                  options:
+                    min: "2021-01-01"
+                    max: "2021-12-31"
+              - name: "updated_by"
+                schema:
+                  fields:
+                    - name: "user"
+                      type: "string"
+                      generator:
+                        type: "random"
+                    - name: "time"
+                      type: "timestamp"
+                      generator:
+                        type: "random"
+        - name: "transactions"
+          type: "array"
+          schema:
+            fields:
+              - name: "txn_date"
+                type: "date"
+                generator:
+                  type: "random"
+              - name: "amount"
+                type: "double"
+                generator:
+                  type: "random"
+              - name: "tags"
+                type: "array<string>"
+                generator:
+                  type: "random"
+  - name: "transactions"
+    type: "json"
+    options:
+      path: "app/src/test/resources/sample/json/txn-gen"
+    count:
+      records: 100
+      perColumn:
+        columnNames:
+          - "account_id"
+          - "name"
+        generator:
+          type: "random"
+          options:
+            max: 10
+            min: 1
+    schema:
+      fields:
+        - name: "account_id"
+          type: "string"
+          generator:
+            type: "regex"
+            options:
+              regex: "ACC1[0-9]{9}"
+        - name: "name"
+          type: "string"
+          generator:
+            type: "random"
+            options:
+              expression: "#{Name.name}"
+        - name: "year"
+          type: "int"
+          generator:
+            type: "random"
+            options:
+              min: 2021
+              max: 2022
+        - name: "amount"
+          type: "double"
+          generator:
+            type: "random"
+            options:
+              min: 10.0
+              max: 100.0
+        - name: "txn_date"
+          type: "date"
+          generator:
+            type: "random"
+            options:
+              min: "2021-01-01"
+              max: "2021-12-31"

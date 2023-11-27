@@ -1,0 +1,22 @@
+name: "jdbc_customer_transactions_table_create"
+steps:
+  - name: "transactions"
+    type: "postgres"
+    count:
+      records: 10000
+      perColumn:
+        columnNames:
+          - "account_number"
+        count: 100
+    options:
+      dbtable: "account.transactions"
+    schema:
+      fields:
+        - name: "account_number"
+          type: "string"
+          generator:
+            type: "random"
+        - name: "amount"
+          type: "double"
+          generator:
+            type: "random"
