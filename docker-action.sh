@@ -13,7 +13,7 @@ if [[ "$publish_res" -ne 0 ]] ; then
 fi
 
 echo "Creating data caterer jar, version=$version"
-./gradlew -PapplicationType=basic build basicJar -x shadowJar
+./gradlew build shadowJar
 build_app=$?
 if [[ "$build_app" -ne 0 ]] ; then
   echo "Failed to build app, exiting"
