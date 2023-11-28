@@ -4,56 +4,67 @@
 
 ## Overview
 
-Generator data for databases, files, JMS or HTTP request through a YAML based input and executed via Spark.
-  
-Full docs can be found [**here**](https://pflooky.github.io/data-caterer-docs/).
+Generator data for databases, files, JMS or HTTP request through a Scala/Java API or YAML input and executed via Spark.
+Run data validations after generating data to ensure it is consumed correctly.
 
-## Flow
+Full docs can be found [**here**](https://data.catering).
 
-![Data Caterer high level design](design/high-level-design.png "High level design")
+## Features
 
-## Generate data
+- Metadata discovery
+- Batch and/or event data generation
+- Maintain referential integrity across any dataset
+- Create custom data generation/validation scenarios
+- Clean up generated data
+- Data validation
+- Suggest data validations
 
-### Quickest start
-1. `mkdir /tmp/datagen`
-2. `docker run -v /tmp/datagen:/opt/app/data-caterer pflookyy/data-caterer:0.1`
-3. `head /tmp/datagen/sample/json/account-gen/part-0000*`
+![Basic flow](design/high_level_flow-basic-flow.svg)
 
-### Quick start
-1. Run [App.scala](app/src/main/scala/com/github/pflooky/datagen/App.scala)
-2. Set environment variables `ENABLE_GENERATE_PLAN_AND_TASKS=false;PLAN_FILE_PATH=/plan/account-create-plan.yaml`
-3. Check generated data under [here](app/src/test/resources/sample/json)
+## Quick start
 
-## Configuration/Customisation
+```shell
+git clone git@github.com:pflooky/data-caterer-example.git
+cd data-caterer-example && ./run.sh
+#check results under docker/sample/report/index.html folder
+```
+
+## Integrations
 
 ### Supported data sources
 
 Data Caterer is able to support the following data sources:
 
 1. Database
-   1. JDBC 
+   1. JDBC
       1. Postgres
       2. MySQL
    2. Cassandra
-   3. ElasticSearch (soon)
-2. HTTP
-3. Files (local or remote like S3)
+   3. ElasticSearch (coming soon)
+2. Files (local or cloud)
    1. CSV
    2. Parquet
    3. ORC
-   4. Delta (soon)
+   4. Delta (coming soon)
    5. JSON
-4. JMS
+3. HTTP (sponsors only)
+4. JMS (sponsors only)
    1. Solace
-5. Kafka
+5. Kafka (sponsors only)
 
-#### Supported use cases
+Metadata sources (sponsors only):
+
+1. OpenAPI
+2. Marquez (OpenLineage)
+3. OpenMetadata
+
+## Supported use cases
 
 1. Insert into single data sink
 2. Insert into multiple data sinks
    1. Foreign keys associated between data sources
    2. Number of records per column value
-3. Set random seed at column level
+3. Set random seed at column and whole data generation level
 4. Generate real looking data (via DataFaker) and edge cases
    1. Names, addresses, places etc.
    2. Edge cases for each data type (e.g. newline character in string, maximum integer, NaN, 0)
@@ -65,37 +76,51 @@ Data Caterer is able to support the following data sources:
 7. Track and delete generated data
 8. Extract data profiling and metadata from given data sources
    1. Calculate the total number of combinations
+9. Validate data
+   1. Basic column validations (not null, contains, equals, greater than)
+   2. Aggregate validations (group by account_id and sum amounts should be less than 100, each account should have at
+      least one transaction)
+   3. Upstream data source validations (generate data and then check same data is inserted in another data source with
+      potential transformations)
 
-## Improvements
+## Run Configurations
 
-- UI to see dashboard of metadata and data generated
-- Read in schema files (such as protobuf, openapi) and convert to tasks
-  - Ability to convert sample data into task
-  - Read from metadata sources like amundsen, datahub, etc.
-- Pass in data attributes to HTTP URL as parameters
-- Auto generate regex and/or faker expressions
-- Track each data generation run along with statistics
-- Fine grain control on delete certain run of data
-- Demo for each type of data source
-  - Demonstrate what modifications are needed for different use cases
-  - Preloaded/preconfigured datasets within docker images
-- ML model to assist in metadata gathering (either via API or self-hosted)
-  - Regex and SQL generation
-  - Foreign key detection across datasets
-  - Documentation for the datasets
-  - Via API could be problem as sensitive data could be shared
-  - Via self-hosted requires large image (10+ Gb)
-- Allow for delete from Queue or API
-  - Ability to define a queue or endpoint that can delete the corresponding records
-- Postgres data type related errors
-  - spark converts to wrong data type when reading from postgres so fails to write back to postgres
-      open_date_interval INTERVAL,
-      ERROR: column "open_date_interval" is of type interval but expression is of type character varying
-      open_id UUID,
-      balance MONEY,
-      payload_json JSONB
+Different ways to run Data Caterer based on your use case:
 
-## Challenges
+![Types of run configurations](design/high_level_flow-run-config.svg)
+
+## Sponsorship
+
+Data Caterer is set up under a sponsorware model where all features are available to sponsors. A subset of the features
+are available here in this project for all to use/fork/update/improve etc., as the open core.
+
+Sponsors have access to the following features:
+
+- Metadata discovery
+- All data sources (see [here for all data sources](https://data.catering/setup/connection/connection/))
+- Batch and :material-circle-multiple: Event generation
+- Auto generation from data connections or metadata sources
+- Suggest data validations
+- Clean up generated data
+- Run as many times as you want, not charged by usage
+plus [more the come](#roadmap).
+
+[Find out more details here to help with sponsorship.](https://data.catering/sponsor)
+
+This is inspired by the [mkdocs-material project](https://github.com/squidfunk/mkdocs-material) which
+[follows the same model](https://squidfunk.github.io/mkdocs-material/insiders/).
+
+## Additional Details
+
+### High Level Flow
+
+![Data Caterer high level design](design/high-level-design.png "High level design")
+
+### Roadmap
+
+[Can check here for full list.](https://data.catering/use-case/roadmap/)
+
+### Challenges
 
 - How to apply foreign keys across datasets
 - Providing functions for data generators
@@ -125,18 +150,7 @@ Data Caterer is able to support the following data sources:
   - How will it interact with a data dictionary?
   - Updated schema/metadata
 
-## UI
-
-- UI for no/low code solution
-- Run as same image
-  - Option to execute jobs separately
-    - Interface through YAML files?
-- Pages
-  - Data sources
-  - Generation
-  - Validation
-
-## Resources
+### Resources
 
 [Spark test data generator](https://github.com/apache/spark/blob/master/sql/catalyst/src/test/scala/org/apache/spark/sql/RandomDataGenerator.scala)
 

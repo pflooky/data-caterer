@@ -1,8 +1,8 @@
 package com.github.pflooky.datagen.core.plan
 
 import com.github.pflooky.datacaterer.api.PlanRun
-import com.github.pflooky.datacaterer.api.model.Constants.{OPEN_METADATA_AUTH_TYPE_OPEN_METADATA, OPEN_METADATA_JWT_TOKEN, OPEN_METADATA_TABLE_FQN, ROWS_PER_SECOND, SAVE_MODE}
-import com.github.pflooky.datacaterer.api.model.{ArrayType, BinaryType, DateType, DoubleType, HeaderType, IntegerType, StringType, StructType, TimestampType}
+import com.github.pflooky.datacaterer.api.model.Constants.SAVE_MODE
+import com.github.pflooky.datacaterer.api.model.{ArrayType, DateType, DoubleType, IntegerType, TimestampType}
 import com.github.pflooky.datagen.core.util.{ObjectMapperUtil, SparkSuite}
 import org.junit.runner.RunWith
 import org.scalatestplus.junit.JUnitRunner
@@ -218,6 +218,14 @@ class PlanProcessorTest extends SparkSuite {
       )
       .count(count.records(10))
 
+    val thirdJsonTask = json("my_thrid_json", "/tmp/data/third_json", Map("saveMode" -> "overwrite"))
+      .schema(
+        field.name("account_id"),
+        field.name("amount").`type`(IntegerType).min(1).max(100),
+        field.name("name").expression("#{Name.name}"),
+      )
+      .count(count.records(10))
+
     val secondJsonTask = json("my_json", "/tmp/data/second_json", Map("saveMode" -> "overwrite"))
       .schema(
         field.name("account_id"),
@@ -236,6 +244,13 @@ class PlanProcessorTest extends SparkSuite {
           .withValidation(validation.groupBy("account_id", "my_first_json_balance").sum("amount").betweenCol("my_first_json_balance * 0.8", "my_first_json_balance * 1.2")),
         validation.upstreamData(firstJsonTask).joinColumns("account_id").joinType("anti").withValidation(validation.count().isEqual(0)),
         validation.upstreamData(firstJsonTask).joinColumns("account_id").withValidation(validation.count().isEqual(30)),
+        validation.upstreamData(firstJsonTask)
+          .joinColumns("account_id")
+          .withValidation(
+            validation.upstreamData(thirdJsonTask)
+              .joinColumns("account_id")
+              .withValidation(validation.count().isEqual(30))
+          )
       )
 
     val config = configuration
@@ -244,8 +259,8 @@ class PlanProcessorTest extends SparkSuite {
       .enableValidation(true)
 
     val foreignPlan = plan
-      .addForeignKeyRelationship(firstJsonTask, "account_id", List(secondJsonTask -> "account_id"))
+      .addForeignKeyRelationship(firstJsonTask, "account_id", List(secondJsonTask -> "account_id", thirdJsonTask -> "account_id"))
 
-    execute(foreignPlan, config, firstJsonTask, secondJsonTask)
+    execute(foreignPlan, config, firstJsonTask, secondJsonTask, thirdJsonTask)
   }
 }
