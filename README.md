@@ -1,4 +1,4 @@
-# MOVED TO FOLLOWING REPO: [Data Caterer](https://github.com/data-catering/data-caterer)
+# [MOVED TO FOLLOWING REPO: Data Caterer](https://github.com/data-catering/data-caterer)
 
 # Data Caterer - Data Generation and Validation
 
