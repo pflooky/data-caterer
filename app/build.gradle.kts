@@ -61,7 +61,7 @@ dependencies {
     }
 
     // data generation helpers
-    basicImpl("net.datafaker:datafaker:1.9.0")
+    basicImpl("net.datafaker:datafaker:2.1.0")
     basicImpl("org.reflections:reflections:0.10.2")
 
     // misc
